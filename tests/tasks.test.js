@@ -99,27 +99,68 @@ test('банк заданий корректен', () => {
 
     assert.equal(typeof task.question, 'string', `${where}: нет вопроса`);
     assert.ok(task.question.trim().length > 0, `${where}: пустой вопрос`);
-    assert.ok(Array.isArray(task.statements), `${where}: нет суждений`);
-    assert.ok(task.statements.length >= 3 && task.statements.length <= 9,
-      `${where}: суждений должно быть от 3 до 9 (для выбора цифрами на клавиатуре)`);
-
-    task.statements.forEach((s, i) => {
-      const w = `${where}, суждение ${i + 1}`;
-      assert.equal(typeof s.correct, 'boolean', `${w}: поле correct должно быть true/false`);
-      assert.ok(typeof s.text === 'string' && s.text.trim(), `${w}: пустой текст`);
-      if (s.explanation !== undefined) {
-        assert.ok(typeof s.explanation === 'string' && s.explanation.trim(), `${w}: пустое объяснение`);
-        // Объяснение не должно противоречить ключу.
-        assert.ok(s.explanation.startsWith(s.correct ? 'Верно.' : 'Неверно.'),
-          `${w}: объяснение должно начинаться с «${s.correct ? 'Верно.' : 'Неверно.'}» — как в ключе`);
-      }
-    });
-
-    const correct = EGE.scoring.getCorrectNumbers(task);
-    assert.ok(correct.length >= 1, `${where}: нет верных суждений`);
-    assert.ok(correct.length < task.statements.length, `${where}: все суждения верные`);
+    const type = EGE.scoring.getTaskType(task);
+    assert.ok(EGE.scoring.TYPES.includes(type), `${where}: неизвестный тип ${type}`);
+    if (task.instruction !== undefined) {
+      assert.ok(typeof task.instruction === 'string' && task.instruction.trim(), `${where}: пустая инструкция`);
+    }
+    if (type === 'matching') checkMatching(task, where);
+    else checkChoice(EGE, task, type, where);
   }
 });
+
+/** Задания с выбором суждений: multiple и exclude-two. */
+function checkChoice(EGE, task, type, where) {
+  assert.ok(Array.isArray(task.statements), `${where}: нет суждений`);
+  assert.ok(task.statements.length >= 3 && task.statements.length <= 9,
+    `${where}: суждений должно быть от 3 до 9 (для выбора цифрами на клавиатуре)`);
+  // В exclude-two correct: true означает «выпадает из ряда».
+  const prefixes = type === 'exclude-two' ? ['Выпадает.', 'Не выпадает.'] : ['Верно.', 'Неверно.'];
+
+  task.statements.forEach((s, i) => {
+    const w = `${where}, суждение ${i + 1}`;
+    assert.equal(typeof s.correct, 'boolean', `${w}: поле correct должно быть true/false`);
+    assert.ok(typeof s.text === 'string' && s.text.trim(), `${w}: пустой текст`);
+    if (s.explanation !== undefined) {
+      assert.ok(typeof s.explanation === 'string' && s.explanation.trim(), `${w}: пустое объяснение`);
+      // Объяснение не должно противоречить ключу.
+      const prefix = s.correct ? prefixes[0] : prefixes[1];
+      assert.ok(s.explanation.startsWith(prefix), `${w}: объяснение должно начинаться с «${prefix}» — как в ключе`);
+    }
+  });
+
+  const correct = EGE.scoring.getCorrectNumbers(task);
+  assert.ok(correct.length >= 1, `${where}: нет верных суждений`);
+  assert.ok(correct.length < task.statements.length, `${where}: все суждения верные`);
+  if (type === 'exclude-two') {
+    assert.equal(correct.length, EGE.scoring.EXCLUDE_COUNT, `${where}: «выпадающих» позиций должно быть две`);
+  }
+}
+
+/** Задания на соответствие. */
+function checkMatching(task, where) {
+  assert.equal(task.statements, undefined, `${where}: у matching вместо statements — items и options`);
+  assert.ok(Array.isArray(task.items) && task.items.length >= 2 && task.items.length <= 9, `${where}: от 2 до 9 позиций`);
+  assert.ok(Array.isArray(task.options) && task.options.length >= 2 && task.options.length <= 9, `${where}: от 2 до 9 вариантов`);
+  task.options.forEach((o, i) => assert.ok(typeof o === 'string' && o.trim(), `${where}, вариант ${i + 1}: пустой текст`));
+  if (task.columns !== undefined) {
+    assert.ok(Array.isArray(task.columns) && task.columns.length === 2, `${where}: columns — два заголовка`);
+  }
+  task.items.forEach((item, i) => {
+    const w = `${where}, позиция ${i + 1}`;
+    assert.ok(typeof item.text === 'string' && item.text.trim(), `${w}: пустой текст`);
+    assert.ok(Number.isInteger(item.match) && item.match >= 1 && item.match <= task.options.length,
+      `${w}: match — номер варианта от 1 до ${task.options.length}`);
+    if (item.explanation !== undefined) {
+      assert.ok(typeof item.explanation === 'string' && item.explanation.trim(), `${w}: пустое объяснение`);
+    }
+  });
+  if (task.oneToOne !== undefined) assert.equal(typeof task.oneToOne, 'boolean', `${where}: oneToOne — true/false`);
+  if (task.oneToOne) {
+    const matches = task.items.map((item) => item.match);
+    assert.equal(new Set(matches).size, matches.length, `${where}: при oneToOne варианты в ключе не повторяются`);
+  }
+}
 
 test('в каждом разделе есть задания; темы без заданий скрываются', () => {
   const EGE = loadBank();
@@ -178,4 +219,55 @@ test('ключи проверенных заданий темы «Социаль
     assert.equal(task.statements.length, 5, `${id}: должно быть 5 суждений`);
     assert.deepEqual([...EGE.scoring.getCorrectNumbers(task)], key, `${id}: ключ не совпадает`);
   }
+});
+
+test('тема «Деятельность» в разделе «Человек и общество»: 16 заданий', () => {
+  const EGE = loadBank();
+  const topic = EGE.getTopic('OBS-ACT');
+  assert.equal(topic.title, 'Деятельность');
+  assert.equal(topic.section, 'OBS');
+  assert.equal(EGE.getSection('OBS').title, 'Человек и общество');
+  assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
+  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-GEN', 'OBS-ACT']);
+});
+
+test('ключи проверенных заданий темы «Деятельность»', () => {
+  const EGE = loadBank();
+  // Ключи утверждены преподавателем — менять только по его решению.
+  // Для matching — номера вариантов по порядку позиций А, Б, В, Г, Д.
+  const keys = {
+    'OBS-ACT-001': ['exclude-two', [2, 5]],
+    'OBS-ACT-002': ['multiple', [2, 3, 4]],
+    'OBS-ACT-003': ['matching', [1, 2, 3, 4, 5]],
+    'OBS-ACT-004': ['multiple', [1, 2, 3]],
+    'OBS-ACT-005': ['multiple', [1, 2, 4, 6]],
+    'OBS-ACT-006': ['multiple', [1, 3, 4]],
+    'OBS-ACT-007': ['multiple', [1, 4, 5]],
+    'OBS-ACT-008': ['multiple', [2, 3, 4]],
+    'OBS-ACT-009': ['matching', [2, 4, 1, 3, 5]],
+    'OBS-ACT-010': ['multiple', [1, 2, 3, 5]],
+    'OBS-ACT-011': ['multiple', [1, 3, 5]],
+    'OBS-ACT-012': ['matching', [3, 5, 2, 4, 1]],
+    'OBS-ACT-013': ['multiple', [1, 2, 3, 5]],
+    'OBS-ACT-014': ['multiple', [1, 3, 5]],
+    'OBS-ACT-015': ['multiple', [1, 3, 5]],
+    'OBS-ACT-016': ['multiple', [1, 2, 3, 5]]
+  };
+  const topicTasks = EGE.getTasksByTopic('OBS-ACT');
+  assert.deepEqual([...topicTasks.map((t) => t.id)], Object.keys(keys), 'в теме только проверенные задания');
+  for (const [id, [type, key]] of Object.entries(keys)) {
+    const task = EGE.getTask(id);
+    assert.equal(EGE.scoring.getTaskType(task), type, `${id}: тип задания`);
+    assert.deepEqual([...EGE.scoring.getCorrect(task)], key, `${id}: ключ не совпадает`);
+    if (type === 'matching') {
+      assert.equal(task.items.length, 5, `${id}: 5 позиций`);
+      assert.equal(task.options.length, 5, `${id}: 5 вариантов`);
+      assert.equal(task.oneToOne, true, `${id}: взаимно-однозначное соответствие`);
+      assert.ok(task.items.every((item) => item.explanation), `${id}: у каждой позиции есть объяснение`);
+    } else {
+      assert.ok(task.statements.every((st) => st.explanation), `${id}: у каждого суждения есть объяснение`);
+    }
+  }
+  assert.equal(EGE.getTask('OBS-ACT-001').statements.length, 6);
+  assert.equal(EGE.getTask('OBS-ACT-005').statements.length, 6);
 });

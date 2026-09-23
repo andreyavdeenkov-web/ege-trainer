@@ -19,7 +19,13 @@
   ];
   var STORAGE_KEY = 'ege-trainer:settings';
 
-  var HINT_SELECT = 'Отметьте все верные суждения. Можно выбрать несколько вариантов.';
+  var HINTS = {
+    'multiple': 'Отметьте все верные суждения. Можно выбрать несколько вариантов.',
+    'exclude-two': 'Отметьте ровно две позиции, которые «выпадают» из общего ряда.',
+    'matching': 'Напротив каждой позиции выберите номер из второго столбца.'
+  };
+  var HINT_ONE_TO_ONE = ' Каждый номер используется один раз: если выбрать занятый, он перейдёт к этой позиции.';
+  var HINT_EXCLUDE_LIMIT = 'Можно отметить только две позиции — снимите одну отметку, чтобы выбрать другую.';
   var HINT_ANSWERED = 'Ответ засчитан — изменить его нельзя.';
 
   var $ = function (id) { return document.getElementById(id); };
@@ -51,6 +57,8 @@
     taskQuestion: $('task-question'),
     taskHint: $('task-hint'),
     statements: $('statements'),
+    matching: $('matching'),
+    taskInstruction: $('task-instruction'),
     feedback: $('feedback'),
     feedbackPoints: $('feedback-points'),
     feedbackCorrect: $('feedback-correct'),
@@ -79,7 +87,8 @@
   var state = {
     attempt: null,  // текущая попытка (см. js/attempt.js)
     viewIndex: 0,   // задание, которое показано на экране (с 0)
-    draft: []       // отметки в текущем, ещё не отвеченном задании
+    draft: null,    // отметки в текущем, ещё не отвеченном задании (см. emptyDraft)
+    matchRow: 0     // matching: позиция, куда попадёт цифра с клавиатуры
   };
 
   /* ---------- Утилиты ---------- */
@@ -267,7 +276,7 @@
       taskIds: pool.map(function (t) { return t.id; })
     });
     state.viewIndex = 0;
-    state.draft = [];
+    state.draft = null;
     showScreen('quiz');
     renderView();
   }
@@ -278,6 +287,38 @@
 
   function viewedAnswer() {
     return A.getAnswer(state.attempt, state.viewIndex);
+  }
+
+  function typeOf(task) {
+    return scoring.getTaskType(task);
+  }
+
+  /** Пустой черновик: номера суждений или, для matching, по null на каждую позицию. */
+  function emptyDraft(task) {
+    return typeOf(task) === 'matching' ? task.items.map(function () { return null; }) : [];
+  }
+
+  /** Черновик текущего задания (создаётся при первом показе). */
+  function currentDraft() {
+    if (!state.draft) {
+      var index = A.currentIndex(state.attempt);
+      state.draft = index === -1 ? [] : emptyDraft(taskAt(index));
+      state.matchRow = 0;
+    }
+    return state.draft;
+  }
+
+  /** Можно ли засчитать черновик: условие зависит от типа задания. */
+  function isDraftReady(task, draft) {
+    var type = typeOf(task);
+    if (type === 'matching') return draft.every(function (n) { return n !== null; });
+    if (type === 'exclude-two') return draft.length === scoring.EXCLUDE_COUNT;
+    return draft.length > 0;
+  }
+
+  function hintFor(task) {
+    var hint = HINTS[typeOf(task)];
+    return task.oneToOne ? hint + HINT_ONE_TO_ONE : hint;
   }
 
   function renderProgress() {
@@ -347,26 +388,37 @@
     var attempt = state.attempt;
     var task = taskAt(state.viewIndex);
     var answer = viewedAnswer();
+    var isMatching = typeOf(task) === 'matching';
     releaseFocus();
 
     ui.taskTopic.textContent = view.topicLabel(task);
     ui.taskTopic.style.setProperty('--topic-color', EGE.getSection(task.section).color);
     ui.taskQuestion.textContent = task.question;
-    ui.taskHint.textContent = answer ? HINT_ANSWERED : HINT_SELECT;
+    ui.taskHint.textContent = answer ? HINT_ANSWERED : hintFor(task);
     ui.taskCard.classList.toggle('is-review', !!answer);
+    ui.taskInstruction.textContent = task.instruction || '';
+    ui.taskInstruction.hidden = !task.instruction;
 
-    view.renderStatements(ui.statements, task, {
-      answer: answer,
-      selected: state.draft,
-      onToggle: toggleStatement
-    });
+    ui.statements.hidden = isMatching;
+    ui.matching.hidden = !isMatching;
+    if (isMatching) {
+      ui.statements.textContent = '';
+      renderMatchingDraft(task, answer);
+    } else {
+      ui.matching.textContent = '';
+      view.renderStatements(ui.statements, task, {
+        answer: answer,
+        selected: answer ? null : currentDraft(),
+        onToggle: toggleStatement
+      });
+    }
 
     if (answer) {
       view.renderFeedback({
         points: ui.feedbackPoints,
         correct: ui.feedbackCorrect,
         user: ui.feedbackUser
-      }, answer);
+      }, answer, task);
     }
     ui.feedback.hidden = !answer;
 
@@ -383,7 +435,7 @@
 
     ui.prevBtn.hidden = state.viewIndex === 0;
     ui.submitBtn.hidden = !!answer;
-    ui.submitBtn.disabled = state.draft.length === 0;
+    ui.submitBtn.disabled = !!answer || !isDraftReady(taskAt(state.viewIndex), currentDraft());
     ui.nextBtn.hidden = !answer;
     ui.nextBtn.textContent = state.viewIndex === last ? 'Посмотреть результаты' : 'Следующее задание';
     // «К текущему» нужна, только если до текущего задания больше одного шага.
@@ -400,21 +452,75 @@
 
   function toggleStatement(number) {
     if (viewedAnswer()) return;
-    var pos = state.draft.indexOf(number);
-    if (pos === -1) state.draft.push(number);
-    else state.draft.splice(pos, 1);
+    var task = taskAt(state.viewIndex);
+    var draft = currentDraft();
+    var pos = draft.indexOf(number);
+    var isExclude = typeOf(task) === 'exclude-two';
+    if (pos === -1) {
+      if (isExclude && draft.length >= scoring.EXCLUDE_COUNT) {
+        ui.taskHint.textContent = HINT_EXCLUDE_LIMIT;
+        return;
+      }
+      draft.push(number);
+    } else {
+      draft.splice(pos, 1);
+    }
+    if (isExclude) ui.taskHint.textContent = hintFor(task);
 
     view.setStatementSelected(ui.statements, number, pos === -1);
-    ui.submitBtn.disabled = state.draft.length === 0;
+    ui.submitBtn.disabled = !isDraftReady(task, draft);
+  }
+
+  function renderMatchingDraft(task, answer) {
+    view.renderMatching(ui.matching, task, {
+      answer: answer,
+      selected: answer ? null : currentDraft(),
+      activeRow: state.matchRow,
+      onChoose: chooseMatch
+    });
+  }
+
+  /**
+   * matching: выбор номера для позиции. Повторное нажатие снимает выбор.
+   * Во взаимно-однозначном задании занятый номер переходит к этой позиции.
+   */
+  function chooseMatch(row, number) {
+    if (viewedAnswer()) return;
+    var task = taskAt(state.viewIndex);
+    var draft = currentDraft();
+    if (draft[row] === number) {
+      draft[row] = null;
+      state.matchRow = row;
+    } else {
+      if (task.oneToOne) {
+        var other = draft.indexOf(number);
+        if (other !== -1) draft[other] = null;
+      }
+      draft[row] = number;
+      state.matchRow = nextEmptyRow(draft, row);
+    }
+    renderMatchingDraft(task, null);
+    ui.submitBtn.disabled = !isDraftReady(task, draft);
+  }
+
+  /** Следующая незаполненная позиция после row (по кругу); если всё заполнено — row. */
+  function nextEmptyRow(draft, row) {
+    for (var k = 1; k <= draft.length; k++) {
+      var i = (row + k) % draft.length;
+      if (draft[i] === null) return i;
+    }
+    return row;
   }
 
   function submitAnswer() {
     var attempt = state.attempt;
-    if (viewedAnswer() || state.draft.length === 0) return;
+    if (viewedAnswer()) return;
     if (state.viewIndex !== A.currentIndex(attempt)) return;
+    var task = taskAt(state.viewIndex);
+    if (!isDraftReady(task, currentDraft())) return;
 
-    var answer = A.recordAnswer(attempt, taskAt(state.viewIndex), state.draft);
-    state.draft = [];
+    var answer = A.recordAnswer(attempt, task, state.draft);
+    state.draft = null;
     notifyStore('onAnswer', [A.snapshot(answer), A.snapshot(attempt)]);
 
     renderView();
@@ -497,17 +603,24 @@
       var answers = el('p', 'mistake__answers');
       answers.appendChild(el('span', null, 'Ваш ответ: '));
       answers.appendChild(el('strong', answer.points === scoring.MAX_SCORE ? 'text-right' : 'text-wrong',
-        scoring.formatAnswer(answer.selected)));
+        scoring.formatTaskAnswer(task, answer.selected)));
       answers.appendChild(el('span', null, ' · Правильный: '));
-      answers.appendChild(el('strong', 'text-right', scoring.formatAnswer(answer.correct)));
+      answers.appendChild(el('strong', 'text-right', scoring.formatTaskAnswer(task, answer.correct)));
       summary.appendChild(answers);
       summary.appendChild(el('span', 'review-item__toggle', 'Показать разбор'));
 
       var body = el('div', 'review-item__body');
-      var list = el('ol', 'statements');
-      view.renderStatements(list, task, { answer: answer });
-      body.appendChild(list);
-      body.appendChild(view.createFeedback(answer));
+      if (typeOf(task) === 'matching') {
+        var box = el('div', 'matching');
+        view.renderMatching(box, task, { answer: answer });
+        body.appendChild(box);
+      } else {
+        var list = el('ol', 'statements');
+        view.renderStatements(list, task, { answer: answer });
+        body.appendChild(list);
+      }
+      if (task.instruction) body.appendChild(el('p', 'task__instruction', task.instruction));
+      body.appendChild(view.createFeedback(answer, task));
 
       details.appendChild(summary);
       details.appendChild(body);
@@ -598,7 +711,14 @@
     if (/^[1-9]$/.test(e.key)) {
       if (answered) return;
       var n = parseInt(e.key, 10);
-      if (n <= taskAt(state.viewIndex).statements.length) {
+      var task = taskAt(state.viewIndex);
+      if (typeOf(task) === 'matching') {
+        // Цифра — номер варианта для выделенной позиции.
+        if (n <= task.options.length) {
+          e.preventDefault();
+          chooseMatch(state.matchRow, n);
+        }
+      } else if (n <= task.statements.length) {
         e.preventDefault();
         toggleStatement(n);
       }
@@ -608,7 +728,8 @@
     } else if (e.key === 'Enter') {
       // Enter на кнопке и так вызывает click — не дублируем действие.
       // Исключение — суждения: там Enter означает «Ответить».
-      if (tag === 'BUTTON' && !e.target.classList.contains('statement__btn')) return;
+      if (tag === 'BUTTON' && !e.target.classList.contains('statement__btn') &&
+          !e.target.classList.contains('match-choice')) return;
       e.preventDefault();
       if (answered) nextTask();
       else submitAnswer();

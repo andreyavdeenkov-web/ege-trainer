@@ -24,7 +24,8 @@
       title: 'Человек и общество',
       color: '#6366f1',
       topics: [
-        { id: 'OBS-GEN', title: 'Общие вопросы' }
+        { id: 'OBS-GEN', title: 'Общие вопросы' },
+        { id: 'OBS-ACT', title: 'Деятельность' }
       ]
     },
     {
@@ -111,6 +112,9 @@
    * Регистрирует задания темы.
    * Каждое задание: { id, question, statements: [{ text, correct, explanation? }] },
    * explanation у суждения необязательно;
+   * type — тип задания: 'multiple' (по умолчанию), 'exclude-two' или 'matching'
+   * (для matching вместо statements — items и options, см. js/scoring.js и README);
+   * instruction — необязательный текст после перечня (как в бланке ЕГЭ);
    * необязательные поля задания: version (номер редакции, по умолчанию 1)
    * и retired (true — задание больше не выдаётся, но его ID занят навсегда).
    */
