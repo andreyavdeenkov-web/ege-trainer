@@ -27,8 +27,10 @@
   --font: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Тёмная тема: по настройке системы или явно через data-theme="dark" */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #0f1221;
     --surface: #181c30;
     --surface-2: #1e233b;
@@ -52,6 +54,32 @@
 
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1221;
+  --surface: #181c30;
+  --surface-2: #1e233b;
+  --text: #e8eaf6;
+  --text-muted: #9aa1c0;
+  --border: #2b3150;
+  --primary: #7c83ff;
+  --primary-hover: #939aff;
+  --primary-soft: #252b52;
+  --focus: rgba(124, 131, 255, 0.45);
+
+  --right: #4ade80;
+  --right-bg: #11291d;
+  --right-border: #1f6b41;
+  --warn: #fbbf24;
+  --warn-bg: #2b2310;
+  --warn-border: #7a5a12;
+  --wrong: #f87171;
+  --wrong-bg: #2e1618;
+  --wrong-border: #7f2a2f;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 /* ===== База ===== */
@@ -103,7 +131,7 @@ button, input { font: inherit; color: inherit; }
 /* ===== Шапка ===== */
 .topbar {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 10;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: saturate(160%) blur(10px);
@@ -544,3 +572,20 @@ kbd {
   .kbd-hint { display: none; }
   .brand__subtitle { display: none; }
 }
+
+/* ===== Подтверждение выхода ===== */
+.exit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--warn-border);
+  border-radius: 14px;
+  background: var(--warn-bg);
+  animation: rise .2s ease;
+}
+.exit-bar__text { flex: 1 1 220px; font-weight: 600; }
+.exit-bar__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.exit-bar .btn { min-height: 40px; padding: 8px 16px; }

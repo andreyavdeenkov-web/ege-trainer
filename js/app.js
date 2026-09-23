@@ -41,6 +41,9 @@
     countOptions: $('count-options'),
     startBtn: $('start-btn'),
     brandHome: $('brand-home'),
+    exitBar: $('exit-bar'),
+    exitCancel: $('exit-cancel'),
+    exitConfirm: $('exit-confirm'),
 
     progressLabel: $('progress-label'),
     progressBar: $('progress-bar'),
@@ -132,6 +135,7 @@
 
   function showScreen(name) {
     releaseFocus();
+    ui.exitBar.hidden = true;
     Object.keys(ui.screens).forEach(function (key) {
       ui.screens[key].hidden = key !== name;
     });
@@ -437,11 +441,20 @@
   ui.nextBtn.addEventListener('click', nextTask);
   ui.restartBtn.addEventListener('click', startSession);
   ui.homeBtn.addEventListener('click', showStart);
+  // Подтверждение выхода — в самой странице: window.confirm() блокируется
+  // во встроенных просмотрщиках (iframe с sandbox).
   ui.brandHome.addEventListener('click', function () {
     var inProgress = !ui.screens.quiz.hidden && state.results.length > 0;
-    if (inProgress && !window.confirm('Прервать тренировку? Результаты не сохранятся.')) return;
-    showStart();
+    if (!inProgress) {
+      showStart();
+      return;
+    }
+    ui.exitBar.hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    ui.exitCancel.focus({ preventScroll: true });
   });
+  ui.exitCancel.addEventListener('click', function () { ui.exitBar.hidden = true; });
+  ui.exitConfirm.addEventListener('click', showStart);
 
   document.addEventListener('keydown', function (e) {
     if (ui.screens.quiz.hidden || e.ctrlKey || e.metaKey || e.altKey) return;

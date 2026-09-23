@@ -60,6 +60,14 @@
 
     <!-- Экран задания -->
     <section class="screen" id="screen-quiz" hidden aria-live="polite">
+      <div class="exit-bar" id="exit-bar" role="alertdialog" aria-labelledby="exit-bar-text" hidden>
+        <p class="exit-bar__text" id="exit-bar-text">Прервать тренировку? Результаты не сохранятся.</p>
+        <div class="exit-bar__actions">
+          <button type="button" class="btn btn--ghost" id="exit-cancel">Продолжить</button>
+          <button type="button" class="btn btn--primary" id="exit-confirm">Выйти</button>
+        </div>
+      </div>
+
       <div class="progress">
         <div class="progress__row">
           <span class="progress__label" id="progress-label">Задание 1 из 5</span>
