@@ -209,6 +209,7 @@ button, input { font: inherit; color: inherit; }
   color: var(--text);
 }
 .btn--ghost:hover { background: var(--surface-2); }
+.btn--sm { min-height: 36px; padding: 6px 14px; font-size: 14px; }
 
 /* ===== Стартовый экран ===== */
 .hero { margin: 8px 0 20px; }
@@ -262,6 +263,8 @@ button, input { font: inherit; color: inherit; }
 }
 .topic-option input:focus-visible + .topic-option__body { outline: 3px solid var(--focus); outline-offset: 2px; }
 .topic-option input:disabled + .topic-option__body { opacity: .5; cursor: not-allowed; }
+.topic-grid--compact { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.topic-grid--compact .topic-option__body { padding: 10px 12px; }
 
 .segmented {
   display: inline-flex;
@@ -320,6 +323,43 @@ button, input { font: inherit; color: inherit; }
   background: var(--border);
   overflow: hidden;
 }
+/* Навигация по заданиям */
+.task-nav { margin-top: 12px; }
+.task-nav__list {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 2px 6px;
+  list-style: none;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+}
+.task-nav__item {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.task-nav__item.is-done.points--2 { color: var(--right); background: var(--right-bg); border-color: var(--right-border); }
+.task-nav__item.is-done.points--1 { color: var(--warn); background: var(--warn-bg); border-color: var(--warn-border); }
+.task-nav__item.is-done.points--0 { color: var(--wrong); background: var(--wrong-bg); border-color: var(--wrong-border); }
+.task-nav__item.is-current { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
+.task-nav__item.is-locked { border-style: dashed; background: transparent; opacity: .6; cursor: not-allowed; }
+.task-nav__item.is-viewed { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.task-nav__item.is-current.is-viewed { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: none; }
+.task-nav__item:not(:disabled):hover { border-color: var(--primary); }
+
 .progress__fill {
   height: 100%;
   width: 0;
@@ -489,7 +529,9 @@ button, input { font: inherit; color: inherit; }
 .points--1 .points__value, .mistake__points.points--1 { color: var(--warn); }
 .points--0 .points__value, .mistake__points.points--0 { color: var(--wrong); }
 
-.task__actions { margin-top: 20px; display: flex; justify-content: flex-end; }
+.task__actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.task__actions-spacer { flex: 1 1 auto; }
+.task.is-review .task__hint { color: var(--primary); font-weight: 600; }
 
 .kbd-hint { margin-top: 14px; font-size: 13px; color: var(--text-muted); text-align: right; }
 kbd {
@@ -545,7 +587,50 @@ kbd {
 .mistake__points { margin-left: auto; font-weight: 700; font-size: 14px; }
 .mistake__question { margin-top: 6px; }
 .mistake__answers { margin-top: 4px; font-size: 15px; color: var(--text-muted); }
-.mistakes__empty { color: var(--right); font-weight: 600; }
+/* Разбор попытки */
+.review__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 12px; }
+.review__head .section-title { margin-bottom: 0; }
+.review__filter { margin-bottom: 16px; }
+.review-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.review-list__empty { color: var(--right); font-weight: 600; }
+.review-item__details {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.review-item__summary {
+  display: block;
+  padding: 14px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 12px;
+}
+.review-item__summary::-webkit-details-marker { display: none; }
+.review-item__summary:hover { background: color-mix(in srgb, var(--primary) 5%, transparent); }
+.review-item__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.review-item__toggle::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .15s;
+}
+.review-item__details[open] .review-item__toggle { font-size: 0; }
+.review-item__details[open] .review-item__toggle::before { content: "Скрыть разбор"; font-size: 14px; }
+.review-item__details[open] .review-item__toggle::after { transform: translateY(2px) rotate(-135deg); }
+.review-item__body { padding: 0 14px 14px; }
+.review-item__body .statements { margin-top: 4px; }
+.feedback--static { animation: none; background: var(--surface); }
 .text-right { color: var(--right); }
 .text-wrong { color: var(--wrong); }
 
@@ -569,6 +654,12 @@ kbd {
   .statement__btn { gap: 10px; padding: 12px; }
   .statement__details { padding: 0 12px 12px 12px; }
   .task__actions .btn, .result__actions .btn { width: 100%; }
+  .task__actions-spacer { display: none; }
+  .task__actions { flex-direction: column-reverse; }
+  .review__filter { width: 100%; }
+  .review-item__summary { padding: 12px; }
+  .review-item__body { padding: 0 10px 12px; }
+  .task-nav__item { min-width: 34px; height: 34px; }
   .kbd-hint { display: none; }
   .brand__subtitle { display: none; }
 }

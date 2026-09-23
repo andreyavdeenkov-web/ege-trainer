@@ -1,7 +1,7 @@
-/* Тема «Экономика» */
-EGE.addTasks('economy', [
+/* Раздел «Экономика», тема «Общие вопросы» */
+EGE.addTasks('ECO-GEN', [
   {
-    id: 'economy-001',
+    id: 'ECO-GEN-001',
     question: 'Выберите верные суждения о рыночной экономике.',
     statements: [
       {
@@ -32,7 +32,7 @@ EGE.addTasks('economy', [
     ]
   },
   {
-    id: 'economy-002',
+    id: 'ECO-GEN-002',
     question: 'Выберите верные суждения об инфляции.',
     statements: [
       {
@@ -63,7 +63,7 @@ EGE.addTasks('economy', [
     ]
   },
   {
-    id: 'economy-003',
+    id: 'ECO-GEN-003',
     question: 'Выберите верные суждения о налогах в Российской Федерации.',
     statements: [
       {
