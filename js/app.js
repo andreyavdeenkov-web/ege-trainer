@@ -21,6 +21,8 @@
 
   var HINTS = {
     'multiple': 'Отметьте все верные суждения. Можно выбрать несколько вариантов.',
+    // multiple с choiceOf: 'items' — выбираются термины или другие элементы, а не суждения.
+    'multiple-items': 'Выберите все подходящие варианты.',
     'exclude-two': 'Отметьте ровно две позиции, которые «выпадают» из общего ряда.',
     'matching': 'Напротив каждой позиции выберите номер из второго столбца.'
   };
@@ -317,7 +319,8 @@
   }
 
   function hintFor(task) {
-    var hint = HINTS[typeOf(task)];
+    var type = typeOf(task);
+    var hint = HINTS[type === 'multiple' && task.choiceOf === 'items' ? 'multiple-items' : type];
     return task.oneToOne ? hint + HINT_ONE_TO_ONE : hint;
   }
 
@@ -327,7 +330,7 @@
     var done = A.answeredCount(attempt);
     ui.progressLabel.textContent = 'Задание ' + (state.viewIndex + 1) + ' из ' + total +
       ' · выполнено ' + done;
-    ui.scorePill.textContent = 'Баллы: ' + A.totalScore(attempt);
+    ui.scorePill.textContent = 'Баллы: ' + A.totalScore(attempt) + ' из ' + A.answeredMaxScore(attempt);
     ui.progressFill.style.width = (done / total) * 100 + '%';
     ui.progressBar.setAttribute('aria-valuemax', String(total));
     ui.progressBar.setAttribute('aria-valuenow', String(done));
@@ -348,8 +351,8 @@
       var label = 'Задание ' + (i + 1) + ': ';
 
       if (answer) {
-        btn.classList.add('is-done', 'points--' + answer.points);
-        label += 'выполнено, ' + answer.points + ' ' + scoring.pluralPoints(answer.points);
+        btn.classList.add('is-done', 'points--' + scoring.pointsLevel(answer.points, answer.maxPoints));
+        label += 'выполнено, ' + scoring.formatPointsOutOf(answer.points, answer.maxPoints);
       } else if (i === current) {
         btn.classList.add('is-current');
         label += 'текущее';
@@ -547,13 +550,13 @@
     }
 
     var score = A.totalScore(attempt);
-    var max = A.maxScore(attempt);
+    var max = A.maxScore(attempt, EGE.getTask);
     var pct = scoring.percent(score, max);
 
     ui.resultPercent.textContent = pct + '%';
     ui.resultRing.style.setProperty('--pct', String(pct));
     ui.resultRing.className = 'result__ring ' + (pct >= 80 ? 'is-high' : pct >= 50 ? 'is-mid' : 'is-low');
-    ui.resultScore.textContent = score + ' из ' + max + ' ' + scoring.pluralPoints(max);
+    ui.resultScore.textContent = scoring.formatPointsOutOf(score, max);
     ui.resultMessage.textContent = resultMessage(pct);
 
     var mistakes = A.mistakeIndexes(attempt).length;
@@ -595,14 +598,14 @@
       var head = el('div', 'mistake__head');
       head.appendChild(el('span', 'mistake__num', 'Задание ' + (i + 1)));
       head.appendChild(view.topicChip(task, true));
-      head.appendChild(el('span', 'mistake__points points--' + answer.points,
-        answer.points + ' ' + scoring.pluralPoints(answer.points)));
+      head.appendChild(el('span', 'mistake__points points--' + scoring.pointsLevel(answer.points, answer.maxPoints),
+        scoring.formatPointsOutOf(answer.points, answer.maxPoints)));
       summary.appendChild(head);
       summary.appendChild(el('p', 'mistake__question', task.question));
 
       var answers = el('p', 'mistake__answers');
       answers.appendChild(el('span', null, 'Ваш ответ: '));
-      answers.appendChild(el('strong', answer.points === scoring.MAX_SCORE ? 'text-right' : 'text-wrong',
+      answers.appendChild(el('strong', answer.points === answer.maxPoints ? 'text-right' : 'text-wrong',
         scoring.formatTaskAnswer(task, answer.selected)));
       answers.appendChild(el('span', null, ' · Правильный: '));
       answers.appendChild(el('strong', 'text-right', scoring.formatTaskAnswer(task, answer.correct)));

@@ -40,7 +40,8 @@ test('новая попытка: поля и начальное состояни
   assert.deepEqual(a.answers, []);
   assert.equal(A.currentIndex(a), 0);
   assert.equal(A.totalScore(a), 0);
-  assert.equal(A.maxScore(a), 6);
+  assert.equal(A.maxScore(a, (id) => tasks[id]), 6);
+  assert.equal(A.answeredMaxScore(a), 0);
 });
 
 test('ответ записывается с ID задания, выбором, правильным ответом и баллом', () => {

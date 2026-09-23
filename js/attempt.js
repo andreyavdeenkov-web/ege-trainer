@@ -144,7 +144,7 @@
       selected: cleaned,
       correct: correct,
       points: scoring.scoreTask(task, cleaned, correct),
-      maxPoints: scoring.MAX_SCORE,
+      maxPoints: scoring.getMaxPoints(task),
       answeredAt: nowIso(now)
     };
     attempt.answers.push(answer);
@@ -161,8 +161,24 @@
     return attempt.answers.reduce(function (sum, a) { return sum + a.points; }, 0);
   }
 
-  function maxScore(attempt) {
-    return attempt.taskIds.length * scoring.MAX_SCORE;
+  /** Максимум баллов за уже выполненные задания (для прогресса во время попытки). */
+  function answeredMaxScore(attempt) {
+    return attempt.answers.reduce(function (sum, a) { return sum + a.maxPoints; }, 0);
+  }
+
+  /**
+   * Максимум баллов за попытку — сумма максимумов её заданий (exclude-two — 1, остальные — 2).
+   * Для выполненных заданий берётся maxPoints из ответа; для невыполненных нужен
+   * getTask(id) → задание, чтобы узнать его тип.
+   */
+  function maxScore(attempt, getTask) {
+    return attempt.taskIds.reduce(function (sum, id, i) {
+      var answer = attempt.answers[i];
+      if (answer) return sum + answer.maxPoints;
+      var task = getTask ? getTask(id) : null;
+      if (!task) throw new Error('Не удалось определить максимум баллов за задание ' + id);
+      return sum + scoring.getMaxPoints(task);
+    }, 0);
   }
 
   /** Индексы выполненных заданий, за которые получен не максимальный балл. */
@@ -192,6 +208,7 @@
     recordAnswer: recordAnswer,
     finishAttempt: finishAttempt,
     totalScore: totalScore,
+    answeredMaxScore: answeredMaxScore,
     maxScore: maxScore,
     mistakeIndexes: mistakeIndexes,
     snapshot: snapshot

@@ -18,7 +18,7 @@ const dataScripts = scripts.filter((s) => s.startsWith('data/tasks/'));
 function loadBank() {
   const context = vm.createContext({});
   context.globalThis = context;
-  for (const src of ['js/registry.js', 'js/scoring.js', ...dataScripts]) {
+  for (const src of ['js/registry.js', 'js/scoring.js', 'js/attempt.js', ...dataScripts]) {
     vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
   }
   return context.EGE;
@@ -270,4 +270,50 @@ test('ключи проверенных заданий темы «Деятель
   }
   assert.equal(EGE.getTask('OBS-ACT-001').statements.length, 6);
   assert.equal(EGE.getTask('OBS-ACT-005').statements.length, 6);
+});
+
+test('тема «Деятельность»: все 16 заданий верно — 31 балл из 31', () => {
+  const EGE = loadBank();
+  const A = EGE.attempt;
+  const tasks = EGE.getTasksByTopic('OBS-ACT');
+  const a = A.createAttempt({ taskIds: tasks.map((t) => t.id) });
+  assert.equal(A.maxScore(a, EGE.getTask), 31);
+  for (const task of tasks) {
+    const answer = A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
+    assert.equal(answer.points, answer.maxPoints, `${task.id}: верный ответ — максимум баллов`);
+    assert.equal(answer.maxPoints, task.type === 'exclude-two' ? 1 : 2, `${task.id}: максимум баллов`);
+  }
+  assert.equal(A.totalScore(a), 31);
+  assert.equal(A.maxScore(a), 31);
+});
+
+// Действия с ответом выполняются кнопками — бланковые указания ЕГЭ не показываются.
+const PAPER_INSTRUCTIONS = [/запишите/i, /цифрами без пробелов/i, /в порядке, соответствующем буквам/i, /в ответ цифры/i];
+
+test('формулировки заданий без технических указаний бумажного бланка', () => {
+  const EGE = loadBank();
+  for (const task of EGE.tasks) {
+    for (const text of [task.question, task.instruction].filter(Boolean)) {
+      for (const re of PAPER_INSTRUCTIONS) {
+        assert.ok(!re.test(text), `${task.id}: «${text}» содержит указание для бланка (${re})`);
+      }
+    }
+  }
+  assert.equal(EGE.getTask('OBS-ACT-005').question, 'Укажите компоненты структуры деятельности.');
+  assert.equal(EGE.getTask('OBS-ACT-001').instruction, 'Найдите два термина, «выпадающих» из общего ряда.');
+});
+
+test('multiple: выбор не суждений, а терминов помечен choiceOf: «items»', () => {
+  const EGE = loadBank();
+  for (const task of EGE.tasks) {
+    if (task.choiceOf !== undefined) {
+      assert.ok(['statements', 'items'].includes(task.choiceOf), `${task.id}: choiceOf — statements или items`);
+    }
+    if (EGE.scoring.getTaskType(task) !== 'multiple') continue;
+    const aboutStatements = /суждени/i.test(task.question);
+    assert.equal(task.choiceOf === 'items', !aboutStatements,
+      `${task.id}: в вопросе ${aboutStatements ? '' : 'не '}говорится о суждениях — choiceOf должен быть ${aboutStatements ? 'не задан' : '«items»'}`);
+  }
+  const itemTasks = EGE.getTasksByTopic('OBS-ACT').filter((t) => t.choiceOf === 'items').map((t) => t.id);
+  assert.deepEqual([...itemTasks], ['OBS-ACT-005']);
 });
