@@ -109,6 +109,9 @@ test('банк заданий корректен', () => {
       assert.ok(typeof s.text === 'string' && s.text.trim(), `${w}: пустой текст`);
       if (s.explanation !== undefined) {
         assert.ok(typeof s.explanation === 'string' && s.explanation.trim(), `${w}: пустое объяснение`);
+        // Объяснение не должно противоречить ключу.
+        assert.ok(s.explanation.startsWith(s.correct ? 'Верно.' : 'Неверно.'),
+          `${w}: объяснение должно начинаться с «${s.correct ? 'Верно.' : 'Неверно.'}» — как в ключе`);
       }
     });
 
