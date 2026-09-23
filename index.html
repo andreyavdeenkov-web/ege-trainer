@@ -60,6 +60,8 @@
           <li><strong>0 баллов</strong> — две ошибки и больше.</li>
         </ul>
         <p class="muted">Пример: правильный ответ 1, 3, 5. Ответ «1, 3» или «1, 3, 5, 6» — 1 балл, ответ «1, 4, 5» — 0 баллов.</p>
+        <p class="muted">«Найдите два термина, выпадающих из ряда»: выбираются ровно две позиции; одна неверная цифра — 1 балл.</p>
+        <p class="muted">Задания на соответствие: ошибка — каждая позиция А, Б, В… с неверным номером. Все верно — 2 балла, одна ошибка — 1, две и более — 0.</p>
       </details>
     </section>
 
@@ -94,6 +96,8 @@
         <p class="task__hint" id="task-hint">Отметьте все верные суждения. Можно выбрать несколько вариантов.</p>
 
         <ol class="statements" id="statements"></ol>
+        <div class="matching" id="matching" hidden></div>
+        <p class="task__instruction" id="task-instruction" hidden></p>
 
         <div class="feedback" id="feedback" hidden>
           <div class="feedback__head">
@@ -112,7 +116,7 @@
           <button type="button" class="btn btn--primary btn--lg" id="submit-btn" disabled>Ответить</button>
           <button type="button" class="btn btn--primary btn--lg" id="next-btn" hidden>Следующее задание</button>
         </div>
-        <p class="kbd-hint" aria-hidden="true">Клавиши <kbd>1</kbd>–<kbd>9</kbd> отмечают суждения, <kbd>Enter</kbd> — ответить / дальше, <kbd>←</kbd> <kbd>→</kbd> — к выполненным заданиям</p>
+        <p class="kbd-hint" aria-hidden="true">Клавиши <kbd>1</kbd>–<kbd>9</kbd> отмечают суждения (в соответствии — номер для выделенной позиции), <kbd>Enter</kbd> — ответить / дальше, <kbd>←</kbd> <kbd>→</kbd> — к выполненным заданиям</p>
       </article>
     </section>
 
@@ -164,6 +168,7 @@
 
   <!-- Банк заданий: папка раздела, по файлу на тему (см. README) -->
   <script src="data/tasks/society/general.js"></script>
+  <script src="data/tasks/society/activity.js"></script>
   <script src="data/tasks/economy/general.js"></script>
   <script src="data/tasks/social/stratification.js"></script>
   <script src="data/tasks/social/mobility.js"></script>

@@ -505,6 +505,92 @@ button, input { font: inherit; color: inherit; }
 .statement.status-skip .statement__tag { color: var(--text-muted); background: var(--surface-2); }
 .statement.status-skip .statement__text { color: var(--text-muted); }
 
+/* ===== Задание на соответствие ===== */
+.task__instruction { margin-top: 16px; font-weight: 600; }
+.matching { margin-top: 20px; }
+.matching__col-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+}
+.matching__legend {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.matching__options { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.matching__option { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+.matching__option-num {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 14px;
+}
+.matching__option-text { padding-top: 1px; }
+.matching__rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.match-row {
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  transition: border-color .15s, background-color .15s;
+}
+.match-row.is-filled { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+.match-row.is-active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus); }
+.match-row__head { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
+.match-row__letter {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 800;
+}
+.match-row__text { padding-top: 3px; font-weight: 600; }
+.match-row__choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0 42px; }
+.match-choice {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.match-choice:hover { border-color: var(--primary); }
+.match-choice.is-selected { background: var(--primary); border-color: var(--primary); color: #fff; }
+.match-choice.is-taken { border-style: dashed; color: var(--text-muted); background: var(--surface-2); }
+.match-row__picked { margin: 6px 0 0 42px; font-size: 14px; color: var(--text-muted); }
+.match-row.is-filled .match-row__picked { color: var(--primary); font-weight: 600; }
+.match-row__result { margin: 8px 0 0 42px; }
+.match-row__line { font-size: 15px; }
+.match-row__result .statement__tag { margin-top: 6px; }
+.match-row.status-right { border-color: var(--right-border); background: var(--right-bg); }
+.match-row.status-right .match-row__letter { background: var(--right); color: #fff; }
+.match-row.status-right .statement__tag { color: var(--right); background: color-mix(in srgb, var(--right) 14%, transparent); }
+.match-row.status-wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
+.match-row.status-wrong .match-row__letter { background: var(--wrong); color: #fff; }
+.match-row.status-wrong .statement__tag { color: var(--wrong); background: color-mix(in srgb, var(--wrong) 14%, transparent); }
+.matching__key { margin-top: 12px; font-size: 15px; }
+.review-item__body .matching { margin-top: 4px; }
+.review-item__body .matching__legend { background: var(--surface); }
+
 /* Итог по заданию */
 .feedback {
   margin-top: 20px;
@@ -661,6 +747,10 @@ kbd {
   .review-item__body { padding: 0 10px 12px; }
   .task-nav__item { min-width: 34px; height: 34px; }
   .kbd-hint { display: none; }
+  .match-row { padding: 12px; }
+  .match-row__choices, .match-row__picked, .match-row__result { margin-left: 0; }
+  .match-row__choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); gap: 6px; }
+  .match-choice { min-width: 0; }
   .brand__subtitle { display: none; }
 }
 

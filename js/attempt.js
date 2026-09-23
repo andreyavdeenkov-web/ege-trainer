@@ -15,6 +15,9 @@
  *               points, maxPoints, answeredAt }]   // в порядке выполнения
  * }
  *
+ * selected и correct — в формате js/scoring.js: номера суждений по возрастанию
+ * или, для matching, номера вариантов по порядку позиций А, Б, В…
+ *
  * Ответы засчитываются строго по порядку и не изменяются: answers[i]
  * всегда относится к заданию taskIds[i].
  */
@@ -85,6 +88,36 @@
     return attempt.answers[index] || null;
   }
 
+  /** Выбор суждений: номера без повторов по возрастанию. */
+  function cleanChoice(task, selected) {
+    var cleaned = Array.from(new Set(selected)).sort(function (a, b) { return a - b; });
+    if (cleaned.length === 0) throw new Error('Не выбрано ни одного суждения');
+    var max = task.statements.length;
+    cleaned.forEach(function (n) {
+      if (!Number.isInteger(n) || n < 1 || n > max) throw new Error('Некорректный номер суждения: ' + n);
+    });
+    if (scoring.getTaskType(task) === 'exclude-two' && cleaned.length !== scoring.EXCLUDE_COUNT) {
+      throw new Error('Нужно выбрать ровно ' + scoring.EXCLUDE_COUNT + ' позиции');
+    }
+    return cleaned;
+  }
+
+  /** Соответствие: номер варианта для каждой позиции по порядку (А, Б, В…). */
+  function cleanMatching(task, selected) {
+    if (!Array.isArray(selected) || selected.length !== task.items.length) {
+      throw new Error('Нужно выбрать вариант для каждой позиции');
+    }
+    var max = task.options.length;
+    selected.forEach(function (n, i) {
+      if (n == null) throw new Error('Не выбран вариант для позиции ' + scoring.letter(i + 1));
+      if (!Number.isInteger(n) || n < 1 || n > max) throw new Error('Некорректный номер варианта: ' + n);
+    });
+    if (task.oneToOne && new Set(selected).size !== selected.length) {
+      throw new Error('Каждый вариант можно использовать только один раз');
+    }
+    return selected.slice();
+  }
+
   /**
    * Засчитывает ответ на текущее задание и возвращает запись ответа.
    * Повторный ответ на то же задание невозможен.
@@ -99,21 +132,18 @@
         ? 'Ответ на задание ' + task.id + ' уже засчитан'
         : 'Сейчас нельзя отвечать на задание ' + task.id);
     }
-    var cleaned = Array.from(new Set(selected)).sort(function (a, b) { return a - b; });
-    if (cleaned.length === 0) throw new Error('Не выбрано ни одного суждения');
-    var max = task.statements.length;
-    cleaned.forEach(function (n) {
-      if (!Number.isInteger(n) || n < 1 || n > max) throw new Error('Некорректный номер суждения: ' + n);
-    });
+    var cleaned = scoring.getTaskType(task) === 'matching'
+      ? cleanMatching(task, selected)
+      : cleanChoice(task, selected);
 
-    var correct = scoring.getCorrectNumbers(task);
+    var correct = scoring.getCorrect(task);
     var answer = {
       taskId: task.id,
       taskVersion: task.version || 1,
       position: index + 1,
       selected: cleaned,
       correct: correct,
-      points: scoring.scoreAnswer(cleaned, correct),
+      points: scoring.scoreTask(task, cleaned, correct),
       maxPoints: scoring.MAX_SCORE,
       answeredAt: nowIso(now)
     };
