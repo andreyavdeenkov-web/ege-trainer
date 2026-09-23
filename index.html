@@ -35,8 +35,13 @@
 
       <form class="panel" id="start-form">
         <fieldset class="field">
+          <legend class="field__label">Раздел</legend>
+          <div class="topic-grid" id="section-options"></div>
+        </fieldset>
+
+        <fieldset class="field" id="topic-field" hidden>
           <legend class="field__label">Тема</legend>
-          <div class="topic-grid" id="topic-options"></div>
+          <div class="topic-grid topic-grid--compact" id="topic-options"></div>
         </fieldset>
 
         <fieldset class="field">
@@ -76,6 +81,9 @@
         <div class="progress__track" role="progressbar" aria-label="Прогресс" aria-valuemin="0" id="progress-bar">
           <div class="progress__fill" id="progress-fill"></div>
         </div>
+        <nav class="task-nav" aria-label="Задания тренировки">
+          <ol class="task-nav__list" id="task-nav"></ol>
+        </nav>
       </div>
 
       <article class="panel task" id="task-card">
@@ -98,10 +106,13 @@
         </div>
 
         <div class="task__actions">
+          <button type="button" class="btn btn--ghost btn--lg" id="prev-btn" hidden>← Назад</button>
+          <span class="task__actions-spacer"></span>
+          <button type="button" class="btn btn--ghost btn--lg" id="current-btn" hidden>К текущему заданию</button>
           <button type="button" class="btn btn--primary btn--lg" id="submit-btn" disabled>Ответить</button>
           <button type="button" class="btn btn--primary btn--lg" id="next-btn" hidden>Следующее задание</button>
         </div>
-        <p class="kbd-hint" aria-hidden="true">Клавиши <kbd>1</kbd>–<kbd>9</kbd> отмечают суждения, <kbd>Enter</kbd> — ответить / дальше</p>
+        <p class="kbd-hint" aria-hidden="true">Клавиши <kbd>1</kbd>–<kbd>9</kbd> отмечают суждения, <kbd>Enter</kbd> — ответить / дальше, <kbd>←</kbd> <kbd>→</kbd> — к выполненным заданиям</p>
       </article>
     </section>
 
@@ -120,9 +131,22 @@
         </div>
       </div>
 
-      <div class="panel" id="mistakes-panel">
-        <h3 class="section-title" id="mistakes-title">Задания с ошибками</h3>
-        <ul class="mistakes" id="mistakes-list"></ul>
+      <div class="panel" id="review-panel">
+        <div class="review__head">
+          <h3 class="section-title" id="review-title">Разбор заданий</h3>
+          <button type="button" class="btn btn--ghost btn--sm" id="expand-all-btn">Развернуть все</button>
+        </div>
+        <div class="segmented review__filter" id="review-filter" role="radiogroup" aria-label="Какие задания показать">
+          <label class="segmented__item">
+            <input type="radio" name="review-filter" value="all">
+            <span id="filter-all-label">Все задания</span>
+          </label>
+          <label class="segmented__item">
+            <input type="radio" name="review-filter" value="mistakes">
+            <span id="filter-mistakes-label">Только с ошибками</span>
+          </label>
+        </div>
+        <ul class="review-list" id="review-list"></ul>
       </div>
     </section>
 
@@ -136,15 +160,19 @@
   <!-- Ядро: реестр тем и логика оценивания -->
   <script src="js/registry.js"></script>
   <script src="js/scoring.js"></script>
+  <script src="js/attempt.js"></script>
 
-  <!-- Банк заданий: по одному файлу на тему (см. README) -->
-  <script src="data/tasks/society.js"></script>
-  <script src="data/tasks/economy.js"></script>
-  <script src="data/tasks/social.js"></script>
-  <script src="data/tasks/politics.js"></script>
-  <script src="data/tasks/law.js"></script>
+  <!-- Банк заданий: папка раздела, по файлу на тему (см. README) -->
+  <script src="data/tasks/society/general.js"></script>
+  <script src="data/tasks/economy/general.js"></script>
+  <script src="data/tasks/social/stratification.js"></script>
+  <script src="data/tasks/social/mobility.js"></script>
+  <script src="data/tasks/social/family.js"></script>
+  <script src="data/tasks/politics/general.js"></script>
+  <script src="data/tasks/law/general.js"></script>
 
   <!-- Интерфейс -->
+  <script src="js/task-view.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-/* Тема «Человек и общество» */
-EGE.addTasks('society', [
+/* Раздел «Человек и общество», тема «Общие вопросы» */
+EGE.addTasks('OBS-GEN', [
   {
-    id: 'society-001',
+    id: 'OBS-GEN-001',
     question: 'Выберите верные суждения об обществе и его сферах.',
     statements: [
       {
@@ -32,7 +32,7 @@ EGE.addTasks('society', [
     ]
   },
   {
-    id: 'society-002',
+    id: 'OBS-GEN-002',
     question: 'Выберите верные суждения о деятельности человека.',
     statements: [
       {
@@ -63,7 +63,7 @@ EGE.addTasks('society', [
     ]
   },
   {
-    id: 'society-003',
+    id: 'OBS-GEN-003',
     question: 'Выберите верные суждения о познании и истине.',
     statements: [
       {

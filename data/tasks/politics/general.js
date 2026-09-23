@@ -1,7 +1,7 @@
-/* Тема «Политика» */
-EGE.addTasks('politics', [
+/* Раздел «Политика», тема «Общие вопросы» */
+EGE.addTasks('POL-GEN', [
   {
-    id: 'politics-001',
+    id: 'POL-GEN-001',
     question: 'Выберите верные суждения о политической власти.',
     statements: [
       {
@@ -32,7 +32,7 @@ EGE.addTasks('politics', [
     ]
   },
   {
-    id: 'politics-002',
+    id: 'POL-GEN-002',
     question: 'Выберите верные суждения об избирательных системах.',
     statements: [
       {
@@ -63,7 +63,7 @@ EGE.addTasks('politics', [
     ]
   },
   {
-    id: 'politics-003',
+    id: 'POL-GEN-003',
     question: 'Выберите верные суждения о политических партиях.',
     statements: [
       {
