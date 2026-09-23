@@ -55,17 +55,41 @@ test('multiple через scoreTask оценивается как раньше',
   }
 });
 
-test('exclude-two: 2 балла — обе позиции верны', () => {
-  assert.equal(scoring.scoreTask(exclude, [2, 5]), 2);
-  assert.equal(scoring.scoreTask(exclude, [5, 2]), 2);
+test('exclude-two: максимум — 1 балл, у остальных типов — 2', () => {
+  assert.equal(scoring.getMaxPoints(exclude), 1);
+  assert.equal(scoring.getMaxPoints(multiple), 2);
+  assert.equal(scoring.getMaxPoints(matching), 2);
 });
 
-test('exclude-two: одна неверная цифра — одна ошибка, 1 балл', () => {
-  assert.equal(scoring.countTaskMistakes(exclude, [2, 4]), 1);
-  assert.equal(scoring.scoreTask(exclude, [2, 4]), 1);
-  assert.equal(scoring.scoreTask(exclude, [1, 5]), 1);
-  // Недостающая цифра — тоже одна ошибка.
-  assert.equal(scoring.scoreTask(exclude, [2]), 1);
+test('exclude-two: «2, 5» — 1 из 1', () => {
+  assert.equal(scoring.scoreTask(exclude, [2, 5]), 1);
+  assert.equal(scoring.scoreTask(exclude, [5, 2]), 1);
+});
+
+test('exclude-two: только «2» — 0 из 1', () => {
+  assert.equal(scoring.scoreTask(exclude, [2]), 0);
+});
+
+test('exclude-two: «2, 3» — 0 из 1', () => {
+  assert.equal(scoring.scoreTask(exclude, [2, 3]), 0);
+});
+
+test('exclude-two: «2, 5» и лишняя позиция — 0 из 1', () => {
+  assert.equal(scoring.scoreTask(exclude, [2, 5, 6]), 0);
+  assert.equal(scoring.scoreTask(exclude, [1, 2, 5]), 0);
+});
+
+test('exclude-two: обе позиции неверны — 0 из 1', () => {
+  assert.equal(scoring.scoreTask(exclude, [1, 3]), 0);
+  assert.equal(scoring.scoreTask(exclude, [4, 6]), 0);
+});
+
+test('уровень результата для оформления считается от максимума задания', () => {
+  assert.equal(scoring.pointsLevel(1, 1), 'full');
+  assert.equal(scoring.pointsLevel(0, 1), 'none');
+  assert.equal(scoring.pointsLevel(2, 2), 'full');
+  assert.equal(scoring.pointsLevel(1, 2), 'partial');
+  assert.equal(scoring.pointsLevel(0, 2), 'none');
 });
 
 test('exclude-two: обе цифры неверны — 0 баллов', () => {
@@ -120,7 +144,7 @@ test('попытка: exclude-two записывается как обычный
   const answer = A.recordAnswer(a, exclude, [5, 2], new Date('2026-09-23T10:01:00Z'));
   assert.deepEqual(answer, {
     taskId: 'OBS-ACT-001', taskVersion: 1, position: 1,
-    selected: [2, 5], correct: [2, 5], points: 2, maxPoints: 2,
+    selected: [2, 5], correct: [2, 5], points: 1, maxPoints: 1,
     answeredAt: '2026-09-23T10:01:00.000Z'
   });
 });
@@ -130,7 +154,10 @@ test('попытка: exclude-two требует ровно две позици�
   assert.throws(() => A.recordAnswer(a, exclude, [2]), /ровно 2/);
   assert.throws(() => A.recordAnswer(a, exclude, [1, 2, 5]), /ровно 2/);
   assert.equal(a.answers.length, 0);
-  assert.equal(A.recordAnswer(a, exclude, [2, 4]).points, 1);
+  const answer = A.recordAnswer(a, exclude, [2, 3]);
+  assert.equal(answer.points, 0);
+  assert.equal(answer.maxPoints, 1);
+  assert.deepEqual(A.mistakeIndexes(a), [0]);
 });
 
 test('попытка: matching записывает номера по позициям без сортировки', () => {
@@ -162,9 +189,14 @@ test('попытка: matching без oneToOne допускает повторы
 test('попытка из заданий разных типов: сумма и максимум баллов', () => {
   const a = attemptWith(multiple, exclude, matching);
   A.recordAnswer(a, multiple, [2, 3]);
+  const byId = (id) => [multiple, exclude, matching].find((t) => t.id === id);
+  assert.equal(A.maxScore(a, byId), 5);
+  assert.throws(() => A.maxScore(a), /максимум баллов/);
   A.recordAnswer(a, exclude, [2, 4]);
+  assert.equal(A.answeredMaxScore(a), 3);
   A.recordAnswer(a, matching, [2, 4, 1, 3, 5]);
-  assert.equal(A.totalScore(a), 5);
-  assert.equal(A.maxScore(a), 6);
+  assert.equal(A.totalScore(a), 4);
+  assert.equal(A.maxScore(a), 5);
+  assert.equal(A.answeredMaxScore(a), 5);
   assert.deepEqual(A.mistakeIndexes(a), [1]);
 });

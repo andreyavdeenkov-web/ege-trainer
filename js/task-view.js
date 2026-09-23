@@ -23,15 +23,24 @@
     skip: 'Относится к ряду'
   };
 
+  // multiple с choiceOf: 'items' — выбираются термины или другие элементы, а не суждения.
+  var ITEM_STATUS_LABELS = {
+    hit: 'Подходит — вы выбрали',
+    missed: 'Подходит — вы пропустили',
+    wrong: 'Не подходит — выбрано лишнее',
+    skip: 'Не подходит'
+  };
+
   function statusLabels(task) {
-    return scoring.getTaskType(task) === 'exclude-two' ? EXCLUDE_STATUS_LABELS : STATUS_LABELS;
+    if (scoring.getTaskType(task) === 'exclude-two') return EXCLUDE_STATUS_LABELS;
+    return task.choiceOf === 'items' ? ITEM_STATUS_LABELS : STATUS_LABELS;
   }
 
-  var POINTS_CAPTIONS = [
-    'Две ошибки и больше',
-    'Одна ошибка',
-    'Ответ полностью верный'
-  ];
+  // Подписи к баллам по индексу-баллу; у заданий на 1 балл ошибка сразу даёт 0.
+  var POINTS_CAPTIONS = {
+    2: ['Две ошибки и больше', 'Одна ошибка', 'Ответ полностью верный'],
+    1: ['Ответ неверный', 'Ответ полностью верный']
+  };
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -249,9 +258,11 @@
   /** Заполняет блок «баллы + правильный ответ + ответ ученика». */
   function renderFeedback(parts, answer, task) {
     parts.points.textContent = '';
-    parts.points.className = 'points points--' + answer.points;
-    parts.points.appendChild(el('span', 'points__value', answer.points + ' ' + scoring.pluralPoints(answer.points)));
-    parts.points.appendChild(el('span', 'points__caption', POINTS_CAPTIONS[answer.points]));
+    parts.points.className = 'points points--' + scoring.pointsLevel(answer.points, answer.maxPoints);
+    parts.points.appendChild(el('span', 'points__value',
+      answer.points + ' из ' + answer.maxPoints + ' ' + scoring.pluralPoints(answer.maxPoints)));
+    var captions = POINTS_CAPTIONS[answer.maxPoints] || POINTS_CAPTIONS[2];
+    parts.points.appendChild(el('span', 'points__caption', captions[answer.points]));
     parts.correct.textContent = task ? scoring.formatTaskAnswer(task, answer.correct) : scoring.formatAnswer(answer.correct);
     parts.user.textContent = task ? scoring.formatTaskAnswer(task, answer.selected) : scoring.formatAnswer(answer.selected);
   }

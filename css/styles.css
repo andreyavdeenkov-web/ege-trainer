@@ -351,9 +351,9 @@ button, input { font: inherit; color: inherit; }
   cursor: pointer;
   transition: background-color .15s, border-color .15s, box-shadow .15s;
 }
-.task-nav__item.is-done.points--2 { color: var(--right); background: var(--right-bg); border-color: var(--right-border); }
-.task-nav__item.is-done.points--1 { color: var(--warn); background: var(--warn-bg); border-color: var(--warn-border); }
-.task-nav__item.is-done.points--0 { color: var(--wrong); background: var(--wrong-bg); border-color: var(--wrong-border); }
+.task-nav__item.is-done.points--full { color: var(--right); background: var(--right-bg); border-color: var(--right-border); }
+.task-nav__item.is-done.points--partial { color: var(--warn); background: var(--warn-bg); border-color: var(--warn-border); }
+.task-nav__item.is-done.points--none { color: var(--wrong); background: var(--wrong-bg); border-color: var(--wrong-border); }
 .task-nav__item.is-current { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
 .task-nav__item.is-locked { border-style: dashed; background: transparent; opacity: .6; cursor: not-allowed; }
 .task-nav__item.is-viewed { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
@@ -611,9 +611,9 @@ button, input { font: inherit; color: inherit; }
 .points { display: flex; flex-direction: column; }
 .points__value { font-size: 26px; font-weight: 800; line-height: 1.1; }
 .points__caption { font-size: 14px; color: var(--text-muted); }
-.points--2 .points__value, .mistake__points.points--2 { color: var(--right); }
-.points--1 .points__value, .mistake__points.points--1 { color: var(--warn); }
-.points--0 .points__value, .mistake__points.points--0 { color: var(--wrong); }
+.points--full .points__value, .mistake__points.points--full { color: var(--right); }
+.points--partial .points__value, .mistake__points.points--partial { color: var(--warn); }
+.points--none .points__value, .mistake__points.points--none { color: var(--wrong); }
 
 .task__actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
 .task__actions-spacer { flex: 1 1 auto; }

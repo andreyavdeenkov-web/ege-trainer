@@ -7,6 +7,7 @@
  *   'multiple'    — выбрать все верные суждения (по умолчанию, если type не указан);
  *   'exclude-two' — выбрать ровно две позиции, «выпадающие» из ряда
  *                   (correct: true у суждения означает «выпадает»);
+ *                   максимум — 1 балл, только за полностью верный ответ;
  *   'matching'    — соответствие: для каждой позиции А, Б, В… (task.items)
  *                   выбрать номер из второго столбца (task.options).
  * Ответ на задания с выбором — отсортированный список номеров [1, 3, 5];
@@ -66,9 +67,8 @@
 
   /**
    * exclude-two: ошибка — каждая выбранная позиция не из ключа
-   * (или недостающая до двух). Выбрано «2, 4» при ключе «2, 5» — одна ошибка:
-   * одна цифра указана неверно. Симметрическая разность здесь дала бы 2,
-   * и за одну неверную цифру ученик терял бы оба балла.
+   * (или недостающая до двух). Для балла это число важно только как «ноль или нет»:
+   * задание оценивается в 1 балл и засчитывается лишь при полностью верном ответе.
    */
   function countExcludeMistakes(selected, correct) {
     var sel = new Set(selected);
@@ -96,9 +96,29 @@
     return countMistakes(selected, key);
   }
 
-  /** Балл за задание любого типа: 0 ошибок — 2, 1 ошибка — 1, 2 и более — 0. */
+  /** Максимальный балл за задание: exclude-two — 1, остальные типы — 2. */
+  function getMaxPoints(task) {
+    return getTaskType(task) === 'exclude-two' ? 1 : MAX_SCORE;
+  }
+
+  /**
+   * Балл за задание любого типа.
+   * multiple и matching: 0 ошибок — 2, 1 ошибка — 1, 2 и более — 0.
+   * exclude-two: 1 балл только за полностью верный ответ, иначе 0.
+   */
   function scoreTask(task, selected, correct) {
-    return Math.max(0, MAX_SCORE - countTaskMistakes(task, selected, correct));
+    var mistakes = countTaskMistakes(task, selected, correct);
+    if (getTaskType(task) === 'exclude-two') return mistakes === 0 ? 1 : 0;
+    return Math.max(0, MAX_SCORE - mistakes);
+  }
+
+  /**
+   * Уровень результата для оформления: 'full' — максимальный балл,
+   * 'partial' — часть баллов, 'none' — 0.
+   */
+  function pointsLevel(points, maxPoints) {
+    if (points >= maxPoints) return 'full';
+    return points > 0 ? 'partial' : 'none';
   }
 
   /** «А — 1, Б — 2» для matching; для заданий с выбором — как formatAnswer. */
@@ -149,7 +169,9 @@
     countExcludeMistakes: countExcludeMistakes,
     countMatchingMistakes: countMatchingMistakes,
     countTaskMistakes: countTaskMistakes,
+    getMaxPoints: getMaxPoints,
     scoreTask: scoreTask,
+    pointsLevel: pointsLevel,
     formatTaskAnswer: formatTaskAnswer
   };
 
