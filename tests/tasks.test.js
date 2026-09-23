@@ -107,7 +107,9 @@ test('банк заданий корректен', () => {
       const w = `${where}, суждение ${i + 1}`;
       assert.equal(typeof s.correct, 'boolean', `${w}: поле correct должно быть true/false`);
       assert.ok(typeof s.text === 'string' && s.text.trim(), `${w}: пустой текст`);
-      assert.ok(typeof s.explanation === 'string' && s.explanation.trim(), `${w}: нет объяснения`);
+      if (s.explanation !== undefined) {
+        assert.ok(typeof s.explanation === 'string' && s.explanation.trim(), `${w}: пустое объяснение`);
+      }
     });
 
     const correct = EGE.scoring.getCorrectNumbers(task);
@@ -153,4 +155,24 @@ test('повторяющийся id, неверный формат id и неи�
   assert.throws(() => EGE.addTasks('ECO-GEN', [sample]), /Повторяющийся id/);
   assert.throws(() => EGE.addTasks('ECO-GEN', [{ id: 'economy-004' }]), /Некорректный id/);
   assert.throws(() => EGE.addTasks('HIS-GEN', [{ id: 'HIS-GEN-001' }]), /Неизвестная тема/);
+});
+
+test('ключи проверенных заданий темы «Социальная стратификация»', () => {
+  const EGE = loadBank();
+  // Ключи утверждены преподавателем — менять только по его решению.
+  const keys = {
+    'SOC-STR-001': [1, 3, 5],
+    'SOC-STR-002': [2, 4, 5],
+    'SOC-STR-003': [1, 3, 5],
+    'SOC-STR-004': [2, 4, 5],
+    'SOC-STR-005': [1, 3, 5],
+    'SOC-STR-006': [1, 4, 5]
+  };
+  const topicTasks = EGE.getTasksByTopic('SOC-STR');
+  assert.deepEqual([...topicTasks.map((t) => t.id)], Object.keys(keys), 'в теме только проверенные задания');
+  for (const [id, key] of Object.entries(keys)) {
+    const task = EGE.getTask(id);
+    assert.equal(task.statements.length, 5, `${id}: должно быть 5 суждений`);
+    assert.deepEqual([...EGE.scoring.getCorrectNumbers(task)], key, `${id}: ключ не совпадает`);
+  }
 });

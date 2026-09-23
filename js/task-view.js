@@ -81,7 +81,10 @@
 
         var details = el('div', 'statement__details');
         details.appendChild(el('span', 'statement__tag', STATUS_LABELS[status]));
-        details.appendChild(el('p', 'statement__explanation', statement.explanation));
+        // Объяснение необязательно: если его нет, показывается только статус суждения.
+        if (statement.explanation) {
+          details.appendChild(el('p', 'statement__explanation', statement.explanation));
+        }
         li.appendChild(details);
       } else {
         btn.setAttribute('role', 'checkbox');

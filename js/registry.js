@@ -109,8 +109,9 @@
 
   /**
    * Регистрирует задания темы.
-   * Каждое задание: { id, question, statements: [{ text, correct, explanation }] },
-   * необязательные поля: version (номер редакции, по умолчанию 1)
+   * Каждое задание: { id, question, statements: [{ text, correct, explanation? }] },
+   * explanation у суждения необязательно;
+   * необязательные поля задания: version (номер редакции, по умолчанию 1)
    * и retired (true — задание больше не выдаётся, но его ID занят навсегда).
    */
   EGE.addTasks = function (topicId, tasks) {
