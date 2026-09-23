@@ -260,7 +260,7 @@
     parts.points.textContent = '';
     parts.points.className = 'points points--' + scoring.pointsLevel(answer.points, answer.maxPoints);
     parts.points.appendChild(el('span', 'points__value',
-      answer.points + ' из ' + answer.maxPoints + ' ' + scoring.pluralPoints(answer.maxPoints)));
+      scoring.formatPointsOutOf(answer.points, answer.maxPoints)));
     var captions = POINTS_CAPTIONS[answer.maxPoints] || POINTS_CAPTIONS[2];
     parts.points.appendChild(el('span', 'points__caption', captions[answer.points]));
     parts.correct.textContent = task ? scoring.formatTaskAnswer(task, answer.correct) : scoring.formatAnswer(answer.correct);

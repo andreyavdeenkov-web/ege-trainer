@@ -352,7 +352,7 @@
 
       if (answer) {
         btn.classList.add('is-done', 'points--' + scoring.pointsLevel(answer.points, answer.maxPoints));
-        label += 'выполнено, ' + answer.points + ' из ' + answer.maxPoints + ' ' + scoring.pluralPoints(answer.maxPoints);
+        label += 'выполнено, ' + scoring.formatPointsOutOf(answer.points, answer.maxPoints);
       } else if (i === current) {
         btn.classList.add('is-current');
         label += 'текущее';
@@ -556,7 +556,7 @@
     ui.resultPercent.textContent = pct + '%';
     ui.resultRing.style.setProperty('--pct', String(pct));
     ui.resultRing.className = 'result__ring ' + (pct >= 80 ? 'is-high' : pct >= 50 ? 'is-mid' : 'is-low');
-    ui.resultScore.textContent = score + ' из ' + max + ' ' + scoring.pluralPoints(max);
+    ui.resultScore.textContent = scoring.formatPointsOutOf(score, max);
     ui.resultMessage.textContent = resultMessage(pct);
 
     var mistakes = A.mistakeIndexes(attempt).length;
@@ -599,7 +599,7 @@
       head.appendChild(el('span', 'mistake__num', 'Задание ' + (i + 1)));
       head.appendChild(view.topicChip(task, true));
       head.appendChild(el('span', 'mistake__points points--' + scoring.pointsLevel(answer.points, answer.maxPoints),
-        answer.points + ' из ' + answer.maxPoints + ' ' + scoring.pluralPoints(answer.maxPoints)));
+        scoring.formatPointsOutOf(answer.points, answer.maxPoints)));
       summary.appendChild(head);
       summary.appendChild(el('p', 'mistake__question', task.question));
 

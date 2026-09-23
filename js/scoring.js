@@ -153,6 +153,19 @@
     return 'баллов';
   }
 
+  /**
+   * Форма после «из N» (родительный падеж, согласуется с N):
+   * «из 1 балла», «из 21 балла», «из 2 баллов», «из 11 баллов», «из 32 баллов».
+   */
+  function pluralPointsOf(n) {
+    return n % 10 === 1 && n % 100 !== 11 ? 'балла' : 'баллов';
+  }
+
+  /** «11 из 31 балла», «19 из 32 баллов». */
+  function formatPointsOutOf(points, max) {
+    return points + ' из ' + max + ' ' + pluralPointsOf(max);
+  }
+
   var scoring = {
     MAX_SCORE: MAX_SCORE,
     getCorrectNumbers: getCorrectNumbers,
@@ -161,6 +174,8 @@
     formatAnswer: formatAnswer,
     percent: percent,
     pluralPoints: pluralPoints,
+    pluralPointsOf: pluralPointsOf,
+    formatPointsOutOf: formatPointsOutOf,
     TYPES: TYPES,
     EXCLUDE_COUNT: EXCLUDE_COUNT,
     getTaskType: getTaskType,
