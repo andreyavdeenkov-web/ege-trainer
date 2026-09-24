@@ -97,7 +97,7 @@ test('источник регистрируется и строит индекс
   const OLY = setup();
   OLY.addSource(source());
   assert.deepEqual(OLY.getAppearances('TST-SOC-MOB-001'), [
-    { sourceId: 'TST-2026-27-DEMO-9-1', number: 2, kind: 'demo', year: '2026/27', classes: [9], round: 1 }
+    { sourceId: 'TST-2026-27-DEMO-9-1', number: 2, kind: 'demo', year: '2026/27', classes: [9], stage: null, round: 1 }
   ]);
   assert.deepEqual(OLY.getAppearances('TST-SOC-STR-001'), []);
   assert.deepEqual(OLY.getSourceTaskIds('TST-2026-27-DEMO-9-1'), ['TST-PHI-HIS-001', 'TST-SOC-MOB-001']);
@@ -116,7 +116,7 @@ test('одно задание в двух источниках для разны
   }));
   assert.equal(OLY.tasks.filter((t) => t.id === 'TST-SOC-MOB-001').length, 1);
   assert.deepEqual(OLY.getTaskFacets('TST-SOC-MOB-001'), {
-    classes: [9, 10, 11], rounds: [1, 2], years: ['2025/26', '2026/27']
+    classes: [9, 10, 11], stages: [], rounds: [1, 2], years: ['2025/26', '2026/27']
   });
 });
 
@@ -153,7 +153,7 @@ test('авторский сборник: год, классы и тур необ
     items: [{ number: 1, taskId: 'TST-SOC-STR-001' }]
   });
   assert.deepEqual(OLY.getAppearances('TST-SOC-STR-001'), [
-    { sourceId: 'TST-AUTHOR-1', number: 1, kind: 'author-set', year: null, classes: [], round: null }
+    { sourceId: 'TST-AUTHOR-1', number: 1, kind: 'author-set', year: null, classes: [], stage: null, round: null }
   ]);
 });
 
@@ -219,4 +219,71 @@ test('пробные туры: только playable-источники, фил�
   assert.deepEqual(found({ class: 9, round: 1 }), ['TST-2026-27-DEMO-9-1']);
   assert.deepEqual(found({ class: 10 }), []);
   assert.deepEqual(found({ round: 2 }), []);
+});
+
+/* ---------- Этапы олимпиады ---------- */
+
+function setupStaged() {
+  const OLY = loadCore();
+  OLY.defineSubject({ id: 'social', title: 'Обществознание', disciplines: [
+    { id: 'SOC', title: 'Социология', topics: [{ id: 'SOC-MOB', title: 'Социальная мобильность' }] }
+  ] });
+  OLY.defineOlympiad({ id: 'STG', title: 'Олимпиада с этапами', subjects: ['social'],
+    classes: [9, 10, 11], rounds: [1, 2], stages: ['qualifying', 'final'] });
+  OLY.addTasks(['001', '002'].map((n) => taskWith({ id: 'STG-SOC-MOB-' + n, olympiad: 'STG' })));
+  return OLY;
+}
+
+function stagedSource(overrides) {
+  return source(Object.assign({
+    id: 'STG-2026-27-DEMO-9-1', olympiad: 'STG', stage: 'qualifying',
+    items: [{ number: 1, taskId: 'STG-SOC-MOB-001' }]
+  }, overrides));
+}
+
+test('этапы: список этапов олимпиады проверяется', () => {
+  const OLY = loadCore();
+  defineCatalog(OLY);
+  assert.throws(() => OLY.defineOlympiad({ id: 'AB', title: 'x', subjects: ['social'], classes: [9], rounds: [1], stages: [] }),
+    /stages должно быть непустым списком/);
+  assert.throws(() => OLY.defineOlympiad({ id: 'AB', title: 'x', subjects: ['social'], classes: [9], rounds: [1], stages: ['Отбор'] }),
+    /stages должно быть непустым списком/);
+  assert.throws(() => OLY.defineOlympiad({ id: 'AB', title: 'x', subjects: ['social'], classes: [9], rounds: [1], stages: ['final', 'final'] }),
+    /этапы повторяются/);
+});
+
+test('этапы: stage источника проверяется по олимпиаде', () => {
+  const OLY = setupStaged();
+  assert.throws(() => OLY.addSource(stagedSource({ stage: 'semifinal' })), /этап semifinal не предусмотрен/);
+  assert.throws(() => OLY.addSource(stagedSource({ stage: undefined })), /этап undefined не предусмотрен/);
+  // У олимпиады без этапов stage не указывается.
+  const plain = setup();
+  assert.throws(() => plain.addSource(source({ stage: 'qualifying' })), /у олимпиады нет этапов/);
+  // Авторскому сборнику этап не обязателен.
+  OLY.addSource({ id: 'STG-AUTHOR-1', olympiad: 'STG', subject: 'social', kind: 'author-set',
+    title: 'Сборник', answersBasis: 'author', items: [{ number: 1, taskId: 'STG-SOC-MOB-002' }] });
+});
+
+test('этапы: stage в индексе появлений и в фасетах', () => {
+  const OLY = setupStaged();
+  OLY.addSource(stagedSource());
+  assert.equal(OLY.getAppearances('STG-SOC-MOB-001')[0].stage, 'qualifying');
+  assert.deepEqual(OLY.getTaskFacets('STG-SOC-MOB-001').stages, ['qualifying']);
+  assert.equal(OLY.getTask('STG-SOC-MOB-001').stage, undefined);
+});
+
+test('этапы: фильтр по этапу проверяется по одному появлению вместе с классом и туром', () => {
+  const OLY = setupStaged();
+  OLY.addSource(stagedSource());                                            // отбор, 9 класс, I тур
+  OLY.addSource(stagedSource({ id: 'STG-2026-27-DEMO-9-FINAL', stage: 'final', round: 2, title: 'Финал',
+    items: [{ number: 1, taskId: 'STG-SOC-MOB-002' }] }));                 // финал, 9 класс, II тур
+  const q = (f) => ids(OLY.query({ olympiad: 'STG', subject: 'social', ...f }));
+  assert.deepEqual(q({ stage: 'qualifying' }), ['STG-SOC-MOB-001']);
+  assert.deepEqual(q({ stage: 'final' }), ['STG-SOC-MOB-002']);
+  assert.deepEqual(q({ class: 9, stage: 'qualifying', round: 1 }), ['STG-SOC-MOB-001']);
+  assert.deepEqual(q({ class: 9, stage: 'final', round: 1 }), []);
+  assert.deepEqual(q({ stage: 'all' }), ['STG-SOC-MOB-001', 'STG-SOC-MOB-002']);
+  const playable = (f) => OLY.getPlayableSources({ olympiad: 'STG', ...f }).map((s) => s.id);
+  assert.deepEqual(playable({ stage: 'qualifying' }), ['STG-2026-27-DEMO-9-1']);
+  assert.deepEqual(playable({ stage: 'final', round: 2 }), ['STG-2026-27-DEMO-9-FINAL']);
 });

@@ -4,9 +4,9 @@
  * Структура банка: олимпиада → предмет → дисциплина → тема → задания.
  * Задание описывает только содержание и тематическую принадлежность:
  * класс, тур и год в нём не хранятся. Где задание встречалось (демоверсия,
- * вариант прошлых лет, авторский сборник — номер, класс, тур, год), описывает
+ * вариант прошлых лет, авторский сборник — номер, класс, этап, тур, год), описывает
  * источник (OLY.addSource). Из источников реестр строит производный индекс
- * появлений, по которому работают фильтры класса, тура и года.
+ * появлений, по которому работают фильтры класса, этапа, тура и года.
  *
  * Порядок подключения данных: предметы (defineSubject) → олимпиады
  * (defineOlympiad) → задания (addTasks) → источники (addSource).
@@ -30,6 +30,8 @@
   /** id источника начинается с кода олимпиады: HP-2026-27-DEMO-9-1. */
   OLY.SOURCE_ID_PATTERN = /^[A-Z]{2,4}(-[A-Z0-9]+)+$/;
   OLY.YEAR_PATTERN = /^\d{4}\/\d{2}$/;
+  /** Код этапа олимпиады: qualifying, final. */
+  OLY.STAGE_ID_PATTERN = /^[a-z][a-z-]*$/;
 
   /** Виды источников: демоверсия, вариант прошлых лет, авторский сборник. */
   OLY.SOURCE_KINDS = ['demo', 'past', 'author-set'];
@@ -122,7 +124,10 @@
   /* ---------- Олимпиады ---------- */
 
   /**
-   * { id: 'HP', title: 'Высшая проба', subjects: ['social'], classes: [9, 10, 11], rounds: [1, 2] }
+   * { id: 'HP', title: 'Высшая проба', subjects: ['social'], classes: [9, 10, 11], rounds: [1, 2],
+   *   stages: ['qualifying', 'final'] }
+   * stages — необязательный список кодов этапов (латиницей); если его нет, у источников
+   * олимпиады этап не указывается.
    */
   OLY.defineOlympiad = function (olympiad) {
     var errors = [];
@@ -142,6 +147,14 @@
         errors.push(key + ' должно быть непустым списком целых чисел');
       }
     });
+    if (olympiad.stages !== undefined) {
+      if (!Array.isArray(olympiad.stages) || olympiad.stages.length === 0 ||
+          !olympiad.stages.every(function (s) { return OLY.STAGE_ID_PATTERN.test(s); })) {
+        errors.push('stages должно быть непустым списком кодов этапов');
+      } else if (new Set(olympiad.stages).size !== olympiad.stages.length) {
+        errors.push('stages: этапы повторяются');
+      }
+    }
     if (errors.length) fail('Олимпиада ' + olympiad.id, errors);
     olympiadsById[olympiad.id] = olympiad;
     return olympiad;
@@ -243,6 +256,7 @@
    *   id: 'HP-2026-27-DEMO-9-1', olympiad: 'HP', subject: 'social',
    *   kind: 'demo' | 'past' | 'author-set',
    *   year: '2026/27', classes: [9], round: 1,   // обязательны для demo и past
+   *   stage: 'qualifying',                       // обязателен для demo и past, если у олимпиады есть этапы
    *   title, answersBasis: 'official' | 'author',
    *   playable: true,                            // можно пройти как пробный тур
    *   items: [{ number: 1, taskId: 'HP-…-001', scoring? }]
@@ -286,6 +300,10 @@
     if (source.round !== undefined || strict) {
       if (!olympiad || olympiad.rounds.indexOf(source.round) === -1) errors.push('тур ' + source.round + ' не предусмотрен олимпиадой');
     }
+    if (olympiad && (source.stage !== undefined || (strict && olympiad.stages))) {
+      if (!olympiad.stages) errors.push('у олимпиады нет этапов, stage не указывается');
+      else if (olympiad.stages.indexOf(source.stage) === -1) errors.push('этап ' + source.stage + ' не предусмотрен олимпиадой');
+    }
 
     if (!Array.isArray(source.items) || source.items.length === 0) errors.push('нет позиций items');
     else {
@@ -322,6 +340,7 @@
         kind: source.kind,
         year: source.year === undefined ? null : source.year,
         classes: source.classes === undefined ? [] : source.classes.slice(),
+        stage: source.stage === undefined ? null : source.stage,
         round: source.round === undefined ? null : source.round
       });
     });
@@ -353,7 +372,7 @@
     return (appearancesByTask[taskId] || []).map(function (a) {
       return {
         sourceId: a.sourceId, number: a.number, kind: a.kind,
-        year: a.year, classes: a.classes.slice(), round: a.round
+        year: a.year, classes: a.classes.slice(), stage: a.stage, round: a.round
       };
     });
   };
@@ -364,18 +383,23 @@
     });
   }
 
-  /** Производные классы, туры и годы задания (по всем его источникам). */
+  /** Производные классы, этапы, туры и годы задания (по всем его источникам). */
   OLY.getTaskFacets = function (taskId) {
     var appearances = appearancesByTask[taskId] || [];
     var classes = [];
+    var stages = [];
     var rounds = [];
     var years = [];
     appearances.forEach(function (a) {
       classes = classes.concat(a.classes);
+      if (a.stage !== null) stages.push(a.stage);
       if (a.round !== null) rounds.push(a.round);
       if (a.year !== null) years.push(a.year);
     });
-    return { classes: uniqueSorted(classes), rounds: uniqueSorted(rounds), years: uniqueSorted(years) };
+    return {
+      classes: uniqueSorted(classes), stages: uniqueSorted(stages),
+      rounds: uniqueSorted(rounds), years: uniqueSorted(years)
+    };
   };
 
   /* ---------- Запросы ---------- */
@@ -384,10 +408,11 @@
     return value !== undefined && value !== null && value !== 'all';
   }
 
-  /** Есть ли у задания одно появление, подходящее сразу под класс, тур и год. */
+  /** Есть ли у задания одно появление, подходящее сразу под класс, этап, тур и год. */
   function matchesAppearance(taskId, filters) {
     return (appearancesByTask[taskId] || []).some(function (a) {
       if (isSet(filters.class) && a.classes.indexOf(filters.class) === -1) return false;
+      if (isSet(filters.stage) && a.stage !== filters.stage) return false;
       if (isSet(filters.round) && a.round !== filters.round) return false;
       if (isSet(filters.year) && a.year !== filters.year) return false;
       return true;
@@ -396,15 +421,15 @@
 
   /**
    * Активные задания по фильтрам (порядок регистрации):
-   * { olympiad, subject, discipline?, topic?, class?, round?, year?, type? }.
+   * { olympiad, subject, discipline?, topic?, class?, stage?, round?, year?, type? }.
    * Значение 'all', null или отсутствие поля — без фильтра.
-   * Класс, тур и год проверяются по одному появлению: «9 класс, II тур» —
+   * Класс, этап, тур и год проверяются по одному появлению: «9 класс, II тур» —
    * задание встречалось во II туре 9 класса, а не в разных источниках по отдельности.
-   * Задание без источников находится только без фильтров класса, тура и года.
+   * Задание без источников находится только без этих фильтров.
    */
   OLY.query = function (filters) {
     var f = filters || {};
-    var byAppearance = isSet(f.class) || isSet(f.round) || isSet(f.year);
+    var byAppearance = isSet(f.class) || isSet(f.stage) || isSet(f.round) || isSet(f.year);
     return OLY.tasks.filter(function (task) {
       if (!isActive(task)) return false;
       if (isSet(f.olympiad) && task.olympiad !== f.olympiad) return false;
@@ -439,7 +464,7 @@
 
   /**
    * Источники, которые можно пройти как пробный тур:
-   * { olympiad, subject?, class?, round? }.
+   * { olympiad, subject?, class?, stage?, round? }.
    */
   OLY.getPlayableSources = function (filters) {
     var f = filters || {};
@@ -448,6 +473,7 @@
       if (isSet(f.olympiad) && source.olympiad !== f.olympiad) return false;
       if (isSet(f.subject) && source.subject !== f.subject) return false;
       if (isSet(f.class) && (source.classes || []).indexOf(f.class) === -1) return false;
+      if (isSet(f.stage) && source.stage !== f.stage) return false;
       if (isSet(f.round) && source.round !== f.round) return false;
       return true;
     });
