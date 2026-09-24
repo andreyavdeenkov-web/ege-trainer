@@ -166,3 +166,101 @@ test('пилот проходится как пробный тур; без кр�
   });
   assert.equal(A.getResult(attempt, 'HP-PHI-RUS-001').points, null);
 });
+
+/* ---------- Авторские задания: Политология · Власть и легитимность ---------- */
+
+const POW_SOURCE = 'HP-AUTHOR-POL-POW';
+
+/** Утверждённые ключи (single-select — число, multiple-select — список). */
+const POW_KEYS = {
+  '003': 4, '004': [1, 3, 5], '005': 3, '006': 1, '007': [2, 4, 5], '008': 2,
+  '009': [1, 2, 4], '010': 3, '012': 3, '013': 1, '014': [2, 3, 5], '015': [1, 4, 5],
+  '016': 1, '017': 2, '018': 4, '020': 2, '021': [1, 3, 4], '022': [3, 4, 5],
+  '023': [1, 2, 5], '024': [2, 4]
+};
+const POW_IDS = Object.keys(POW_KEYS).map((n) => 'HP-POL-POW-' + n);
+
+test('власть и легитимность: 20 утверждённых заданий с ключами', () => {
+  const OLY = loadBank();
+  const found = OLY.query({ olympiad: 'HP', subject: 'social', discipline: 'POL', topic: 'POL-POW' });
+  assert.deepEqual(found.map((t) => t.id).sort(), [...POW_IDS].sort());
+  for (const [n, key] of Object.entries(POW_KEYS)) {
+    const task = OLY.getTask('HP-POL-POW-' + n);
+    assert.equal(task.type, Array.isArray(key) ? 'multiple-select' : 'single-select', task.id);
+    assert.deepEqual(OLY.types.get(task.type).getCorrect(task), key, task.id);
+    assert.equal(task.scoring, null, task.id);
+  }
+});
+
+test('власть и легитимность: позиции правильных ответов распределены без шаблона', () => {
+  const singles = Object.values(POW_KEYS).filter((k) => !Array.isArray(k));
+  const counts = [1, 2, 3, 4].map((pos) => singles.filter((k) => k === pos).length);
+  assert.ok(Math.max(...counts) - Math.min(...counts) <= 1, `single-select по позициям: ${counts}`);
+  const combos = Object.values(POW_KEYS).filter(Array.isArray).map((k) => k.join(','));
+  assert.equal(new Set(combos).size, combos.length, 'комбинации multiple-select повторяются');
+  assert.ok(!combos.includes('1,2,3') && !combos.includes('1,2'), 'шаблон «первые варианты подряд»');
+});
+
+test('власть и легитимность: номера вариантов в объяснениях соответствуют порядку вариантов', () => {
+  const OLY = loadBank();
+  const t22 = OLY.getTask('HP-POL-POW-022');
+  assert.match(t22.explanation, /в варианте 2\./);
+  assert.match(t22.options[1].text, /^Рутинизация/);
+  const t24 = OLY.getTask('HP-POL-POW-024');
+  assert.match(t24.explanation, /Вариант 1 приписывает Фуко/);
+  assert.match(t24.options[0].text, /^Фуко, в отличие от Льюкса/);
+  assert.match(t24.explanation, /Вариант 3 — упрощение/);
+  assert.match(t24.options[2].text, /^Различие сводится/);
+});
+
+test('власть и легитимность: в активном банке только single-select и multiple-select', () => {
+  const OLY = loadBank();
+  for (const task of OLY.query({ olympiad: 'HP', subject: 'social', topic: 'POL-POW' })) {
+    assert.ok(['single-select', 'multiple-select'].includes(task.type), task.id);
+    assert.ok(OLY.ui.views.has(task.type), task.id);
+  }
+  // Задания на соответствие — в резерве (docs/drafts), в банке их нет.
+  assert.equal(OLY.getTask('HP-POL-POW-011'), null);
+  assert.equal(OLY.getTask('HP-POL-POW-019'), null);
+});
+
+test('власть и легитимность: авторский источник, не официальный и не пробный тур', () => {
+  const OLY = loadBank();
+  const source = OLY.getSource(POW_SOURCE);
+  assert.equal(source.kind, 'author-set');
+  assert.equal(source.answersBasis, 'author');
+  assert.equal(source.playable, false);
+  for (const field of ['year', 'classes', 'stage', 'round']) assert.equal(source[field], undefined, field);
+  assert.deepEqual(OLY.getSourceTaskIds(POW_SOURCE).slice().sort(), [...POW_IDS].sort());
+  assert.deepEqual(source.items.map((i) => i.number), POW_IDS.map((_, i) => i + 1));
+  // В пробные туры и в выборку «9 класс, отбор, I тур» авторские задания не попадают.
+  assert.deepEqual(OLY.getPlayableSources({ olympiad: 'HP' }).map((s) => s.id), [PILOT_SOURCE]);
+  assert.equal(OLY.query({ olympiad: 'HP', subject: 'social', class: 9, stage: 'qualifying', round: 1 }).length, 5);
+});
+
+test('власть и легитимность: строка источника для ученика — «авторские задания», без номера', () => {
+  const OLY = loadBank();
+  const [appearance] = OLY.getAppearances('HP-POL-POW-024');
+  assert.equal(OLY.ui.format.sourceLine(appearance), 'Авторские задания в формате «Высшей пробы»');
+  assert.deepEqual(OLY.getTaskFacets('HP-POL-POW-024'),
+    { classes: [], stages: [], rounds: [], years: [], sourceKinds: ['author-set'] });
+});
+
+test('политология: фильтры «Источник» и «Тип задания» появляются, когда в данных больше одного значения', () => {
+  const OLY = loadBank();
+  const F = OLY.ui.filters;
+  const all = { olympiad: 'HP', subject: 'social', discipline: 'POL', topic: 'all' };
+  const groups = F.describe(all, {});
+  assert.deepEqual(groups.map((g) => g.key), ['class', 'round', 'sourceKind', 'type']);
+  const source = groups.find((g) => g.key === 'sourceKind');
+  assert.deepEqual(source.options.map((o) => [o.label, o.count]),
+    [['Все', 21], ['Официальные демоверсии', 1], ['Авторские задания', 20]]);
+  assert.deepEqual(groups.find((g) => g.key === 'type').options.map((o) => [o.label, o.count]),
+    [['Все', 21], ['Один вариант ответа', 12], ['Несколько вариантов ответа', 9]]);
+  assert.equal(F.buildPool(all, { class: 9 }).length, 1);
+  assert.equal(F.buildPool(all, { sourceKind: 'author-set', type: 'single-select' }).length, 11);
+  // Внутри темы источник один — фильтр источника скрыт; класс и тур показаны, но без заданий.
+  const topic = F.describe({ ...all, topic: 'POL-POW' }, {});
+  assert.deepEqual(topic.map((g) => g.key), ['class', 'round', 'type']);
+  assert.deepEqual(topic[0].options.map((o) => o.count), [20, 0, 0, 0]);
+});

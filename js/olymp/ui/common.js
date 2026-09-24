@@ -96,6 +96,7 @@
   /**
    * Строка источника для ученика:
    * «Официальная демоверсия „Высшей пробы“, 2026/27 · 9 класс · отборочный этап · I тур · № 2».
+   * У авторского сборника номер позиции не показывается: он не связан с реальным вариантом.
    */
   function sourceLine(appearance) {
     var source = OLY.getSource(appearance.sourceId);
@@ -105,7 +106,7 @@
     if (appearance.classes.length) parts.push(classesLabel(appearance.classes));
     if (appearance.stage) parts.push(lowerFirst(stageTitle(olympiad, appearance.stage)));
     if (appearance.round) parts.push(roundLabel(appearance.round));
-    parts.push('№ ' + appearance.number);
+    if (source.kind !== 'author-set') parts.push('№ ' + appearance.number);
     return parts.join(' · ');
   }
 

@@ -32,7 +32,8 @@ OLY.defineSubject({
       color: '#f59e0b',
       title: 'Политология',
       topics: [
-        { id: 'POL-RAT', title: 'Рационализация и бюрократия' }
+        { id: 'POL-RAT', title: 'Рационализация и бюрократия' },
+        { id: 'POL-POW', title: 'Власть и легитимность' }
       ]
     },
     {
