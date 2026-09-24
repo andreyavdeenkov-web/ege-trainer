@@ -173,10 +173,10 @@ const POW_SOURCE = 'HP-AUTHOR-POL-POW';
 
 /** Утверждённые ключи (single-select — число, multiple-select — список). */
 const POW_KEYS = {
-  '003': 1, '004': [1, 2, 3], '005': 1, '006': 1, '007': [1, 2, 3], '008': 1,
-  '009': [1, 2, 3], '010': 1, '012': 3, '013': 1, '014': [1, 2, 3], '015': [1, 2, 3],
-  '016': 1, '017': 1, '018': 1, '020': 1, '021': [1, 2, 3], '022': [1, 2, 3],
-  '023': [1, 2, 3], '024': [1, 2]
+  '003': 4, '004': [1, 3, 5], '005': 3, '006': 1, '007': [2, 4, 5], '008': 2,
+  '009': [1, 2, 4], '010': 3, '012': 3, '013': 1, '014': [2, 3, 5], '015': [1, 4, 5],
+  '016': 1, '017': 2, '018': 4, '020': 2, '021': [1, 3, 4], '022': [3, 4, 5],
+  '023': [1, 2, 5], '024': [2, 4]
 };
 const POW_IDS = Object.keys(POW_KEYS).map((n) => 'HP-POL-POW-' + n);
 
@@ -190,6 +190,27 @@ test('власть и легитимность: 20 утверждённых за
     assert.deepEqual(OLY.types.get(task.type).getCorrect(task), key, task.id);
     assert.equal(task.scoring, null, task.id);
   }
+});
+
+test('власть и легитимность: позиции правильных ответов распределены без шаблона', () => {
+  const singles = Object.values(POW_KEYS).filter((k) => !Array.isArray(k));
+  const counts = [1, 2, 3, 4].map((pos) => singles.filter((k) => k === pos).length);
+  assert.ok(Math.max(...counts) - Math.min(...counts) <= 1, `single-select по позициям: ${counts}`);
+  const combos = Object.values(POW_KEYS).filter(Array.isArray).map((k) => k.join(','));
+  assert.equal(new Set(combos).size, combos.length, 'комбинации multiple-select повторяются');
+  assert.ok(!combos.includes('1,2,3') && !combos.includes('1,2'), 'шаблон «первые варианты подряд»');
+});
+
+test('власть и легитимность: номера вариантов в объяснениях соответствуют порядку вариантов', () => {
+  const OLY = loadBank();
+  const t22 = OLY.getTask('HP-POL-POW-022');
+  assert.match(t22.explanation, /в варианте 2\./);
+  assert.match(t22.options[1].text, /^Рутинизация/);
+  const t24 = OLY.getTask('HP-POL-POW-024');
+  assert.match(t24.explanation, /Вариант 1 приписывает Фуко/);
+  assert.match(t24.options[0].text, /^Фуко, в отличие от Льюкса/);
+  assert.match(t24.explanation, /Вариант 3 — упрощение/);
+  assert.match(t24.options[2].text, /^Различие сводится/);
 });
 
 test('власть и легитимность: в активном банке только single-select и multiple-select', () => {
