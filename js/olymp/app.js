@@ -41,6 +41,7 @@
     topicList: $('topic-list'),
     setupEyebrow: $('setup-eyebrow'),
     setupTitle: $('setup-title'),
+    setupNote: $('setup-note'),
     setupForm: $('setup-form'),
     filters: $('filters'),
     poolInfo: $('pool-info'),
@@ -370,6 +371,11 @@
 
   /* ---------- Настройка тренировки ---------- */
 
+  var SETUP_NOTES = {
+    topic: 'Задания разных классов по теме решаются вместе. Класс, этап и тур — фильтры: по умолчанию выбраны все задания.',
+    all: 'Задания разных классов и тем дисциплины могут решаться вместе. Класс, этап и тур можно выбрать с помощью фильтров.'
+  };
+
   function currentSelection(scope) {
     return F.normalize(scope, settings.filters);
   }
@@ -379,6 +385,7 @@
     var discipline = OLY.getDiscipline(subjectOf(olympiad), route.discipline);
     dom.setupEyebrow.textContent = route.topic === 'all' ? 'Все темы дисциплины' : discipline.title;
     dom.setupTitle.textContent = route.topic === 'all' ? discipline.title : topicTitle(route);
+    dom.setupNote.textContent = route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
     setTitle([dom.setupTitle.textContent, olympiad.title]);
     renderFilters(route);
   }
