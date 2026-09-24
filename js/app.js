@@ -17,7 +17,7 @@
     { value: '10', label: '10' },
     { value: 'all', label: 'Все' }
   ];
-  var STORAGE_KEY = 'ege-trainer:settings';
+  var STORAGE_KEY = 'ege-trainer:settings:v2'; // v2: по умолчанию — все задания
 
   var HINTS = {
     'multiple': 'Отметьте все верные суждения. Можно выбрать несколько вариантов.',
@@ -125,7 +125,7 @@
   }
 
   function loadSettings() {
-    var result = { section: 'all', topic: 'all', count: '5' };
+    var result = { section: 'all', topic: 'all', count: 'all' };
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && typeof saved === 'object') {
@@ -262,7 +262,7 @@
     } else {
       settings.topic = data.get('topic') || 'all';
     }
-    settings.count = data.get('count') || '5';
+    settings.count = data.get('count') || 'all';
   }
 
   /* ---------- Тренировка ---------- */
