@@ -116,7 +116,7 @@ test('одно задание в двух источниках для разны
   }));
   assert.equal(OLY.tasks.filter((t) => t.id === 'TST-SOC-MOB-001').length, 1);
   assert.deepEqual(OLY.getTaskFacets('TST-SOC-MOB-001'), {
-    classes: [9, 10, 11], stages: [], rounds: [1, 2], years: ['2025/26', '2026/27']
+    classes: [9, 10, 11], stages: [], rounds: [1, 2], years: ['2025/26', '2026/27'], sourceKinds: ['demo', 'past']
   });
 });
 
@@ -286,4 +286,35 @@ test('этапы: фильтр по этапу проверяется по од�
   const playable = (f) => OLY.getPlayableSources({ olympiad: 'STG', ...f }).map((s) => s.id);
   assert.deepEqual(playable({ stage: 'qualifying' }), ['STG-2026-27-DEMO-9-1']);
   assert.deepEqual(playable({ stage: 'final', round: 2 }), ['STG-2026-27-DEMO-9-FINAL']);
+});
+
+/* ---------- Вид источника и список олимпиад ---------- */
+
+test('фильтр по виду источника: демоверсия, прошлые годы, авторские задания', () => {
+  const OLY = setup();
+  OLY.addSource(source({ items: [{ number: 1, taskId: 'TST-SOC-MOB-001' }] }));
+  OLY.addSource(source({ id: 'TST-2025-26-PAST-9-1', kind: 'past', year: '2025/26', title: 'Прошлый год',
+    items: [{ number: 1, taskId: 'TST-SOC-MOB-002' }] }));
+  OLY.addSource({ id: 'TST-AUTHOR-1', olympiad: 'TST', subject: 'social', kind: 'author-set',
+    title: 'Сборник', answersBasis: 'author', items: [{ number: 1, taskId: 'TST-SOC-STR-001' }] });
+  const q = (f) => ids(OLY.query({ olympiad: 'TST', subject: 'social', ...f }));
+  assert.deepEqual(q({ sourceKind: 'demo' }), ['TST-SOC-MOB-001']);
+  assert.deepEqual(q({ sourceKind: 'past' }), ['TST-SOC-MOB-002']);
+  assert.deepEqual(q({ sourceKind: 'author-set' }), ['TST-SOC-STR-001']);
+  assert.deepEqual(q({ sourceKind: 'demo', class: 9, round: 1 }), ['TST-SOC-MOB-001']);
+  assert.deepEqual(q({ sourceKind: 'all' }).length, 5);
+  assert.deepEqual(OLY.getTaskFacets('TST-SOC-MOB-002').sourceKinds, ['past']);
+  assert.deepEqual(OLY.getPlayableSources({ olympiad: 'TST', sourceKind: 'past' }).map((s) => s.id), ['TST-2025-26-PAST-9-1']);
+});
+
+test('список олимпиад и подписи для интерфейса', () => {
+  const OLY = loadCore();
+  defineCatalog(OLY);
+  assert.deepEqual(OLY.olympiads.map((o) => o.id), ['TST']);
+  const base = { title: 'x', subjects: ['social'], classes: [9], rounds: [1], stages: ['qualifying'] };
+  OLY.defineOlympiad({ ...base, id: 'AB', titleGenitive: 'Икса', stageTitles: { qualifying: 'Отборочный этап' } });
+  assert.equal(OLY.olympiads.length, 2);
+  assert.throws(() => OLY.defineOlympiad({ ...base, id: 'AC', stageTitles: { final: 'Финал' } }), /неизвестный этап final/);
+  assert.throws(() => OLY.defineOlympiad({ ...base, id: 'AD', stages: undefined, stageTitles: {} }), /только вместе со stages/);
+  assert.throws(() => OLY.defineOlympiad({ ...base, id: 'AE', titleGenitive: ' ' }), /titleGenitive/);
 });

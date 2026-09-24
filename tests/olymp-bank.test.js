@@ -8,24 +8,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
-const { CORE_SCRIPTS } = require('./helpers/olymp.js');
+const { CORE_SCRIPTS, pageScripts, loadBank } = require('./helpers/olymp.js');
 
 const root = path.join(__dirname, '..');
-const html = fs.readFileSync(path.join(root, 'olympiad.html'), 'utf8');
-const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+const scripts = pageScripts();
 const dataScripts = scripts.filter((s) => s.startsWith('data/olympiads/'));
-
-function loadBank() {
-  const sandbox = {};
-  for (const src of scripts) {
-    const code = fs.readFileSync(path.join(root, src), 'utf8');
-    // Данные обращаются к глобальному OLY — передаём его параметром.
-    const run = vm.runInThisContext('(function (window, globalThis, OLY) {\n' + code + '\n})', { filename: src });
-    run(undefined, sandbox, sandbox.OLY);
-  }
-  return sandbox.OLY;
-}
 
 function listJsFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -157,7 +144,7 @@ test('тематический режим: задание находится п�
   for (const p of PILOT) {
     const found = OLY.query({ olympiad: 'HP', subject: 'social', discipline: p.discipline, topic: p.topic, class: 'all', round: 'all' });
     assert.deepEqual(found.map((t) => t.id), [p.id]);
-    assert.deepEqual(OLY.getTaskFacets(p.id), { classes: [9], stages: ['qualifying'], rounds: [1], years: ['2026/27'] });
+    assert.deepEqual(OLY.getTaskFacets(p.id), { classes: [9], stages: ['qualifying'], rounds: [1], years: ['2026/27'], sourceKinds: ['demo'] });
   }
   assert.deepEqual(OLY.getAvailableDisciplines({ olympiad: 'HP', subject: 'social' }).map((d) => d.id),
     ['PHI', 'SOC', 'POL', 'ECO', 'LAW']);

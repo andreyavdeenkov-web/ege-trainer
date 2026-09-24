@@ -5,6 +5,7 @@
  * категория, в которую входят разные задания, а не название конкретного вопроса.
  * Темы добавляются по мере появления заданий; id дисциплин и тем постоянные
  * (они входят в ID заданий), названия менять можно.
+ * color — цвет дисциплины в интерфейсе (метки и карточки).
  */
 OLY.defineSubject({
   id: 'social',
@@ -12,6 +13,7 @@ OLY.defineSubject({
   disciplines: [
     {
       id: 'PHI',
+      color: '#8b5cf6',
       title: 'Философия',
       topics: [
         { id: 'PHI-RUS', title: 'Русская философия' }
@@ -19,6 +21,7 @@ OLY.defineSubject({
     },
     {
       id: 'SOC',
+      color: '#3b82f6',
       title: 'Социология',
       topics: [
         { id: 'SOC-CAR', title: 'Образование и профессиональная деятельность' }
@@ -26,6 +29,7 @@ OLY.defineSubject({
     },
     {
       id: 'POL',
+      color: '#f59e0b',
       title: 'Политология',
       topics: [
         { id: 'POL-RAT', title: 'Рационализация и бюрократия' }
@@ -33,6 +37,7 @@ OLY.defineSubject({
     },
     {
       id: 'ECO',
+      color: '#ec4899',
       title: 'Экономика',
       topics: [
         { id: 'ECO-INE', title: 'Неравенство и распределение доходов' }
@@ -40,6 +45,7 @@ OLY.defineSubject({
     },
     {
       id: 'LAW',
+      color: '#ef4444',
       title: 'Право',
       topics: [
         { id: 'LAW-FAM', title: 'Семейное право' }

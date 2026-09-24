@@ -1,0 +1,218 @@
+/*
+ * Олимпиады: дополнения к css/styles.css.
+ * Общие токены, шрифт, тёмная тема и компоненты берутся из styles.css;
+ * здесь — бирюзовый акцент раздела и элементы, которых нет в тренажёре ЕГЭ.
+ * styles.css подключается раньше и не изменяется.
+ */
+
+/* ===== Акцент раздела ===== */
+:root {
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-soft: #e3f4f1;
+  --focus: rgba(15, 118, 110, 0.35);
+  --on-primary: #ffffff;
+  --accent-gradient: linear-gradient(135deg, #14b8a6, #0f766e);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --primary: #2dd4bf;
+    --primary-hover: #5eead4;
+    --primary-soft: #12302d;
+    --focus: rgba(45, 212, 191, 0.45);
+    --on-primary: #042f2c;
+    --accent-gradient: linear-gradient(135deg, #2dd4bf, #0d9488);
+  }
+}
+
+:root[data-theme="dark"] {
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-soft: #12302d;
+  --focus: rgba(45, 212, 191, 0.45);
+  --on-primary: #042f2c;
+  --accent-gradient: linear-gradient(135deg, #2dd4bf, #0d9488);
+}
+
+/* Текст на акцентном фоне: в тёмной теме акцент светлый, поэтому текст тёмный. */
+.btn--primary,
+.statement.is-selected .statement__num,
+.task-nav__item.is-current.is-viewed { color: var(--on-primary); }
+.statement.is-selected .statement__check::after { border-color: var(--on-primary); }
+
+.brand__logo { background: var(--accent-gradient); color: var(--on-primary); }
+.progress__fill { background: var(--accent-gradient); }
+
+a.brand { color: inherit; text-decoration: none; }
+
+/* ===== Навигация по разделу ===== */
+.crumbs { margin-bottom: 4px; }
+.crumbs__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.crumbs__list li { display: inline-flex; align-items: center; gap: 6px; }
+.crumbs__list li + li::before { content: "›"; color: var(--text-muted); }
+.crumbs__list a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 6px;
+}
+.crumbs__list a:hover { text-decoration: underline; }
+.crumbs__list [aria-current="page"] { color: var(--text); font-weight: 600; }
+
+.eyebrow {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.hero h1 { text-wrap: balance; }
+
+/* ===== Карточки-ссылки (олимпиады, дисциплины, темы) ===== */
+a.topic-option { color: inherit; text-decoration: none; }
+a.topic-option:focus-visible { outline: none; }
+a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focus); outline-offset: 2px; }
+.card-grid .topic-option__body { grid-template-areas: "dot title" "dot count" "dot meta"; }
+.topic-option__meta { grid-area: meta; font-size: 13px; color: var(--text-muted); }
+.topic-option--all .topic-option__body { border-style: dashed; }
+.list-title { margin: 22px 0 10px; }
+.empty-note { color: var(--text-muted); }
+
+/* ===== Режимы ===== */
+.mode-switch { max-width: 100%; }
+.segmented__item.is-soon { cursor: not-allowed; }
+.segmented__item input:disabled + span { opacity: .55; }
+.soon-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  vertical-align: 1px;
+}
+
+/* ===== Настройка тренировки ===== */
+.filters-group .segmented { flex-wrap: wrap; max-width: 100%; }
+.filters-group .segmented__item span { min-width: 56px; }
+.seg-count {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.pool-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: -4px 0 20px;
+  font-weight: 600;
+}
+.pool-info.is-empty { color: var(--wrong); }
+.setup-note { margin-top: 14px; font-size: 14px; }
+
+/* ===== Тренировка ===== */
+.progress__side { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Черновик: ответ введён, но не проверен. */
+.task-nav__item.is-draft { border-color: var(--primary); border-style: dashed; color: var(--primary); }
+
+.sources { margin: -4px 0 12px; display: flex; flex-direction: column; gap: 2px; }
+.sources__line { font-size: 13px; color: var(--text-muted); }
+.sources__more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+/* Одиночный выбор: круглая отметка с точкой. */
+.statement__check--radio { border-radius: 50%; }
+.statement__check--radio::after,
+.statement.is-selected .statement__check--radio::after {
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--on-primary);
+  transform: translate(-50%, -50%) scale(0);
+}
+.statement.is-selected .statement__check--radio::after { transform: translate(-50%, -50%) scale(1); }
+.statement.status-hit .statement__check--radio::after { background: #fff; transform: translate(-50%, -50%) scale(1); }
+
+.explanation {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.explanation__title { font-size: 15px; margin-bottom: 4px; }
+
+/* ===== Итоги ===== */
+.result__scope { margin-top: 6px; color: var(--text-muted); }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0 0;
+}
+.stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.stat dt { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.stat dd { margin: 0; font-size: 24px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.stat--right dd { color: var(--right); }
+.stat--wrong dd { color: var(--wrong); }
+.stat--skip dd { color: var(--text-muted); }
+.points-box {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--primary-soft);
+  color: var(--text);
+}
+.points-box strong { color: var(--primary); }
+.points-box p + p { margin-top: 2px; font-size: 14px; color: var(--text-muted); }
+.mistake__points.is-skipped { color: var(--text-muted); }
+.review-item__body .sources { margin: 0 0 10px; }
+.review-item__body .explanation { background: var(--surface); }
+
+@media (max-width: 560px) {
+  .progress__row { flex-wrap: wrap; }
+  .mode-switch { display: flex; }
+  .mode-switch .segmented__item span { padding: 8px 10px; }
+  .stats { gap: 6px; }
+  .stat { padding: 10px 8px; }
+  .stat dd { font-size: 20px; }
+  .filters-group .segmented { display: flex; }
+}

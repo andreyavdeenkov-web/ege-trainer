@@ -2,33 +2,201 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Подготовка к олимпиадам по обществознанию">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Подготовка к олимпиадам по обществознанию: тренировка по дисциплинам и темам">
+  <meta name="theme-color" content="#0f766e">
   <meta name="robots" content="noindex">
   <title>Олимпиады по обществознанию</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EОБ%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EОЛ%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/olymp.css">
 </head>
-<body>
+<body class="olymp">
   <header class="topbar">
     <div class="topbar__inner">
-      <div class="brand">
-        <span class="brand__logo" aria-hidden="true">ОБ</span>
+      <a class="brand" href="#/" data-route aria-label="Олимпиады — к списку олимпиад">
+        <span class="brand__logo" aria-hidden="true">ОЛ</span>
         <span class="brand__text">
           <span class="brand__title">Олимпиады</span>
           <span class="brand__subtitle">Обществознание</span>
         </span>
-      </div>
+      </a>
     </div>
   </header>
 
-  <main class="container">
-    <div class="hero">
-      <h1>Раздел в разработке</h1>
-      <p class="hero__lead">Подготовка к олимпиадам по обществознанию скоро появится здесь.</p>
-    </div>
+  <main class="container" id="app">
+    <nav class="crumbs" id="crumbs" aria-label="Путь по разделу" hidden>
+      <ol class="crumbs__list" id="crumbs-list"></ol>
+    </nav>
+
+    <!-- Список олимпиад -->
+    <section class="screen" id="screen-home" hidden aria-labelledby="home-title">
+      <div class="hero">
+        <p class="eyebrow">Обществознание</p>
+        <h1 id="home-title">Олимпиады</h1>
+        <p class="hero__lead">Задания собраны по дисциплинам и темам. Класс, этап и тур можно выбрать фильтром перед тренировкой.</p>
+      </div>
+      <div class="topic-grid card-grid" id="olympiad-list"></div>
+    </section>
+
+    <!-- Олимпиада: дисциплины -->
+    <section class="screen" id="screen-olympiad" hidden aria-labelledby="olympiad-title">
+      <div class="hero">
+        <p class="eyebrow">Олимпиада · обществознание</p>
+        <h1 id="olympiad-title"></h1>
+      </div>
+      <div class="segmented mode-switch" role="radiogroup" aria-label="Режим подготовки">
+        <label class="segmented__item">
+          <input type="radio" name="mode" id="mode-topic" value="topic" checked>
+          <span>Тематическая тренировка</span>
+        </label>
+        <label class="segmented__item is-soon" title="Появится позже">
+          <input type="radio" name="mode" id="mode-mock" value="mock" disabled>
+          <span>Пробный тур <small class="soon-badge">скоро</small></span>
+        </label>
+      </div>
+      <h2 class="field__label list-title">Дисциплины</h2>
+      <div class="topic-grid card-grid" id="discipline-list"></div>
+    </section>
+
+    <!-- Дисциплина: темы -->
+    <section class="screen" id="screen-discipline" hidden aria-labelledby="discipline-title">
+      <div class="hero">
+        <p class="eyebrow" id="discipline-eyebrow"></p>
+        <h1 id="discipline-title"></h1>
+        <p class="hero__lead">Выберите тему или тренируйтесь сразу по всей дисциплине.</p>
+      </div>
+      <div class="topic-grid topic-grid--compact card-grid" id="topic-list"></div>
+    </section>
+
+    <!-- Настройка тренировки -->
+    <section class="screen" id="screen-setup" hidden aria-labelledby="setup-title">
+      <div class="hero">
+        <p class="eyebrow" id="setup-eyebrow"></p>
+        <h1 id="setup-title"></h1>
+      </div>
+      <form class="panel" id="setup-form">
+        <div id="filters"></div>
+        <div class="pool-info">
+          <p id="pool-info" aria-live="polite"></p>
+          <button type="button" class="btn btn--ghost btn--sm" id="reset-filters" hidden>Сбросить фильтры</button>
+        </div>
+        <fieldset class="field" id="count-field" hidden>
+          <legend class="field__label">Количество заданий</legend>
+          <div class="segmented" id="count-options"></div>
+        </fieldset>
+        <button type="submit" class="btn btn--primary btn--lg btn--block" id="start-btn">Начать тренировку</button>
+      </form>
+      <p class="setup-note muted">Задания разных классов по теме решаются вместе. Класс, этап и тур — фильтры: по умолчанию выбраны все задания.</p>
+    </section>
+
+    <!-- Тренировка -->
+    <section class="screen" id="screen-train" hidden aria-live="polite">
+      <div class="exit-bar" id="confirm-bar" role="alertdialog" aria-labelledby="confirm-text" hidden>
+        <p class="exit-bar__text" id="confirm-text"></p>
+        <div class="exit-bar__actions">
+          <button type="button" class="btn btn--ghost" id="confirm-cancel">Продолжить</button>
+          <button type="button" class="btn btn--primary" id="confirm-ok"></button>
+        </div>
+      </div>
+
+      <div class="progress">
+        <div class="progress__row">
+          <span class="progress__label" id="progress-label"></span>
+          <span class="progress__side">
+            <span class="score-pill" id="checked-pill"></span>
+            <button type="button" class="btn btn--ghost btn--sm" id="finish-btn">Завершить</button>
+          </span>
+        </div>
+        <div class="progress__track" role="progressbar" aria-label="Проверено заданий" aria-valuemin="0" id="progress-bar">
+          <div class="progress__fill" id="progress-fill"></div>
+        </div>
+        <nav class="task-nav" aria-label="Задания тренировки">
+          <ol class="task-nav__list" id="task-nav"></ol>
+        </nav>
+      </div>
+
+      <article class="panel task" id="task-card">
+        <div class="task__meta">
+          <span class="chip" id="task-topic"></span>
+        </div>
+        <div class="sources" id="task-sources"></div>
+        <h2 class="task__question" id="task-question"></h2>
+        <p class="task__hint" id="task-hint"></p>
+
+        <div class="answer" id="answer"></div>
+
+        <div class="feedback" id="feedback" hidden>
+          <div class="feedback__head">
+            <div class="points" id="verdict"></div>
+            <div class="feedback__answers">
+              <div><span class="muted">Правильный ответ:</span> <strong id="feedback-correct"></strong></div>
+              <div><span class="muted">Ваш ответ:</span> <strong id="feedback-user"></strong></div>
+              <div id="feedback-points-row" hidden><span class="muted">Баллы:</span> <strong id="feedback-points"></strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="explanation" id="explanation" hidden>
+          <h3 class="explanation__title">Разбор</h3>
+          <p id="explanation-text"></p>
+        </div>
+
+        <div class="task__actions">
+          <button type="button" class="btn btn--ghost btn--lg" id="prev-btn">← Назад</button>
+          <span class="task__actions-spacer"></span>
+          <button type="button" class="btn btn--ghost btn--lg" id="skip-btn">Пропустить</button>
+          <button type="button" class="btn btn--primary btn--lg" id="check-btn" disabled>Проверить</button>
+          <button type="button" class="btn btn--primary btn--lg" id="next-btn" hidden>Следующее задание</button>
+        </div>
+        <p class="kbd-hint" aria-hidden="true">Клавиши <kbd>1</kbd>–<kbd>9</kbd> выбирают варианты, <kbd>Enter</kbd> — проверить / дальше, <kbd>←</kbd> <kbd>→</kbd> — переход между заданиями</p>
+      </article>
+    </section>
+
+    <!-- Итоги -->
+    <section class="screen" id="screen-result" hidden aria-labelledby="result-title">
+      <div class="panel result">
+        <h2 class="result__title" id="result-title">Тренировка завершена</h2>
+        <p class="result__scope" id="result-scope"></p>
+        <dl class="stats" id="result-stats"></dl>
+        <div class="points-box" id="result-points" hidden></div>
+        <div class="result__actions">
+          <button type="button" class="btn btn--primary btn--lg" id="again-btn">Ещё раз по теме</button>
+          <button type="button" class="btn btn--ghost btn--lg" id="skipped-btn" hidden></button>
+          <button type="button" class="btn btn--ghost btn--lg" id="mistakes-btn" hidden></button>
+          <button type="button" class="btn btn--ghost btn--lg" id="topics-btn">К темам</button>
+        </div>
+      </div>
+
+      <div class="panel" id="review-panel">
+        <div class="review__head">
+          <h3 class="section-title">Разбор заданий</h3>
+          <button type="button" class="btn btn--ghost btn--sm" id="expand-all-btn">Развернуть все</button>
+        </div>
+        <div class="segmented review__filter" id="review-filter" role="radiogroup" aria-label="Какие задания показать">
+          <label class="segmented__item">
+            <input type="radio" name="review-filter" id="review-all" value="all" checked>
+            <span id="review-all-label">Все</span>
+          </label>
+          <label class="segmented__item">
+            <input type="radio" name="review-filter" id="review-mistakes" value="mistakes">
+            <span id="review-mistakes-label">С ошибками</span>
+          </label>
+          <label class="segmented__item">
+            <input type="radio" name="review-filter" id="review-skipped" value="skipped">
+            <span id="review-skipped-label">Пропущенные</span>
+          </label>
+        </div>
+        <ul class="review-list" id="review-list"></ul>
+      </div>
+    </section>
+
+    <noscript>
+      <div class="panel">Для работы раздела включите JavaScript в браузере.</div>
+    </noscript>
   </main>
+
+  <footer class="footer">Подготовка к олимпиадам по обществознанию</footer>
 
   <!-- Олимпиадное ядро (порядок важен) -->
   <script src="js/olymp/normalize.js"></script>
@@ -47,5 +215,14 @@
   <script src="data/olympiads/hp/social/economics/inequality.js"></script>
   <script src="data/olympiads/hp/social/law/family.js"></script>
   <script src="data/olympiads/hp/sources/2026-27-demo-9-1.js"></script>
+
+  <!-- Интерфейс: помощники, фильтры, отрисовка типов заданий, экраны -->
+  <script src="js/olymp/ui/common.js"></script>
+  <script src="js/olymp/ui/router.js"></script>
+  <script src="js/olymp/ui/views.js"></script>
+  <script src="js/olymp/ui/views/choice.js"></script>
+  <script src="js/olymp/ui/filters.js"></script>
+  <script src="js/olymp/ui/session.js"></script>
+  <script src="js/olymp/app.js"></script>
 </body>
 </html>
