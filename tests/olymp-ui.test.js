@@ -164,7 +164,7 @@ test('реестр фильтров расширяется без изменен
   assert.throws(() => F.register({ key: 'class', label: 'x', values: () => [] }), /уже зарегистрирован/);
   F.register({ key: 'discipline', label: 'Дисциплина', always: true, values: () => ['SOC', 'LAW'], format: (v) => v });
   const groups = F.describe({ olympiad: 'HP', subject: 'social' }, {});
-  assert.deepEqual(group(groups, 'discipline').options.map((o) => [o.value, o.count]), [['all', 5], ['SOC', 1], ['LAW', 1]]);
+  assert.deepEqual(group(groups, 'discipline').options.map((o) => [o.value, o.count]), [['all', 25], ['SOC', 1], ['LAW', 1]]);
 });
 
 /* ---------- Тренировка ---------- */
