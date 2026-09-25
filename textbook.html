@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Интерактивный учебник по обществознанию: теория, в которой нужно думать">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="robots" content="noindex">
+  <title>Интерактивный учебник — обществознание</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Ctext x='16' y='22' font-family='Georgia' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EУЧ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/textbook.css">
+</head>
+<body class="textbook">
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="brand" href="#/" aria-label="Учебник — к списку глав">
+        <span class="brand__logo" aria-hidden="true">УЧ</span>
+        <span class="brand__text">
+          <span class="brand__title">Учебник</span>
+          <span class="brand__subtitle">Обществознание</span>
+        </span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Шапка главы: видна на экранах разделов -->
+  <div class="tb-chapterbar" id="chapterbar" hidden>
+    <div class="tb-chapterbar__inner">
+      <a class="tb-chapterbar__title" id="chapterbar-title" href="#/"></a>
+      <span class="tb-chapterbar__progress" id="chapterbar-progress"></span>
+      <button type="button" class="btn btn--ghost btn--sm tb-chapterbar__toc" id="toc-open" aria-haspopup="dialog">Разделы</button>
+    </div>
+    <div class="tb-chapterbar__track" aria-hidden="true"><div class="tb-chapterbar__fill" id="chapterbar-fill"></div></div>
+  </div>
+
+  <main class="container tb-main" id="app">
+    <!-- Каталог глав -->
+    <section class="screen tb-narrow" id="screen-home" hidden aria-labelledby="home-title">
+      <div class="hero">
+        <p class="tb-eyebrow">Обществознание · ЕГЭ и олимпиады</p>
+        <h1 class="tb-display" id="home-title">Интерактивный учебник</h1>
+        <p class="hero__lead">Каждая глава начинается с проблемы, а не с определения. Вы выдвигаете версии, разбираете схемы, классифицируете ситуации — и только потом переходите к заданиям.</p>
+      </div>
+      <div id="catalog"></div>
+    </section>
+
+    <!-- Обзор главы -->
+    <section class="screen tb-narrow" id="screen-chapter" hidden aria-labelledby="chapter-title">
+      <nav class="tb-crumbs" aria-label="Путь"><a href="#/">Все главы</a></nav>
+      <div class="hero">
+        <p class="tb-eyebrow" id="chapter-eyebrow"></p>
+        <h1 class="tb-display" id="chapter-title"></h1>
+        <p class="hero__lead" id="chapter-description"></p>
+      </div>
+      <div class="tb-overview" id="chapter-overview"></div>
+    </section>
+
+    <!-- Раздел главы -->
+    <section class="screen" id="screen-section" hidden>
+      <div class="tb-layout">
+        <nav class="tb-aside" id="toc-aside" aria-label="Разделы главы"></nav>
+        <article class="tb-article" id="section-article" aria-labelledby="section-title">
+          <header class="tb-section-head" id="section-head">
+            <p class="tb-eyebrow" id="section-eyebrow"></p>
+            <h1 class="tb-display" id="section-title" tabindex="-1"></h1>
+            <p class="tb-section-head__subtitle" id="section-subtitle" hidden></p>
+          </header>
+          <div class="tb-blocks" id="section-blocks"></div>
+          <footer class="tb-section-foot" id="section-foot"></footer>
+        </article>
+      </div>
+    </section>
+
+    <noscript>
+      <div class="panel">Для работы учебника включите JavaScript в браузере.</div>
+    </noscript>
+  </main>
+
+  <dialog class="tb-drawer" id="toc-dialog" aria-labelledby="toc-dialog-title">
+    <div class="tb-drawer__head">
+      <p class="tb-drawer__title" id="toc-dialog-title">Разделы главы</p>
+      <button type="button" class="btn btn--ghost btn--sm" id="toc-close">Закрыть</button>
+    </div>
+    <div id="toc-dialog-body"></div>
+  </dialog>
+
+  <footer class="footer">Интерактивный учебник по обществознанию</footer>
+
+  <!-- Ядро учебника (порядок важен) -->
+  <script src="js/textbook/inline.js"></script>
+  <script src="js/textbook/schema.js"></script>
+  <script src="js/textbook/registry.js"></script>
+  <script src="js/textbook/progress.js"></script>
+  <script src="js/textbook/router.js"></script>
+
+  <!-- Содержание: каталог, затем главы -->
+  <script src="data/textbook/catalog.js"></script>
+  <script src="data/textbook/politics/power.js"></script>
+
+  <!-- Интерфейс: помощники, реестр блоков, блоки, экраны -->
+  <script src="js/textbook/ui/dom.js"></script>
+  <script src="js/textbook/ui/blocks.js"></script>
+  <script src="js/textbook/ui/blocks/text.js"></script>
+  <script src="js/textbook/ui/blocks/choice.js"></script>
+  <script src="js/textbook/ui/blocks/explore.js"></script>
+  <script src="js/textbook/ui/blocks/match.js"></script>
+  <script src="js/textbook/ui/blocks/ladder.js"></script>
+  <script src="js/textbook/ui/blocks/summary.js"></script>
+  <script src="js/textbook/app.js"></script>
+</body>
+</html>
