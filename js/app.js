@@ -12,11 +12,6 @@
   var view = EGE.taskView;
   var el = view.el;
 
-  var COUNT_OPTIONS = [
-    { value: '5', label: '5' },
-    { value: '10', label: '10' },
-    { value: 'all', label: 'Все' }
-  ];
   var STORAGE_KEY = 'ege-trainer:settings';
 
   var HINTS = {
@@ -42,7 +37,6 @@
     sectionOptions: $('section-options'),
     topicField: $('topic-field'),
     topicOptions: $('topic-options'),
-    countOptions: $('count-options'),
     startBtn: $('start-btn'),
     brandHome: $('brand-home'),
     exitBar: $('exit-bar'),
@@ -124,14 +118,14 @@
     return EGE.getAvailableTopics(sectionId).some(function (t) { return t.id === topicId; });
   }
 
+  /** Настройки старта: раздел и тема. Тренировка всегда включает все задания выбора. */
   function loadSettings() {
-    var result = { section: 'all', topic: 'all', count: '5' };
+    var result = { section: 'all', topic: 'all' };
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && typeof saved === 'object') {
         if (isValidSection(saved.section)) result.section = saved.section;
         if (isValidTopic(result.section, saved.topic)) result.topic = saved.topic;
-        if (COUNT_OPTIONS.some(function (o) { return o.value === saved.count; })) result.count = saved.count;
       }
     } catch (e) { /* хранилище недоступно — используем значения по умолчанию */ }
     return result;
@@ -201,20 +195,6 @@
     });
 
     renderTopicOptions();
-
-    ui.countOptions.textContent = '';
-    COUNT_OPTIONS.forEach(function (opt) {
-      var label = el('label', 'segmented__item');
-      var input = el('input');
-      input.type = 'radio';
-      input.name = 'count';
-      input.value = opt.value;
-      input.checked = settings.count === opt.value;
-      label.appendChild(input);
-      label.appendChild(el('span', null, opt.label));
-      ui.countOptions.appendChild(label);
-    });
-
     updateStartButton();
   }
 
@@ -237,14 +217,8 @@
     return EGE.getPool(settings.section, settings.topic);
   }
 
-  function plannedCount() {
-    var available = currentPool().length;
-    if (settings.count === 'all') return available;
-    return Math.min(available, parseInt(settings.count, 10));
-  }
-
   function updateStartButton() {
-    var n = plannedCount();
+    var n = currentPool().length;
     ui.startBtn.disabled = n === 0;
     ui.startBtn.textContent = n === 0
       ? 'Здесь пока нет заданий'
@@ -262,19 +236,18 @@
     } else {
       settings.topic = data.get('topic') || 'all';
     }
-    settings.count = data.get('count') || '5';
   }
 
   /* ---------- Тренировка ---------- */
 
   function startSession() {
-    var pool = shuffle(currentPool()).slice(0, plannedCount());
+    var pool = shuffle(currentPool());
     if (pool.length === 0) {
       showStart();
       return;
     }
     state.attempt = A.createAttempt({
-      settings: { section: settings.section, topic: settings.topic, count: settings.count },
+      settings: { section: settings.section, topic: settings.topic },
       taskIds: pool.map(function (t) { return t.id; })
     });
     state.viewIndex = 0;

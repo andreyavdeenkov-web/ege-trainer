@@ -9,7 +9,7 @@
  *   schemaVersion: 1,
  *   id: 'uuid',
  *   startedAt: ISO-строка UTC, finishedAt: ISO-строка | null,
- *   settings: { section, topic, count },
+ *   settings: { section, topic },          // в попытку входят все задания выбора
  *   taskIds: ['SOC-STR-004', ...],          // порядок показа, фиксируется при старте
  *   answers: [{ taskId, taskVersion, position, selected, correct,
  *               points, maxPoints, answeredAt }]   // в порядке выполнения
@@ -54,7 +54,7 @@
       id: options.id || generateId(),
       startedAt: nowIso(options.now),
       finishedAt: null,
-      settings: { section: s.section || 'all', topic: s.topic || 'all', count: s.count || null },
+      settings: { section: s.section || 'all', topic: s.topic || 'all' },
       taskIds: taskIds,
       answers: []
     };
