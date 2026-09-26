@@ -36,7 +36,7 @@ test('новая попытка: поля и начальное состояни
   assert.match(a.id, /^[0-9a-f-]{36}$/);
   assert.equal(a.startedAt, '2026-09-23T10:00:00.000Z');
   assert.equal(a.finishedAt, null);
-  assert.deepEqual(a.settings, { section: 'SOC', topic: 'all', count: '5' });
+  assert.deepEqual(a.settings, { section: 'SOC', topic: 'all' }, 'лимит количества заданий в попытку не попадает');
   assert.deepEqual(a.answers, []);
   assert.equal(A.currentIndex(a), 0);
   assert.equal(A.totalScore(a), 0);
