@@ -228,7 +228,7 @@ test('тема «Деятельность» в разделе «Человек �
   assert.equal(topic.section, 'OBS');
   assert.equal(EGE.getSection('OBS').title, 'Человек и общество');
   assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
-  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-GEN', 'OBS-ACT']);
+  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-GEN', 'OBS-ACT', 'OBS-COG']);
 });
 
 test('ключи проверенных заданий темы «Деятельность»', () => {
@@ -287,6 +287,60 @@ test('тема «Деятельность»: все 16 заданий верно
   assert.equal(A.maxScore(a), 31);
 });
 
+test('тема «Познание» в разделе «Человек и общество»: 9 заданий', () => {
+  const EGE = loadBank();
+  const topic = EGE.getTopic('OBS-COG');
+  assert.equal(topic.title, 'Познание');
+  assert.equal(topic.section, 'OBS');
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 9);
+  assert.equal(EGE.getTasksBySection('OBS').length,
+    EGE.getTasksByTopic('OBS-GEN').length + EGE.getTasksByTopic('OBS-ACT').length + 9);
+});
+
+test('ключи заданий темы «Познание»', () => {
+  const EGE = loadBank();
+  // Для matching — номера вариантов по порядку позиций А, Б, В, Г, Д.
+  const keys = {
+    'OBS-COG-001': ['matching', [2, 1, 1, 2, 2]],
+    'OBS-COG-002': ['exclude-two', [2, 3]],
+    'OBS-COG-003': ['multiple', [1, 2, 3]],
+    'OBS-COG-004': ['matching', [2, 1, 2, 1, 1]],
+    'OBS-COG-005': ['matching', [1, 1, 1, 2, 2]],
+    'OBS-COG-006': ['multiple', [1, 2, 3]],
+    'OBS-COG-007': ['multiple', [3, 4, 5, 6]],
+    'OBS-COG-008': ['matching', [2, 2, 1, 1, 2]],
+    'OBS-COG-009': ['matching', [1, 1, 2, 1, 2]]
+  };
+  const topicTasks = EGE.getTasksByTopic('OBS-COG');
+  assert.deepEqual([...topicTasks.map((t) => t.id)], Object.keys(keys));
+  for (const [id, [type, key]] of Object.entries(keys)) {
+    const task = EGE.getTask(id);
+    assert.equal(EGE.scoring.getTaskType(task), type, `${id}: тип задания`);
+    assert.deepEqual([...EGE.scoring.getCorrect(task)], key, `${id}: ключ не совпадает`);
+    if (type === 'matching') {
+      assert.equal(task.items.length, 5, `${id}: 5 позиций`);
+      assert.equal(task.options.length, 2, `${id}: 2 варианта`);
+      assert.ok(!task.oneToOne, `${id}: варианты повторяются`);
+      assert.ok(task.items.every((item) => item.explanation), `${id}: у каждой позиции есть объяснение`);
+    } else {
+      assert.ok(task.statements.every((st) => st.explanation), `${id}: у каждого суждения есть объяснение`);
+    }
+  }
+});
+
+test('тема «Познание»: все 9 заданий верно — 17 баллов из 17', () => {
+  const EGE = loadBank();
+  const A = EGE.attempt;
+  const tasks = EGE.getTasksByTopic('OBS-COG');
+  const a = A.createAttempt({ taskIds: tasks.map((t) => t.id) });
+  for (const task of tasks) {
+    const answer = A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
+    assert.equal(answer.points, answer.maxPoints, `${task.id}: верный ответ — максимум баллов`);
+  }
+  assert.equal(A.totalScore(a), 17);
+  assert.equal(A.maxScore(a), 17);
+});
+
 // Действия с ответом выполняются кнопками — бланковые указания ЕГЭ не показываются.
 const PAPER_INSTRUCTIONS = [/запишите/i, /цифрами без пробелов/i, /в порядке, соответствующем буквам/i, /в ответ цифры/i];
 
@@ -316,4 +370,6 @@ test('multiple: выбор не суждений, а терминов помеч
   }
   const itemTasks = EGE.getTasksByTopic('OBS-ACT').filter((t) => t.choiceOf === 'items').map((t) => t.id);
   assert.deepEqual([...itemTasks], ['OBS-ACT-005']);
+  const cogItemTasks = EGE.getTasksByTopic('OBS-COG').filter((t) => t.choiceOf === 'items').map((t) => t.id);
+  assert.deepEqual([...cogItemTasks], ['OBS-COG-003', 'OBS-COG-007']);
 });

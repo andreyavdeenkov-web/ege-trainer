@@ -25,7 +25,8 @@
       color: '#6366f1',
       topics: [
         { id: 'OBS-GEN', title: 'Общие вопросы' },
-        { id: 'OBS-ACT', title: 'Деятельность' }
+        { id: 'OBS-ACT', title: 'Деятельность' },
+        { id: 'OBS-COG', title: 'Познание' }
       ]
     },
     {
