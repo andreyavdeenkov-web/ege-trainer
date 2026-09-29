@@ -50,13 +50,13 @@
   }
 
   /** Подпись темы задания: «Раздел · Тема». */
-  /** «Раздел · Тема»; если у темы несколько тренажёров — ещё и «· Тренажёр N». */
+  /** «Раздел · Тема»; если у темы есть выбор тренажёра — ещё и «· Тренажёр N». */
   function topicLabel(task) {
     var section = EGE.getSection(task.section);
     var topic = EGE.getTopic(task.topic);
     var label = section.title + ' · ' + topic.title;
     var set = task.set && EGE.getSet(task.set);
-    if (set && EGE.getAvailableSets(task.topic).length > 1) label += ' · ' + set.title;
+    if (set && EGE.showsSetChoice(task.topic)) label += ' · ' + set.title;
     return label;
   }
 

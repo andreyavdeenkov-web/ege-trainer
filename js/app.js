@@ -239,14 +239,17 @@
   }
 
   /**
-   * Тренажёры выбранной темы. Выбор показывается, только если наборов два и больше:
-   * тема с одним набором запускается сразу. Пустые наборы не показываются.
+   * Тренажёры выбранной темы. Выбор показывается у тем с наборами из EGE.addTaskSet
+   * (даже с одним) и у тем с двумя и более наборами (см. EGE.showsSetChoice);
+   * тема только с неявным набором из EGE.addTasks запускается сразу.
+   * Пустые наборы не показываются.
    */
   function renderSetOptions() {
     ui.setOptions.textContent = '';
+    var show = settings.topic !== 'all' && EGE.showsSetChoice(settings.topic);
+    ui.setField.hidden = !show;
+    if (!show) return;
     var sets = topicSets(settings.topic);
-    ui.setField.hidden = sets.length < 2;
-    if (sets.length < 2) return;
     var color = EGE.getSection(settings.section).color;
     sets.forEach(function (set) {
       ui.setOptions.appendChild(optionCard('set', set.id, set.title,

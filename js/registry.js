@@ -131,8 +131,14 @@
    * Порядок наборов в теме — порядок их первой регистрации.
    * Задание принадлежит ровно одному набору, поэтому счётчик темы —
    * это сумма наборов без двойного подсчёта.
+   * Набор, объявленный так явно, помечается explicit: тема с явными наборами
+   * показывает выбор тренажёра даже при одном наборе (см. EGE.showsSetChoice).
    */
   EGE.addTaskSet = function (topicId, set) {
+    return registerSet(topicId, set, true);
+  };
+
+  function registerSet(topicId, set, explicit) {
     var topic = EGE.getTopic(topicId);
     if (!topic) throw new Error('Неизвестная тема: ' + topicId);
     if (!set || !EGE.SET_ID_PATTERN.test(set.id) || set.id.indexOf(topicId + '-T') !== 0) {
@@ -144,17 +150,19 @@
     }
     if (!existing) {
       if (!set.title) throw new Error('У набора ' + set.id + ' нет названия');
-      existing = { id: set.id, title: set.title, topic: topicId, section: topic.section, tasks: [] };
+      existing = { id: set.id, title: set.title, topic: topicId, section: topic.section, explicit: false, tasks: [] };
       setsById[set.id] = existing;
       topic.sets.push(existing);
     }
+    if (explicit) existing.explicit = true;
     registerTasks(topic, existing, set.tasks || []);
     return existing;
-  };
+  }
 
   /**
    * Регистрирует задания темы в её набор по умолчанию «Тренажёр 1» (ТЕМА-T1).
    * Подходит для тем с одним набором; для второго и следующих — EGE.addTaskSet.
+   * Такой набор неявный: пока он у темы единственный, выбор тренажёра не показывается.
    * Каждое задание: { id, question, statements: [{ text, correct, explanation? }] },
    * explanation у суждения необязательно;
    * type — тип задания: 'multiple' (по умолчанию), 'exclude-two' или 'matching'
@@ -170,7 +178,7 @@
     var setId = EGE.defaultSetId(topicId);
     // Название задаётся только при создании набора: если «Тренажёр 1» уже
     // зарегистрирован через addTaskSet (возможно, под другим названием), задания дописываются в него.
-    return EGE.addTaskSet(topicId, { id: setId, title: EGE.getSet(setId) ? undefined : 'Тренажёр 1', tasks: tasks });
+    return registerSet(topicId, { id: setId, title: EGE.getSet(setId) ? undefined : 'Тренажёр 1', tasks: tasks }, false);
   };
 
   function registerTasks(topic, set, tasks) {
@@ -223,6 +231,17 @@
     return topic.sets.filter(function (set) {
       return EGE.getTasksBySet(set.id).length > 0;
     });
+  };
+
+  /**
+   * Показывать ли у темы выбор тренажёра: если среди её непустых наборов есть
+   * объявленный через EGE.addTaskSet (даже единственный) или непустых наборов
+   * два и больше. Тема только с неявным «Тренажёром 1» из EGE.addTasks выбора
+   * не показывает; пустой объявленный набор его тоже не включает.
+   */
+  EGE.showsSetChoice = function (topicId) {
+    var sets = EGE.getAvailableSets(topicId);
+    return sets.length > 1 || sets.some(function (set) { return set.explicit; });
   };
 
   /**

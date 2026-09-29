@@ -158,6 +158,43 @@ test('второй набор темы: появляется в выборе, с
   assert.equal(a.settings.set, 'OBS-COG-T2');
 });
 
+test('выбор тренажёра: у тем из addTaskSet — даже при одном наборе, у тем из addTasks — нет', () => {
+  const EGE = loadBank();
+  assert.equal(EGE.getSet('OBS-COG-T1').explicit, true, '«Познание» объявлено через addTaskSet');
+  assert.equal(EGE.showsSetChoice('OBS-COG'), true, '«Познание»: «Тренажёр 1» показывается');
+  for (const topicId of ['OBS-GEN', 'OBS-ACT', 'ECO-GEN', 'SOC-STR', 'SOC-MOB', 'SOC-FAM', 'POL-GEN', 'LAW-GEN']) {
+    assert.equal(EGE.getSet(topicId + '-T1').explicit, false, topicId);
+    assert.equal(EGE.showsSetChoice(topicId), false, `${topicId}: без выбора тренажёра`);
+  }
+  // Тема без заданий и несуществующая тема — без выбора.
+  assert.equal(EGE.showsSetChoice('SOC-GRP'), false);
+  assert.equal(EGE.showsSetChoice('OBS-XXX'), false);
+});
+
+test('выбор тренажёра: второй набор добавляет карточку; тема из addTasks получает выбор со вторым набором', () => {
+  const EGE = loadBank();
+  EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', title: 'Тренажёр 2', tasks: [sampleTask('OBS-COG-901')] });
+  assert.equal(EGE.showsSetChoice('OBS-COG'), true);
+  assert.deepEqual(ids(EGE.getAvailableSets('OBS-COG')), ['OBS-COG-T1', 'OBS-COG-T2']);
+
+  // «Деятельность» остаётся без выбора, пока у неё один неявный набор…
+  assert.equal(EGE.showsSetChoice('OBS-ACT'), false);
+  EGE.addTasks('OBS-ACT', [sampleTask('OBS-ACT-901')]);
+  assert.equal(EGE.showsSetChoice('OBS-ACT'), false, 'addTasks не делает набор явным');
+  // …а со вторым набором выбор появляется.
+  EGE.addTaskSet('OBS-ACT', { id: 'OBS-ACT-T2', title: 'Тренажёр 2', tasks: [sampleTask('OBS-ACT-902')] });
+  assert.equal(EGE.showsSetChoice('OBS-ACT'), true);
+  assert.deepEqual(ids(EGE.getAvailableSets('OBS-ACT')), ['OBS-ACT-T1', 'OBS-ACT-T2']);
+  assert.equal(EGE.getSet('OBS-ACT-T1').explicit, false);
+});
+
+test('выбор тренажёра: пустой явный набор выбор не включает', () => {
+  const EGE = loadBank();
+  EGE.addTaskSet('OBS-ACT', { id: 'OBS-ACT-T2', title: 'Тренажёр 2', tasks: [] });
+  assert.equal(EGE.showsSetChoice('OBS-ACT'), false, '«Деятельность» выглядит как раньше');
+  assert.deepEqual(ids(EGE.getAvailableSets('OBS-ACT')), ['OBS-ACT-T1'], 'пустой набор не показывается');
+});
+
 test('пустой набор и набор только из снятых заданий не показываются', () => {
   const EGE = loadBank();
   EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', title: 'Тренажёр 2', tasks: [] });
@@ -201,11 +238,12 @@ test('попытка: набор записывается, только если
     { section: 'OBS', topic: 'OBS-COG', set: 'OBS-COG-T1' });
 });
 
-test('интерфейс: выбор тренажёра — общий для всех тем, только при двух и более наборах', () => {
+test('интерфейс: выбор тренажёра — общий для всех тем, по EGE.showsSetChoice', () => {
   const appCode = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
   assert.match(html, /id="set-field" hidden/);
   assert.match(html, /id="set-options"/);
-  assert.match(appCode, /ui\.setField\.hidden = sets\.length < 2;/);
+  assert.match(appCode, /EGE\.showsSetChoice\(settings\.topic\)/);
+  assert.match(appCode, /ui\.setField\.hidden = !show;/);
   assert.match(appCode, /EGE\.getPool\(settings\.section, settings\.topic, settings\.set\)/);
   assert.doesNotMatch(appCode, /OBS-COG|Познание/, 'в интерфейсе нет логики для конкретной темы');
 });
