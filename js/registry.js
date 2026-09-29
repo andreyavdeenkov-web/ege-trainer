@@ -25,7 +25,7 @@
       title: 'Человек и общество',
       color: '#6366f1',
       topics: [
-        { id: 'OBS-GEN', title: 'Общие вопросы' },
+        { id: 'OBS-SOC', title: 'Общество' },
         { id: 'OBS-ACT', title: 'Деятельность' },
         { id: 'OBS-COG', title: 'Познание' }
       ]

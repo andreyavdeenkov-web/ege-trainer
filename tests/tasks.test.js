@@ -221,14 +221,14 @@ test('ключи проверенных заданий темы «Социаль
   }
 });
 
-test('тема «Деятельность» в разделе «Человек и общество»: 16 заданий', () => {
+test('тема «Деятельность» в разделе «Человек и общество»: 17 заданий', () => {
   const EGE = loadBank();
   const topic = EGE.getTopic('OBS-ACT');
   assert.equal(topic.title, 'Деятельность');
   assert.equal(topic.section, 'OBS');
   assert.equal(EGE.getSection('OBS').title, 'Человек и общество');
-  assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
-  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-GEN', 'OBS-ACT', 'OBS-COG']);
+  assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 17);
+  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-SOC', 'OBS-ACT', 'OBS-COG']);
 });
 
 test('ключи проверенных заданий темы «Деятельность»', () => {
@@ -251,7 +251,9 @@ test('ключи проверенных заданий темы «Деятель
     'OBS-ACT-013': ['multiple', [1, 2, 3, 5]],
     'OBS-ACT-014': ['multiple', [1, 3, 5]],
     'OBS-ACT-015': ['multiple', [1, 3, 5]],
-    'OBS-ACT-016': ['multiple', [1, 2, 3, 5]]
+    'OBS-ACT-016': ['multiple', [1, 2, 3, 5]],
+    // Перенесено из «Общих вопросов» (было OBS-GEN-002).
+    'OBS-ACT-017': ['multiple', [2, 3, 5]]
   };
   const topicTasks = EGE.getTasksByTopic('OBS-ACT');
   assert.deepEqual([...topicTasks.map((t) => t.id)], Object.keys(keys), 'в теме только проверенные задания');
@@ -272,30 +274,32 @@ test('ключи проверенных заданий темы «Деятель
   assert.equal(EGE.getTask('OBS-ACT-005').statements.length, 6);
 });
 
-test('тема «Деятельность»: все 16 заданий верно — 31 балл из 31', () => {
+test('тема «Деятельность»: все 17 заданий верно — 33 балла из 33', () => {
   const EGE = loadBank();
   const A = EGE.attempt;
   const tasks = EGE.getTasksByTopic('OBS-ACT');
   const a = A.createAttempt({ taskIds: tasks.map((t) => t.id) });
-  assert.equal(A.maxScore(a, EGE.getTask), 31);
+  assert.equal(A.maxScore(a, EGE.getTask), 33);
   for (const task of tasks) {
     const answer = A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
     assert.equal(answer.points, answer.maxPoints, `${task.id}: верный ответ — максимум баллов`);
     assert.equal(answer.maxPoints, task.type === 'exclude-two' ? 1 : 2, `${task.id}: максимум баллов`);
   }
-  assert.equal(A.totalScore(a), 31);
-  assert.equal(A.maxScore(a), 31);
+  assert.equal(A.totalScore(a), 33);
+  assert.equal(A.maxScore(a), 33);
 });
 
-test('тема «Познание» в разделе «Человек и общество»: 20 заданий', () => {
+test('тема «Познание» в разделе «Человек и общество»: 21 задание (20 + 1)', () => {
   const EGE = loadBank();
   const topic = EGE.getTopic('OBS-COG');
   assert.equal(topic.title, 'Познание');
   assert.equal(topic.section, 'OBS');
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 20);
-  assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 21);
+  assert.equal(EGE.getTasksBySet('OBS-COG-T1').length, 20);
+  assert.equal(EGE.getTasksBySet('OBS-COG-T2').length, 1);
+  assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 17);
   assert.equal(EGE.getTasksBySection('OBS').length,
-    EGE.getTasksByTopic('OBS-GEN').length + EGE.getTasksByTopic('OBS-ACT').length + 20);
+    EGE.getTasksByTopic('OBS-SOC').length + EGE.getTasksByTopic('OBS-ACT').length + 21);
   assert.equal(EGE.getTasksBySection('OBS').length, 39);
 });
 
@@ -323,7 +327,9 @@ test('ключи заданий темы «Познание»', () => {
     'OBS-COG-017': ['multiple', [2, 3, 5]],
     'OBS-COG-018': ['multiple', [1, 3, 5]],
     'OBS-COG-019': ['multiple', [1, 2, 4]],
-    'OBS-COG-020': ['multiple', [1, 3, 5]]
+    'OBS-COG-020': ['multiple', [1, 3, 5]],
+    // «Тренажёр 2»; перенесено из «Общих вопросов» (было OBS-GEN-003).
+    'OBS-COG-021': ['multiple', [2, 4, 5]]
   };
   const topicTasks = EGE.getTasksByTopic('OBS-COG');
   assert.deepEqual([...topicTasks.map((t) => t.id)], Object.keys(keys));
@@ -342,7 +348,7 @@ test('ключи заданий темы «Познание»', () => {
   }
 });
 
-test('тема «Познание»: все 20 заданий верно — 39 баллов из 39', () => {
+test('тема «Познание»: все 21 задание верно — 41 балл из 41 (39 + 2)', () => {
   const EGE = loadBank();
   const A = EGE.attempt;
   const tasks = EGE.getTasksByTopic('OBS-COG');
@@ -351,8 +357,8 @@ test('тема «Познание»: все 20 заданий верно — 39 
     const answer = A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
     assert.equal(answer.points, answer.maxPoints, `${task.id}: верный ответ — максимум баллов`);
   }
-  assert.equal(A.totalScore(a), 39);
-  assert.equal(A.maxScore(a), 39);
+  assert.equal(A.totalScore(a), 41);
+  assert.equal(A.maxScore(a), 41);
 });
 
 test('matching в банке: режим уникальности задан данными и согласован с ключом', () => {

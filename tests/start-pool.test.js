@@ -34,11 +34,11 @@ test('тренировка берёт весь набор выбора, без �
   assert.match(appCode, /var n = currentPool\(\)\.length;/);
 });
 
-test('«Деятельность»: в наборе все 16 заданий', () => {
+test('«Деятельность», «Тренажёр 1»: в наборе все 17 заданий', () => {
   const EGE = loadBank();
-  const pool = EGE.getPool('OBS', 'OBS-ACT');
-  assert.equal(pool.length, 16);
-  assert.equal(new Set(pool.map((t) => t.id)).size, 16);
+  const pool = EGE.getPool('OBS', 'OBS-ACT', 'OBS-ACT-T1');
+  assert.equal(pool.length, 17);
+  assert.equal(new Set(pool.map((t) => t.id)).size, 17);
 });
 
 test('«Весь раздел» и «Все разделы» включают все задания', () => {

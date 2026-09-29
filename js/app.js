@@ -114,13 +114,20 @@
     return id === 'all' || EGE.getAvailableSections().some(function (s) { return s.id === id; });
   }
 
-  function isValidTopic(sectionId, topicId) {
-    if (topicId === 'all') return true;
-    if (sectionId === 'all') return false;
-    return EGE.getAvailableTopics(sectionId).some(function (t) { return t.id === topicId; });
+  /**
+   * Тема для раздела: в блоке «Тема» только содержательные темы (без «Весь раздел»),
+   * поэтому у выбранного раздела всегда выбрана одна из его тем — сохранённая,
+   * если она ещё есть, иначе первая. Для «Все разделы» темы нет ('all').
+   */
+  function resolveTopic(sectionId, topicId) {
+    if (sectionId === 'all') return 'all';
+    var topics = EGE.getAvailableTopics(sectionId);
+    if (topics.length === 0) return 'all';
+    var found = topics.some(function (t) { return t.id === topicId; });
+    return found ? topicId : topics[0].id;
   }
 
-  /** Наборы (тренажёры) выбранной темы; для «Весь раздел» и «Все разделы» — пусто. */
+  /** Наборы (тренажёры) выбранной темы; для «Все разделы» — пусто. */
   function topicSets(topicId) {
     return topicId && topicId !== 'all' ? EGE.getAvailableSets(topicId) : [];
   }
@@ -147,10 +154,11 @@
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && typeof saved === 'object') {
         if (isValidSection(saved.section)) result.section = saved.section;
-        if (isValidTopic(result.section, saved.topic)) result.topic = saved.topic;
+        result.topic = saved.topic;
         savedSet = saved.set;
       }
     } catch (e) { /* хранилище недоступно — используем значения по умолчанию */ }
+    result.topic = resolveTopic(result.section, result.topic);
     result.set = resolveSet(result.topic, savedSet);
     return result;
   }
@@ -222,7 +230,11 @@
     updateStartButton();
   }
 
-  /** Темы выбранного раздела. Темы без заданий не показываются. */
+  /**
+   * Темы выбранного раздела — только содержательные, без «Весь раздел».
+   * Темы без заданий не показываются. (Пул всего раздела по-прежнему есть
+   * в реестре — EGE.getTasksBySection / getPool(section, 'all').)
+   */
   function renderTopicOptions() {
     ui.topicOptions.textContent = '';
     var section = EGE.getSection(settings.section);
@@ -230,8 +242,6 @@
     renderSetOptions();
     if (!section) return;
 
-    ui.topicOptions.appendChild(optionCard('topic', 'all', 'Весь раздел',
-      EGE.getTasksBySection(section.id).length, section.color, settings.topic === 'all'));
     EGE.getAvailableTopics(section.id).forEach(function (topic) {
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
         EGE.getTasksByTopic(topic.id).length, section.color, settings.topic === topic.id));
@@ -273,14 +283,14 @@
     var data = new FormData(ui.startForm);
     var section = data.get('section') || 'all';
     if (section !== settings.section) {
-      // При смене раздела выбор темы сбрасывается на «Весь раздел».
+      // При смене раздела выбирается его первая тема и её первый тренажёр.
       settings.section = section;
-      settings.topic = 'all';
-      settings.set = 'all';
+      settings.topic = resolveTopic(section, null);
+      settings.set = resolveSet(settings.topic, null);
       renderTopicOptions();
       return;
     }
-    var topic = data.get('topic') || 'all';
+    var topic = resolveTopic(section, data.get('topic'));
     if (topic !== settings.topic) {
       // При смене темы выбирается её первый тренажёр.
       settings.topic = topic;

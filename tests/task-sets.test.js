@@ -84,136 +84,152 @@ test('счётчики: тема = сумма её наборов, раздел 
   assert.equal(new Set(ids(all)).size, all.length, 'задания не повторяются');
 });
 
-test('«Познание»: один набор «Тренажёр 1» (OBS-COG-T1) — все 20 заданий в исходном порядке', () => {
+test('«Человек и общество»: только содержательные темы, у каждой — явные тренажёры', () => {
   const EGE = loadBank();
-  const sets = EGE.getAvailableSets('OBS-COG');
-  assert.deepEqual(ids(sets), ['OBS-COG-T1']);
-  assert.equal(sets[0].title, 'Тренажёр 1');
+  assert.equal(EGE.getTopic('OBS-GEN'), null, '«Общие вопросы» удалены');
+  assert.deepEqual(ids(EGE.getSection('OBS').topics), ['OBS-SOC', 'OBS-ACT', 'OBS-COG']);
+  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-SOC', 'OBS-ACT', 'OBS-COG']);
+  const sets = (topicId) => [...EGE.getAvailableSets(topicId).map((s) => s.title + ' — ' + EGE.getTasksBySet(s.id).length)];
+  assert.deepEqual(sets('OBS-SOC'), ['Тренажёр 1 — 1']);
+  assert.deepEqual(sets('OBS-ACT'), ['Тренажёр 1 — 17']);
+  assert.deepEqual(sets('OBS-COG'), ['Тренажёр 1 — 20', 'Тренажёр 2 — 1']);
+  for (const topicId of ['OBS-SOC', 'OBS-ACT', 'OBS-COG']) {
+    assert.ok(EGE.getSection('OBS').topics.find((t) => t.id === topicId).sets.every((s) => s.explicit), `${topicId}: наборы явные`);
+    assert.equal(EGE.showsSetChoice(topicId), true, `${topicId}: блок «Тренажёр» показывается`);
+  }
+  assert.equal(EGE.getTasksBySection('OBS').length, 39, '1 + 17 + 21');
+  assert.equal(EGE.getTasksBySection('all').length, 56, 'общее число заданий не изменилось');
+});
+
+test('перенесённые из «Общих вопросов» задания: новые ID, темы и наборы, прежние ключи', () => {
+  const EGE = loadBank();
+  const moved = {
+    'OBS-SOC-001': ['OBS-SOC', 'OBS-SOC-T1', [1, 4, 5], 'Выберите верные суждения об обществе и его сферах.'],
+    'OBS-ACT-017': ['OBS-ACT', 'OBS-ACT-T1', [2, 3, 5], 'Выберите верные суждения о деятельности человека.'],
+    'OBS-COG-021': ['OBS-COG', 'OBS-COG-T2', [2, 4, 5], 'Выберите верные суждения о познании и истине.']
+  };
+  for (const [id, [topic, set, key, question]] of Object.entries(moved)) {
+    const task = EGE.getTask(id);
+    assert.ok(task, `${id} есть в банке`);
+    assert.equal(task.topic, topic);
+    assert.equal(task.set, set);
+    assert.equal(task.question, question);
+    assert.equal(task.statements.length, 5);
+    assert.ok(task.statements.every((st) => st.explanation), `${id}: объяснения на месте`);
+    assert.deepEqual([...EGE.scoring.getCorrect(task)], key, `${id}: ключ`);
+  }
+  for (const old of ['OBS-GEN-001', 'OBS-GEN-002', 'OBS-GEN-003']) assert.equal(EGE.getTask(old), null, `${old} больше не используется`);
+  // «Деятельность»: 16 прежних заданий по порядку, перенесённое — 17-м.
+  const act = Array.from({ length: 17 }, (_, i) => 'OBS-ACT-' + String(i + 1).padStart(3, '0'));
+  assert.deepEqual(ids(EGE.getTasksBySet('OBS-ACT-T1')), act);
+  assert.deepEqual(ids(EGE.getTasksBySet('OBS-COG-T2')), ['OBS-COG-021']);
+  assert.deepEqual(ids(EGE.getTasksBySet('OBS-SOC-T1')), ['OBS-SOC-001']);
+});
+
+test('«Познание», «Тренажёр 1» (OBS-COG-T1) — прежние 20 заданий в исходном порядке', () => {
+  const EGE = loadBank();
   const expected = Array.from({ length: 20 }, (_, i) => 'OBS-COG-' + String(i + 1).padStart(3, '0'));
+  assert.equal(EGE.getSet('OBS-COG-T1').title, 'Тренажёр 1');
   assert.deepEqual(ids(EGE.getTasksBySet('OBS-COG-T1')), expected);
   assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T1')), expected);
-  assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG')), expected, 'без выбора набора — вся тема');
+  assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T2')), ['OBS-COG-021']);
+  assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG')), [...expected, 'OBS-COG-021'], 'без выбора набора — вся тема');
 });
 
-test('«Познание», «Тренажёр 1»: все 20 заданий верно — 39 баллов из 39', () => {
+test('каждый тренажёр — отдельная тренировка: максимумы наборов «Человека и общества»', () => {
   const EGE = loadBank();
   const A = EGE.attempt;
-  const tasks = EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T1');
-  const a = A.createAttempt({
-    settings: { section: 'OBS', topic: 'OBS-COG', set: 'OBS-COG-T1' },
-    taskIds: ids(tasks)
-  });
-  for (const task of tasks) A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
-  assert.equal(A.totalScore(a), 39);
-  assert.equal(A.maxScore(a), 39);
-  assert.deepEqual({ ...a.settings }, { section: 'OBS', topic: 'OBS-COG', set: 'OBS-COG-T1' }, 'попытка помнит тренажёр');
+  const expected = { 'OBS-SOC-T1': 2, 'OBS-ACT-T1': 33, 'OBS-COG-T1': 39, 'OBS-COG-T2': 2 };
+  for (const [setId, max] of Object.entries(expected)) {
+    const set = EGE.getSet(setId);
+    const tasks = EGE.getPool('OBS', set.topic, setId);
+    const a = A.createAttempt({ settings: { section: 'OBS', topic: set.topic, set: setId }, taskIds: ids(tasks) });
+    for (const task of tasks) A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
+    assert.equal(A.totalScore(a), max, setId);
+    assert.equal(A.maxScore(a), max, setId);
+    assert.equal(a.settings.set, setId, 'попытка помнит тренажёр');
+  }
 });
 
-test('темы с одним набором (addTasks) — набор по умолчанию «Тренажёр 1»; «Деятельность» — 16 заданий', () => {
+test('темы других разделов (addTasks) — неявный «Тренажёр 1», без выбора тренажёра', () => {
   const EGE = loadBank();
-  for (const topicId of ['OBS-GEN', 'OBS-ACT', 'ECO-GEN', 'SOC-STR', 'POL-GEN', 'LAW-GEN']) {
+  for (const topicId of ['ECO-GEN', 'SOC-STR', 'SOC-MOB', 'SOC-FAM', 'POL-GEN', 'LAW-GEN']) {
     const sets = EGE.getAvailableSets(topicId);
     assert.deepEqual(ids(sets), [topicId + '-T1'], topicId);
     assert.equal(sets[0].title, 'Тренажёр 1');
-    assert.deepEqual(ids(EGE.getPool('X', topicId, topicId + '-T1')), ids(EGE.getTasksByTopic(topicId)));
-  }
-  assert.equal(EGE.getTasksBySet('OBS-ACT-T1').length, 16);
-  assert.equal(EGE.getPool('OBS', 'OBS-ACT').length, 16);
-  assert.equal(EGE.getTasksBySection('OBS').length, 39);
-});
-
-test('второй набор темы: появляется в выборе, считается в теме и разделе один раз, пулы раздельны', () => {
-  const EGE = loadBank();
-  const sectionBefore = EGE.getTasksBySection('OBS').length;
-  const allBefore = EGE.getTasksBySection('all').length;
-
-  const set = EGE.addTaskSet('OBS-COG', {
-    id: 'OBS-COG-T2',
-    title: 'Тренажёр 2',
-    tasks: [sampleTask('OBS-COG-901'), sampleTask('OBS-COG-902')]
-  });
-  assert.equal(set.title, 'Тренажёр 2');
-
-  assert.deepEqual(ids(EGE.getAvailableSets('OBS-COG')), ['OBS-COG-T1', 'OBS-COG-T2'], 'порядок — порядок регистрации');
-  assert.equal(EGE.getTasksBySet('OBS-COG-T1').length, 20, 'первый набор не изменился');
-  assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T2')), ['OBS-COG-901', 'OBS-COG-902']);
-  assert.ok(EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T1').every((t) => t.set === 'OBS-COG-T1'));
-
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 22);
-  assert.equal(EGE.getTasksBySection('OBS').length, sectionBefore + 2);
-  assert.equal(EGE.getTasksBySection('all').length, allBefore + 2);
-  assert.equal(EGE.getTask('OBS-COG-901').set, 'OBS-COG-T2');
-
-  // Набор другой темы в пул не попадает.
-  assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-ACT', 'OBS-COG-T2')), []);
-
-  // Проверка и баллы — общие: второй набор — самостоятельная тренировка со своим результатом.
-  const A = EGE.attempt;
-  const tasks = EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T2');
-  const a = A.createAttempt({ settings: { section: 'OBS', topic: 'OBS-COG', set: 'OBS-COG-T2' }, taskIds: ids(tasks) });
-  assert.equal(A.recordAnswer(a, tasks[0], [1, 3]).points, 2);
-  assert.equal(A.recordAnswer(a, tasks[1], [1]).points, 1);
-  assert.equal(A.totalScore(a), 3);
-  assert.equal(A.maxScore(a), 4);
-  assert.equal(a.settings.set, 'OBS-COG-T2');
-});
-
-test('выбор тренажёра: у тем из addTaskSet — даже при одном наборе, у тем из addTasks — нет', () => {
-  const EGE = loadBank();
-  assert.equal(EGE.getSet('OBS-COG-T1').explicit, true, '«Познание» объявлено через addTaskSet');
-  assert.equal(EGE.showsSetChoice('OBS-COG'), true, '«Познание»: «Тренажёр 1» показывается');
-  for (const topicId of ['OBS-GEN', 'OBS-ACT', 'ECO-GEN', 'SOC-STR', 'SOC-MOB', 'SOC-FAM', 'POL-GEN', 'LAW-GEN']) {
-    assert.equal(EGE.getSet(topicId + '-T1').explicit, false, topicId);
+    assert.equal(sets[0].explicit, false, topicId);
     assert.equal(EGE.showsSetChoice(topicId), false, `${topicId}: без выбора тренажёра`);
+    assert.deepEqual(ids(EGE.getPool('X', topicId, topicId + '-T1')), ids(EGE.getTasksByTopic(topicId)));
   }
   // Тема без заданий и несуществующая тема — без выбора.
   assert.equal(EGE.showsSetChoice('SOC-GRP'), false);
   assert.equal(EGE.showsSetChoice('OBS-XXX'), false);
 });
 
-test('выбор тренажёра: второй набор добавляет карточку; тема из addTasks получает выбор со вторым набором', () => {
+test('новый набор темы: появляется в выборе, считается в теме и разделе один раз, пулы раздельны', () => {
   const EGE = loadBank();
-  EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', title: 'Тренажёр 2', tasks: [sampleTask('OBS-COG-901')] });
-  assert.equal(EGE.showsSetChoice('OBS-COG'), true);
-  assert.deepEqual(ids(EGE.getAvailableSets('OBS-COG')), ['OBS-COG-T1', 'OBS-COG-T2']);
+  const sectionBefore = EGE.getTasksBySection('OBS').length;
+  const allBefore = EGE.getTasksBySection('all').length;
 
-  // «Деятельность» остаётся без выбора, пока у неё один неявный набор…
-  assert.equal(EGE.showsSetChoice('OBS-ACT'), false);
-  EGE.addTasks('OBS-ACT', [sampleTask('OBS-ACT-901')]);
-  assert.equal(EGE.showsSetChoice('OBS-ACT'), false, 'addTasks не делает набор явным');
-  // …а со вторым набором выбор появляется.
-  EGE.addTaskSet('OBS-ACT', { id: 'OBS-ACT-T2', title: 'Тренажёр 2', tasks: [sampleTask('OBS-ACT-902')] });
-  assert.equal(EGE.showsSetChoice('OBS-ACT'), true);
-  assert.deepEqual(ids(EGE.getAvailableSets('OBS-ACT')), ['OBS-ACT-T1', 'OBS-ACT-T2']);
-  assert.equal(EGE.getSet('OBS-ACT-T1').explicit, false);
+  const set = EGE.addTaskSet('OBS-SOC', {
+    id: 'OBS-SOC-T2',
+    title: 'Тренажёр 2',
+    tasks: [sampleTask('OBS-SOC-901'), sampleTask('OBS-SOC-902')]
+  });
+  assert.equal(set.title, 'Тренажёр 2');
+
+  assert.deepEqual(ids(EGE.getAvailableSets('OBS-SOC')), ['OBS-SOC-T1', 'OBS-SOC-T2'], 'порядок — порядок регистрации');
+  assert.equal(EGE.getTasksBySet('OBS-SOC-T1').length, 1, 'первый набор не изменился');
+  assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-SOC', 'OBS-SOC-T2')), ['OBS-SOC-901', 'OBS-SOC-902']);
+  assert.equal(EGE.getTasksByTopic('OBS-SOC').length, 3);
+  assert.equal(EGE.getTasksBySection('OBS').length, sectionBefore + 2);
+  assert.equal(EGE.getTasksBySection('all').length, allBefore + 2);
+
+  // Набор другой темы в пул не попадает.
+  assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-ACT', 'OBS-SOC-T2')), []);
+
+  // Проверка и баллы — общие: новый набор — самостоятельная тренировка со своим результатом.
+  const A = EGE.attempt;
+  const tasks = EGE.getPool('OBS', 'OBS-SOC', 'OBS-SOC-T2');
+  const a = A.createAttempt({ settings: { section: 'OBS', topic: 'OBS-SOC', set: 'OBS-SOC-T2' }, taskIds: ids(tasks) });
+  assert.equal(A.recordAnswer(a, tasks[0], [1, 3]).points, 2);
+  assert.equal(A.recordAnswer(a, tasks[1], [1]).points, 1);
+  assert.equal(A.totalScore(a), 3);
+  assert.equal(A.maxScore(a), 4);
 });
 
-test('выбор тренажёра: пустой явный набор выбор не включает', () => {
+test('выбор тренажёра у темы из addTasks: только со вторым непустым набором', () => {
   const EGE = loadBank();
-  EGE.addTaskSet('OBS-ACT', { id: 'OBS-ACT-T2', title: 'Тренажёр 2', tasks: [] });
-  assert.equal(EGE.showsSetChoice('OBS-ACT'), false, '«Деятельность» выглядит как раньше');
-  assert.deepEqual(ids(EGE.getAvailableSets('OBS-ACT')), ['OBS-ACT-T1'], 'пустой набор не показывается');
+  EGE.addTasks('ECO-GEN', [sampleTask('ECO-GEN-901')]);
+  assert.equal(EGE.showsSetChoice('ECO-GEN'), false, 'addTasks не делает набор явным');
+  EGE.addTaskSet('ECO-GEN', { id: 'ECO-GEN-T2', title: 'Тренажёр 2', tasks: [] });
+  assert.equal(EGE.showsSetChoice('ECO-GEN'), false, 'пустой явный набор выбор не включает');
+  assert.deepEqual(ids(EGE.getAvailableSets('ECO-GEN')), ['ECO-GEN-T1'], 'пустой набор не показывается');
+  EGE.addTaskSet('ECO-GEN', { id: 'ECO-GEN-T2', tasks: [sampleTask('ECO-GEN-902')] });
+  assert.equal(EGE.showsSetChoice('ECO-GEN'), true);
+  assert.deepEqual(ids(EGE.getAvailableSets('ECO-GEN')), ['ECO-GEN-T1', 'ECO-GEN-T2']);
+  assert.equal(EGE.getSet('ECO-GEN-T1').explicit, false);
 });
 
-test('пустой набор и набор только из снятых заданий не показываются', () => {
+test('набор из одних снятых заданий не показывается и не считается', () => {
   const EGE = loadBank();
-  EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', title: 'Тренажёр 2', tasks: [] });
   EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T3', title: 'Тренажёр 3', tasks: [{ ...sampleTask('OBS-COG-903'), retired: true }] });
-  assert.deepEqual(ids(EGE.getAvailableSets('OBS-COG')), ['OBS-COG-T1']);
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 20);
+  assert.deepEqual(ids(EGE.getAvailableSets('OBS-COG')), ['OBS-COG-T1', 'OBS-COG-T2']);
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 21);
   assert.equal(EGE.getTasksBySection('OBS').length, 39);
 });
 
 test('набор можно дополнять повторным вызовом; addTasks дописывает в «Тренажёр 1»', () => {
   const EGE = loadBank();
-  EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', title: 'Тренажёр 2', tasks: [sampleTask('OBS-COG-901')] });
-  EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', tasks: [sampleTask('OBS-COG-902')] });
-  assert.deepEqual(ids(EGE.getTasksBySet('OBS-COG-T2')), ['OBS-COG-901', 'OBS-COG-902']);
+  EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T3', title: 'Тренажёр 3', tasks: [sampleTask('OBS-COG-901')] });
+  EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T3', tasks: [sampleTask('OBS-COG-902')] });
+  assert.deepEqual(ids(EGE.getTasksBySet('OBS-COG-T3')), ['OBS-COG-901', 'OBS-COG-902']);
 
   EGE.addTasks('OBS-COG', [sampleTask('OBS-COG-904')]);
   assert.equal(EGE.getTask('OBS-COG-904').set, 'OBS-COG-T1');
   assert.equal(EGE.getTasksBySet('OBS-COG-T1').length, 21);
   assert.equal(EGE.getSet('OBS-COG-T1').title, 'Тренажёр 1');
+  assert.equal(EGE.getSet('OBS-COG-T1').explicit, true, 'явный набор остаётся явным');
 });
 
 test('некорректные наборы отклоняются', () => {
@@ -221,10 +237,10 @@ test('некорректные наборы отклоняются', () => {
   assert.throws(() => EGE.addTaskSet('OBS-XXX', { id: 'OBS-XXX-T1', title: 't', tasks: [] }), /Неизвестная тема/);
   assert.throws(() => EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-2', title: 't', tasks: [] }), /Некорректный id набора/);
   assert.throws(() => EGE.addTaskSet('OBS-COG', { id: 'OBS-ACT-T2', title: 't', tasks: [] }), /Некорректный id набора/);
-  assert.throws(() => EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', tasks: [] }), /нет названия/);
+  assert.throws(() => EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T3', tasks: [] }), /нет названия/);
   assert.throws(() => EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T1', title: 'Другое', tasks: [] }), /уже зарегистрирован/);
   // id задания уникален во всём банке, в том числе между наборами.
-  assert.throws(() => EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', title: 'Тренажёр 2', tasks: [sampleTask('OBS-COG-001')] }),
+  assert.throws(() => EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T3', title: 'Тренажёр 3', tasks: [sampleTask('OBS-COG-001')] }),
     /Повторяющийся id/);
 });
 
@@ -245,5 +261,15 @@ test('интерфейс: выбор тренажёра — общий для в
   assert.match(appCode, /EGE\.showsSetChoice\(settings\.topic\)/);
   assert.match(appCode, /ui\.setField\.hidden = !show;/);
   assert.match(appCode, /EGE\.getPool\(settings\.section, settings\.topic, settings\.set\)/);
-  assert.doesNotMatch(appCode, /OBS-COG|Познание/, 'в интерфейсе нет логики для конкретной темы');
+  assert.doesNotMatch(appCode, /OBS-|Познание|Деятельность|Общество/, 'в интерфейсе нет логики для конкретной темы');
+});
+
+test('интерфейс: в блоке «Тема» нет «Весь раздел», при выборе раздела выбирается его первая тема', () => {
+  const appCode = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
+  assert.doesNotMatch(appCode, /optionCard\('topic', 'all'/, 'карточки «Весь раздел» нет');
+  assert.match(appCode, /function resolveTopic\(sectionId, topicId\)/);
+  assert.match(appCode, /settings\.topic = resolveTopic\(section, null\);/);
+  // Пул всего раздела в реестре сохранён — для будущих обобщающих тренажёров.
+  const EGE = loadBank();
+  assert.equal(EGE.getPool('OBS', 'all').length, 39);
 });
