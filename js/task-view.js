@@ -50,10 +50,14 @@
   }
 
   /** Подпись темы задания: «Раздел · Тема». */
+  /** «Раздел · Тема»; если у темы несколько тренажёров — ещё и «· Тренажёр N». */
   function topicLabel(task) {
     var section = EGE.getSection(task.section);
     var topic = EGE.getTopic(task.topic);
-    return section.title + ' · ' + topic.title;
+    var label = section.title + ' · ' + topic.title;
+    var set = task.set && EGE.getSet(task.set);
+    if (set && EGE.getAvailableSets(task.topic).length > 1) label += ' · ' + set.title;
+    return label;
   }
 
   /** Цветной ярлык темы задания. */

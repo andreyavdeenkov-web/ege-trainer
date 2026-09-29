@@ -9,7 +9,8 @@
  *   schemaVersion: 1,
  *   id: 'uuid',
  *   startedAt: ISO-строка UTC, finishedAt: ISO-строка | null,
- *   settings: { section, topic },          // в попытку входят все задания выбора
+ *   settings: { section, topic, set? },    // в попытку входят все задания выбора;
+ *                                          // set — id набора (тренажёра), если выбрана тема
  *   taskIds: ['SOC-STR-004', ...],          // порядок показа, фиксируется при старте
  *   answers: [{ taskId, taskVersion, position, selected, correct,
  *               points, maxPoints, answeredAt }]   // в порядке выполнения
@@ -49,12 +50,14 @@
     if (taskIds.length === 0) throw new Error('В попытке нет заданий');
     if (new Set(taskIds).size !== taskIds.length) throw new Error('Задания в попытке повторяются');
     var s = options.settings || {};
+    var settings = { section: s.section || 'all', topic: s.topic || 'all' };
+    if (s.set && s.set !== 'all') settings.set = s.set;
     return {
       schemaVersion: SCHEMA_VERSION,
       id: options.id || generateId(),
       startedAt: nowIso(options.now),
       finishedAt: null,
-      settings: { section: s.section || 'all', topic: s.topic || 'all' },
+      settings: settings,
       taskIds: taskIds,
       answers: []
     };

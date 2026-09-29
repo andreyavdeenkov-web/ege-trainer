@@ -1,9 +1,10 @@
 /**
  * Реестр разделов, тем и заданий.
  *
- * Структура банка: раздел → тема → задания.
+ * Структура банка: раздел → тема → наборы заданий (тренажёры) → задания.
  * Файлы с заданиями (data/tasks/**.js) подключаются после этого файла
- * и регистрируют задания через EGE.addTasks(topicId, [...]).
+ * и регистрируют задания через EGE.addTaskSet(topicId, { id, title, tasks })
+ * или, если у темы один набор, короче — EGE.addTasks(topicId, [...]).
  * Файл работает и в браузере, и в Node.js (для тестов).
  */
 (function (root) {
@@ -74,6 +75,8 @@
   EGE.TASK_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-\d{3,4}$/;
   /** Формат id темы: РАЗДЕЛ-ТЕМА, например SOC-STR. */
   EGE.TOPIC_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}$/;
+  /** Формат id набора заданий (тренажёра): ТЕМА-T-НОМЕР, например OBS-COG-T1. */
+  EGE.SET_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-T\d+$/;
 
   /** Все задания в порядке регистрации. */
   EGE.tasks = [];
@@ -82,6 +85,7 @@
   var topicsById = Object.create(null);
   var tasksById = Object.create(null);
   var tasksByTopic = Object.create(null);
+  var setsById = Object.create(null);
 
   EGE.sections.forEach(function (section) {
     sectionsById[section.id] = section;
@@ -92,6 +96,7 @@
       if (topicsById[topic.id]) throw new Error('Повторяющийся id темы: ' + topic.id);
       topic.section = section.id;
       topicsById[topic.id] = topic;
+      topic.sets = [];
       tasksByTopic[topic.id] = [];
     });
   });
@@ -109,8 +114,47 @@
     return tasksById[taskId] || null;
   };
 
+  /** Набор заданий по id (в том числе без активных заданий). */
+  EGE.getSet = function (setId) {
+    return setsById[setId] || null;
+  };
+
+  /** id набора по умолчанию: первый тренажёр темы, OBS-ACT → OBS-ACT-T1. */
+  EGE.defaultSetId = function (topicId) {
+    return topicId + '-T1';
+  };
+
   /**
-   * Регистрирует задания темы.
+   * Регистрирует набор заданий (тренажёр) темы и его задания.
+   * set: { id, title, tasks: [...] }; id — постоянный, вида ТЕМА-T1, ТЕМА-T2…
+   * Повторный вызов с тем же id дописывает задания в конец набора.
+   * Порядок наборов в теме — порядок их первой регистрации.
+   * Задание принадлежит ровно одному набору, поэтому счётчик темы —
+   * это сумма наборов без двойного подсчёта.
+   */
+  EGE.addTaskSet = function (topicId, set) {
+    var topic = EGE.getTopic(topicId);
+    if (!topic) throw new Error('Неизвестная тема: ' + topicId);
+    if (!set || !EGE.SET_ID_PATTERN.test(set.id) || set.id.indexOf(topicId + '-T') !== 0) {
+      throw new Error('Некорректный id набора: ' + (set && set.id) + ' (ожидается формат ' + topicId + '-T1)');
+    }
+    var existing = setsById[set.id];
+    if (existing && set.title && set.title !== existing.title) {
+      throw new Error('Набор ' + set.id + ' уже зарегистрирован с названием «' + existing.title + '»');
+    }
+    if (!existing) {
+      if (!set.title) throw new Error('У набора ' + set.id + ' нет названия');
+      existing = { id: set.id, title: set.title, topic: topicId, section: topic.section, tasks: [] };
+      setsById[set.id] = existing;
+      topic.sets.push(existing);
+    }
+    registerTasks(topic, existing, set.tasks || []);
+    return existing;
+  };
+
+  /**
+   * Регистрирует задания темы в её набор по умолчанию «Тренажёр 1» (ТЕМА-T1).
+   * Подходит для тем с одним набором; для второго и следующих — EGE.addTaskSet.
    * Каждое задание: { id, question, statements: [{ text, correct, explanation? }] },
    * explanation у суждения необязательно;
    * type — тип задания: 'multiple' (по умолчанию), 'exclude-two' или 'matching'
@@ -122,9 +166,15 @@
    * и retired (true — задание больше не выдаётся, но его ID занят навсегда).
    */
   EGE.addTasks = function (topicId, tasks) {
-    var topic = EGE.getTopic(topicId);
-    if (!topic) throw new Error('Неизвестная тема: ' + topicId);
+    if (!EGE.getTopic(topicId)) throw new Error('Неизвестная тема: ' + topicId);
+    var setId = EGE.defaultSetId(topicId);
+    // Название задаётся только при создании набора: если «Тренажёр 1» уже
+    // зарегистрирован через addTaskSet (возможно, под другим названием), задания дописываются в него.
+    return EGE.addTaskSet(topicId, { id: setId, title: EGE.getSet(setId) ? undefined : 'Тренажёр 1', tasks: tasks });
+  };
 
+  function registerTasks(topic, set, tasks) {
+    var topicId = topic.id;
     tasks.forEach(function (task) {
       if (!task.id) throw new Error('У задания нет id (тема ' + topicId + ')');
       if (!EGE.TASK_ID_PATTERN.test(task.id)) {
@@ -133,11 +183,13 @@
       if (tasksById[task.id]) throw new Error('Повторяющийся id задания: ' + task.id);
       task.topic = topicId;
       task.section = topic.section;
+      task.set = set.id;
       tasksById[task.id] = task;
       tasksByTopic[topicId].push(task);
+      set.tasks.push(task);
       EGE.tasks.push(task);
     });
-  };
+  }
 
   function isActive(task) {
     return !task.retired;
@@ -158,12 +210,33 @@
     }, []);
   };
 
+  /** Активные задания набора. */
+  EGE.getTasksBySet = function (setId) {
+    var set = EGE.getSet(setId);
+    return set ? set.tasks.filter(isActive) : [];
+  };
+
+  /** Наборы темы, в которых есть хотя бы одно активное задание (пустые скрыты). */
+  EGE.getAvailableSets = function (topicId) {
+    var topic = EGE.getTopic(topicId);
+    if (!topic) return [];
+    return topic.sets.filter(function (set) {
+      return EGE.getTasksBySet(set.id).length > 0;
+    });
+  };
+
   /**
-   * Пул заданий для тренировки: одна тема, весь раздел или все разделы.
-   * topicId = 'all' означает «весь раздел».
+   * Пул заданий для тренировки: один набор темы, вся тема, весь раздел или все разделы.
+   * topicId = 'all' означает «весь раздел»; setId не задан или 'all' — все наборы темы.
    */
-  EGE.getPool = function (sectionId, topicId) {
-    if (topicId && topicId !== 'all') return EGE.getTasksByTopic(topicId);
+  EGE.getPool = function (sectionId, topicId, setId) {
+    if (topicId && topicId !== 'all') {
+      if (setId && setId !== 'all') {
+        var set = EGE.getSet(setId);
+        return set && set.topic === topicId ? EGE.getTasksBySet(setId) : [];
+      }
+      return EGE.getTasksByTopic(topicId);
+    }
     return EGE.getTasksBySection(sectionId);
   };
 

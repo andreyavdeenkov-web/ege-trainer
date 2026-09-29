@@ -37,6 +37,8 @@
     sectionOptions: $('section-options'),
     topicField: $('topic-field'),
     topicOptions: $('topic-options'),
+    setField: $('set-field'),
+    setOptions: $('set-options'),
     startBtn: $('start-btn'),
     brandHome: $('brand-home'),
     exitBar: $('exit-bar'),
@@ -118,16 +120,38 @@
     return EGE.getAvailableTopics(sectionId).some(function (t) { return t.id === topicId; });
   }
 
-  /** Настройки старта: раздел и тема. Тренировка всегда включает все задания выбора. */
+  /** Наборы (тренажёры) выбранной темы; для «Весь раздел» и «Все разделы» — пусто. */
+  function topicSets(topicId) {
+    return topicId && topicId !== 'all' ? EGE.getAvailableSets(topicId) : [];
+  }
+
+  /**
+   * Набор, который будет запущен для темы: сохранённый выбор, если он ещё есть,
+   * иначе первый. Тема с одним набором запускает его сразу, без выбора.
+   */
+  function resolveSet(topicId, setId) {
+    var sets = topicSets(topicId);
+    if (sets.length === 0) return 'all';
+    var found = sets.some(function (s) { return s.id === setId; });
+    return found ? setId : sets[0].id;
+  }
+
+  /**
+   * Настройки старта: раздел, тема и набор заданий темы (тренажёр).
+   * Тренировка включает все задания выбранного набора (или раздела).
+   */
   function loadSettings() {
-    var result = { section: 'all', topic: 'all' };
+    var result = { section: 'all', topic: 'all', set: 'all' };
+    var savedSet = null;
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && typeof saved === 'object') {
         if (isValidSection(saved.section)) result.section = saved.section;
         if (isValidTopic(result.section, saved.topic)) result.topic = saved.topic;
+        savedSet = saved.set;
       }
     } catch (e) { /* хранилище недоступно — используем значения по умолчанию */ }
+    result.set = resolveSet(result.topic, savedSet);
     return result;
   }
 
@@ -203,6 +227,7 @@
     ui.topicOptions.textContent = '';
     var section = EGE.getSection(settings.section);
     ui.topicField.hidden = !section;
+    renderSetOptions();
     if (!section) return;
 
     ui.topicOptions.appendChild(optionCard('topic', 'all', 'Весь раздел',
@@ -213,8 +238,24 @@
     });
   }
 
+  /**
+   * Тренажёры выбранной темы. Выбор показывается, только если наборов два и больше:
+   * тема с одним набором запускается сразу. Пустые наборы не показываются.
+   */
+  function renderSetOptions() {
+    ui.setOptions.textContent = '';
+    var sets = topicSets(settings.topic);
+    ui.setField.hidden = sets.length < 2;
+    if (sets.length < 2) return;
+    var color = EGE.getSection(settings.section).color;
+    sets.forEach(function (set) {
+      ui.setOptions.appendChild(optionCard('set', set.id, set.title,
+        EGE.getTasksBySet(set.id).length, color, settings.set === set.id));
+    });
+  }
+
   function currentPool() {
-    return EGE.getPool(settings.section, settings.topic);
+    return EGE.getPool(settings.section, settings.topic, settings.set);
   }
 
   function updateStartButton() {
@@ -232,9 +273,18 @@
       // При смене раздела выбор темы сбрасывается на «Весь раздел».
       settings.section = section;
       settings.topic = 'all';
+      settings.set = 'all';
       renderTopicOptions();
+      return;
+    }
+    var topic = data.get('topic') || 'all';
+    if (topic !== settings.topic) {
+      // При смене темы выбирается её первый тренажёр.
+      settings.topic = topic;
+      settings.set = resolveSet(topic, null);
+      renderSetOptions();
     } else {
-      settings.topic = data.get('topic') || 'all';
+      settings.set = resolveSet(topic, data.get('set'));
     }
   }
 
@@ -247,7 +297,7 @@
       return;
     }
     state.attempt = A.createAttempt({
-      settings: { section: settings.section, topic: settings.topic },
+      settings: { section: settings.section, topic: settings.topic, set: settings.set },
       taskIds: pool.map(function (t) { return t.id; })
     });
     state.viewIndex = 0;
