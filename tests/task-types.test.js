@@ -200,3 +200,52 @@ test('попытка из заданий разных типов: сумма и 
   assert.equal(A.answeredMaxScore(a), 5);
   assert.deepEqual(A.mistakeIndexes(a), [1]);
 });
+
+/* ---------- matching: выбор номера до ответа (черновик) ---------- */
+
+test('matching oneToOne: выбранный номер занят для остальных позиций и не может повториться', () => {
+  assert.equal(A.isOneToOne(matching), true);
+  let s = A.chooseMatch(matching, [null, null, null, null, null], 0, 2);
+  assert.deepEqual(s.draft, [2, null, null, null, null]);
+  assert.equal(s.row, 1, 'дальше — следующая пустая позиция');
+  assert.deepEqual({ ...A.takenMatches(matching, s.draft) }, { 2: 0 }, 'номер 2 занят позицией А');
+
+  // Номер 2, выбранный для Б, уходит от А: повтора нет.
+  s = A.chooseMatch(matching, s.draft, 1, 2);
+  assert.deepEqual(s.draft, [null, 2, null, null, null]);
+  assert.equal(s.row, 2);
+  assert.deepEqual({ ...A.takenMatches(matching, s.draft) }, { 2: 1 });
+
+  // Сколько ни выбирай, в черновике нет повторов.
+  let draft = [null, null, null, null, null];
+  for (const [row, n] of [[0, 1], [1, 1], [2, 1], [3, 3], [4, 3], [0, 5], [1, 5]]) {
+    draft = A.chooseMatch(matching, draft, row, n).draft;
+    const filled = draft.filter((x) => x !== null);
+    assert.equal(new Set(filled).size, filled.length, `повтор в черновике ${JSON.stringify(draft)}`);
+  }
+});
+
+test('matching с повторами: номер для одной буквы не блокирует его для других', () => {
+  assert.equal(A.isOneToOne(matchingRepeat), false);
+  let draft = [null, null, null, null];
+  for (let row = 0; row < 4; row++) draft = A.chooseMatch(matchingRepeat, draft, row, 1).draft;
+  assert.deepEqual(draft, [1, 1, 1, 1], 'один номер у всех позиций');
+  assert.deepEqual({ ...A.takenMatches(matchingRepeat, draft) }, {}, 'занятых номеров нет');
+  const s = A.chooseMatch(matchingRepeat, draft, 2, 2);
+  assert.deepEqual(s.draft, [1, 1, 2, 1], 'остальные позиции не меняются');
+});
+
+test('matching: повторное нажатие снимает выбор; исходный черновик не меняется', () => {
+  const draft = [2, null, null, null, null];
+  const s = A.chooseMatch(matching, draft, 0, 2);
+  assert.deepEqual(s.draft, [null, null, null, null, null]);
+  assert.equal(s.row, 0);
+  assert.deepEqual(draft, [2, null, null, null, null], 'chooseMatch не изменяет аргумент');
+  assert.deepEqual(A.chooseMatch(matching, [1, 2, 3, 4, null], 4, 5).row, 4, 'всё заполнено — позиция остаётся');
+});
+
+test('matching: режим определяется только полем oneToOne задания', () => {
+  assert.equal(A.isOneToOne({ ...matching, oneToOne: false }), false);
+  assert.equal(A.isOneToOne({ ...matching, oneToOne: undefined }), false);
+  assert.equal(A.isOneToOne({ ...matchingRepeat, oneToOne: true }), true);
+});

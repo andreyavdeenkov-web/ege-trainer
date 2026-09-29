@@ -115,7 +115,7 @@
       if (n == null) throw new Error('Не выбран вариант для позиции ' + scoring.letter(i + 1));
       if (!Number.isInteger(n) || n < 1 || n > max) throw new Error('Некорректный номер варианта: ' + n);
     });
-    if (task.oneToOne && new Set(selected).size !== selected.length) {
+    if (isOneToOne(task) && new Set(selected).size !== selected.length) {
       throw new Error('Каждый вариант можно использовать только один раз');
     }
     return selected.slice();
@@ -194,6 +194,58 @@
   }
 
   /** Независимая копия попытки для передачи наружу (например, на сервер). */
+  /* ---------- Черновик ответа на matching (до «Ответить») ---------- */
+
+  /**
+   * Режим задания на соответствие задаётся данными: oneToOne: true — каждый номер
+   * второго столбца используется только один раз; иначе номера могут повторяться
+   * (например, «1 — чувственное, 2 — рациональное» для пяти позиций).
+   */
+  function isOneToOne(task) {
+    return task.oneToOne === true;
+  }
+
+  /**
+   * Номера, занятые другими позициями: { номер: индекс позиции }.
+   * Только для oneToOne; при повторяющихся вариантах занятых номеров нет.
+   */
+  function takenMatches(task, selected) {
+    var taken = Object.create(null);
+    if (!isOneToOne(task)) return taken;
+    (selected || []).forEach(function (n, row) { if (n != null) taken[n] = row; });
+    return taken;
+  }
+
+  /**
+   * Выбор номера number для позиции row в черновике draft (массив номеров или null).
+   * Возвращает { draft, row }: новый черновик и позицию, куда попадёт следующая цифра.
+   * Повторное нажатие на выбранный номер снимает выбор. В oneToOne номер,
+   * занятый другой позицией, переходит к row — два одинаковых номера невозможны.
+   * При повторяющихся вариантах выбор не влияет на другие позиции.
+   */
+  function chooseMatch(task, draft, row, number) {
+    var next = draft.slice();
+    if (next[row] === number) {
+      next[row] = null;
+      return { draft: next, row: row };
+    }
+    if (isOneToOne(task)) {
+      var other = next.indexOf(number);
+      if (other !== -1) next[other] = null;
+    }
+    next[row] = number;
+    return { draft: next, row: nextEmptyRow(next, row) };
+  }
+
+  /** Следующая незаполненная позиция после row (по кругу); если всё заполнено — row. */
+  function nextEmptyRow(draft, row) {
+    for (var k = 1; k <= draft.length; k++) {
+      var i = (row + k) % draft.length;
+      if (draft[i] === null) return i;
+    }
+    return row;
+  }
+
   function snapshot(attempt) {
     return JSON.parse(JSON.stringify(attempt));
   }
@@ -214,6 +266,9 @@
     answeredMaxScore: answeredMaxScore,
     maxScore: maxScore,
     mistakeIndexes: mistakeIndexes,
+    isOneToOne: isOneToOne,
+    takenMatches: takenMatches,
+    chooseMatch: chooseMatch,
     snapshot: snapshot
   };
 

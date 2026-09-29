@@ -347,7 +347,7 @@
   function hintFor(task) {
     var type = typeOf(task);
     var hint = HINTS[type === 'multiple' && task.choiceOf === 'items' ? 'multiple-items' : type];
-    return task.oneToOne ? hint + HINT_ONE_TO_ONE : hint;
+    return A.isOneToOne(task) ? hint + HINT_ONE_TO_ONE : hint;
   }
 
   function renderProgress() {
@@ -516,29 +516,12 @@
   function chooseMatch(row, number) {
     if (viewedAnswer()) return;
     var task = taskAt(state.viewIndex);
-    var draft = currentDraft();
-    if (draft[row] === number) {
-      draft[row] = null;
-      state.matchRow = row;
-    } else {
-      if (task.oneToOne) {
-        var other = draft.indexOf(number);
-        if (other !== -1) draft[other] = null;
-      }
-      draft[row] = number;
-      state.matchRow = nextEmptyRow(draft, row);
-    }
+    // Правила выбора (в т. ч. oneToOne) — в EGE.attempt.chooseMatch, там же тесты.
+    var result = A.chooseMatch(task, currentDraft(), row, number);
+    state.draft = result.draft;
+    state.matchRow = result.row;
     renderMatchingDraft(task, null);
-    ui.submitBtn.disabled = !isDraftReady(task, draft);
-  }
-
-  /** Следующая незаполненная позиция после row (по кругу); если всё заполнено — row. */
-  function nextEmptyRow(draft, row) {
-    for (var k = 1; k <= draft.length; k++) {
-      var i = (row + k) % draft.length;
-      if (draft[i] === null) return i;
-    }
-    return row;
+    ui.submitBtn.disabled = !isDraftReady(task, state.draft);
   }
 
   function submitAnswer() {

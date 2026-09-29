@@ -355,6 +355,30 @@ test('тема «Познание»: все 20 заданий верно — 39 
   assert.equal(A.maxScore(a), 39);
 });
 
+test('matching в банке: режим уникальности задан данными и согласован с ключом', () => {
+  const EGE = loadBank();
+  const A = EGE.attempt;
+  const matchingTasks = EGE.tasks.filter((t) => EGE.scoring.getTaskType(t) === 'matching');
+  for (const task of matchingTasks) {
+    const key = EGE.scoring.getCorrect(task);
+    const repeats = new Set(key).size !== key.length;
+    if (A.isOneToOne(task)) {
+      assert.ok(!repeats, `${task.id}: oneToOne, но в ключе номера повторяются`);
+      assert.ok(task.options.length >= task.items.length, `${task.id}: oneToOne, но вариантов меньше, чем позиций`);
+    }
+    // Если ключ повторяет номера, задание обязано разрешать повторы — иначе его не решить.
+    if (repeats) assert.equal(A.isOneToOne(task), false, `${task.id}: ключ с повторами требует oneToOne: false`);
+    // Правильный ответ всегда можно ввести кнопками.
+    let draft = task.items.map(() => null);
+    key.forEach((n, row) => { draft = A.chooseMatch(task, draft, row, n).draft; });
+    assert.deepEqual([...draft], [...key], `${task.id}: ключ вводится кнопками`);
+  }
+  const oneToOne = matchingTasks.filter((t) => A.isOneToOne(t)).map((t) => t.id);
+  const withRepeats = matchingTasks.filter((t) => !A.isOneToOne(t)).map((t) => t.id);
+  assert.deepEqual([...oneToOne], ['OBS-ACT-003', 'OBS-ACT-009', 'OBS-ACT-012']);
+  assert.deepEqual([...withRepeats], ['OBS-COG-001', 'OBS-COG-004', 'OBS-COG-005', 'OBS-COG-008', 'OBS-COG-009', 'OBS-COG-011']);
+});
+
 // Действия с ответом выполняются кнопками — бланковые указания ЕГЭ не показываются.
 const PAPER_INSTRUCTIONS = [/запишите/i, /цифрами без пробелов/i, /в порядке, соответствующем буквам/i, /в ответ цифры/i];
 

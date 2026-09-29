@@ -160,8 +160,8 @@
     var answer = options.answer || null;
     var selected = answer ? answer.selected : options.selected || [];
     var columns = task.columns || [];
-    var used = Object.create(null);
-    selected.forEach(function (n, row) { if (n != null) used[n] = row; });
+    // Номера, занятые другими позициями (только при oneToOne).
+    var used = EGE.attempt.takenMatches(task, selected);
 
     var focused = document.activeElement && box.contains(document.activeElement)
       ? document.activeElement.dataset : null;
@@ -243,7 +243,7 @@
           }
         } else if (value === n) {
           btn.classList.add('is-selected');
-        } else if (task.oneToOne && used[n] !== undefined) {
+        } else if (used[n] !== undefined) {
           btn.classList.add('is-taken');
           label += ' (сейчас выбран для ' + scoring.letter(used[n] + 1) + ')';
         }
@@ -287,11 +287,6 @@
         review.appendChild(li);
       });
       box.appendChild(review);
-
-      var key = el('p', 'matching__key');
-      key.appendChild(el('span', 'muted', 'Правильное соответствие: '));
-      key.appendChild(el('strong', null, scoring.formatTaskAnswer(task, answer.correct)));
-      box.appendChild(key);
     }
 
     // Перерисовка не должна сбивать фокус клавиатуры.
