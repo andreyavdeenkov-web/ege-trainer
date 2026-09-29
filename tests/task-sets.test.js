@@ -84,18 +84,18 @@ test('счётчики: тема = сумма её наборов, раздел 
   assert.equal(new Set(ids(all)).size, all.length, 'задания не повторяются');
 });
 
-test('«Познание»: один набор «Тренажёр 1» (OBS-COG-T1) — все 18 заданий в исходном порядке', () => {
+test('«Познание»: один набор «Тренажёр 1» (OBS-COG-T1) — все 20 заданий в исходном порядке', () => {
   const EGE = loadBank();
   const sets = EGE.getAvailableSets('OBS-COG');
   assert.deepEqual(ids(sets), ['OBS-COG-T1']);
   assert.equal(sets[0].title, 'Тренажёр 1');
-  const expected = Array.from({ length: 18 }, (_, i) => 'OBS-COG-' + String(i + 1).padStart(3, '0'));
+  const expected = Array.from({ length: 20 }, (_, i) => 'OBS-COG-' + String(i + 1).padStart(3, '0'));
   assert.deepEqual(ids(EGE.getTasksBySet('OBS-COG-T1')), expected);
   assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T1')), expected);
   assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG')), expected, 'без выбора набора — вся тема');
 });
 
-test('«Познание», «Тренажёр 1»: все 18 заданий верно — 35 баллов из 35', () => {
+test('«Познание», «Тренажёр 1»: все 20 заданий верно — 39 баллов из 39', () => {
   const EGE = loadBank();
   const A = EGE.attempt;
   const tasks = EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T1');
@@ -104,8 +104,8 @@ test('«Познание», «Тренажёр 1»: все 18 заданий в�
     taskIds: ids(tasks)
   });
   for (const task of tasks) A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
-  assert.equal(A.totalScore(a), 35);
-  assert.equal(A.maxScore(a), 35);
+  assert.equal(A.totalScore(a), 39);
+  assert.equal(A.maxScore(a), 39);
   assert.deepEqual({ ...a.settings }, { section: 'OBS', topic: 'OBS-COG', set: 'OBS-COG-T1' }, 'попытка помнит тренажёр');
 });
 
@@ -119,7 +119,7 @@ test('темы с одним набором (addTasks) — набор по ум�
   }
   assert.equal(EGE.getTasksBySet('OBS-ACT-T1').length, 16);
   assert.equal(EGE.getPool('OBS', 'OBS-ACT').length, 16);
-  assert.equal(EGE.getTasksBySection('OBS').length, 37);
+  assert.equal(EGE.getTasksBySection('OBS').length, 39);
 });
 
 test('второй набор темы: появляется в выборе, считается в теме и разделе один раз, пулы раздельны', () => {
@@ -135,11 +135,11 @@ test('второй набор темы: появляется в выборе, с
   assert.equal(set.title, 'Тренажёр 2');
 
   assert.deepEqual(ids(EGE.getAvailableSets('OBS-COG')), ['OBS-COG-T1', 'OBS-COG-T2'], 'порядок — порядок регистрации');
-  assert.equal(EGE.getTasksBySet('OBS-COG-T1').length, 18, 'первый набор не изменился');
+  assert.equal(EGE.getTasksBySet('OBS-COG-T1').length, 20, 'первый набор не изменился');
   assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T2')), ['OBS-COG-901', 'OBS-COG-902']);
   assert.ok(EGE.getPool('OBS', 'OBS-COG', 'OBS-COG-T1').every((t) => t.set === 'OBS-COG-T1'));
 
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 20);
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 22);
   assert.equal(EGE.getTasksBySection('OBS').length, sectionBefore + 2);
   assert.equal(EGE.getTasksBySection('all').length, allBefore + 2);
   assert.equal(EGE.getTask('OBS-COG-901').set, 'OBS-COG-T2');
@@ -200,8 +200,8 @@ test('пустой набор и набор только из снятых за�
   EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T2', title: 'Тренажёр 2', tasks: [] });
   EGE.addTaskSet('OBS-COG', { id: 'OBS-COG-T3', title: 'Тренажёр 3', tasks: [{ ...sampleTask('OBS-COG-903'), retired: true }] });
   assert.deepEqual(ids(EGE.getAvailableSets('OBS-COG')), ['OBS-COG-T1']);
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 18);
-  assert.equal(EGE.getTasksBySection('OBS').length, 37);
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 20);
+  assert.equal(EGE.getTasksBySection('OBS').length, 39);
 });
 
 test('набор можно дополнять повторным вызовом; addTasks дописывает в «Тренажёр 1»', () => {
@@ -212,7 +212,7 @@ test('набор можно дополнять повторным вызовом
 
   EGE.addTasks('OBS-COG', [sampleTask('OBS-COG-904')]);
   assert.equal(EGE.getTask('OBS-COG-904').set, 'OBS-COG-T1');
-  assert.equal(EGE.getTasksBySet('OBS-COG-T1').length, 19);
+  assert.equal(EGE.getTasksBySet('OBS-COG-T1').length, 21);
   assert.equal(EGE.getSet('OBS-COG-T1').title, 'Тренажёр 1');
 });
 

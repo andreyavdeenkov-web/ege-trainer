@@ -287,16 +287,16 @@ test('тема «Деятельность»: все 16 заданий верно
   assert.equal(A.maxScore(a), 31);
 });
 
-test('тема «Познание» в разделе «Человек и общество»: 18 заданий', () => {
+test('тема «Познание» в разделе «Человек и общество»: 20 заданий', () => {
   const EGE = loadBank();
   const topic = EGE.getTopic('OBS-COG');
   assert.equal(topic.title, 'Познание');
   assert.equal(topic.section, 'OBS');
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 18);
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 20);
   assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
   assert.equal(EGE.getTasksBySection('OBS').length,
-    EGE.getTasksByTopic('OBS-GEN').length + EGE.getTasksByTopic('OBS-ACT').length + 18);
-  assert.equal(EGE.getTasksBySection('OBS').length, 37);
+    EGE.getTasksByTopic('OBS-GEN').length + EGE.getTasksByTopic('OBS-ACT').length + 20);
+  assert.equal(EGE.getTasksBySection('OBS').length, 39);
 });
 
 test('ключи заданий темы «Познание»', () => {
@@ -321,7 +321,9 @@ test('ключи заданий темы «Познание»', () => {
     'OBS-COG-015': ['multiple', [1, 2, 5]],
     'OBS-COG-016': ['multiple', [1, 3, 4]],
     'OBS-COG-017': ['multiple', [2, 3, 5]],
-    'OBS-COG-018': ['multiple', [1, 3, 5]]
+    'OBS-COG-018': ['multiple', [1, 3, 5]],
+    'OBS-COG-019': ['multiple', [1, 2, 4]],
+    'OBS-COG-020': ['multiple', [1, 3, 5]]
   };
   const topicTasks = EGE.getTasksByTopic('OBS-COG');
   assert.deepEqual([...topicTasks.map((t) => t.id)], Object.keys(keys));
@@ -340,7 +342,7 @@ test('ключи заданий темы «Познание»', () => {
   }
 });
 
-test('тема «Познание»: все 18 заданий верно — 35 баллов из 35', () => {
+test('тема «Познание»: все 20 заданий верно — 39 баллов из 39', () => {
   const EGE = loadBank();
   const A = EGE.attempt;
   const tasks = EGE.getTasksByTopic('OBS-COG');
@@ -349,8 +351,8 @@ test('тема «Познание»: все 18 заданий верно — 35 
     const answer = A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
     assert.equal(answer.points, answer.maxPoints, `${task.id}: верный ответ — максимум баллов`);
   }
-  assert.equal(A.totalScore(a), 35);
-  assert.equal(A.maxScore(a), 35);
+  assert.equal(A.totalScore(a), 39);
+  assert.equal(A.maxScore(a), 39);
 });
 
 // Действия с ответом выполняются кнопками — бланковые указания ЕГЭ не показываются.

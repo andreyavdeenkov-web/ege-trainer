@@ -161,7 +161,7 @@ EGE.addTaskSet('OBS-COG', {
   id: 'OBS-COG-T2',
   title: 'Тренажёр 2',
   tasks: [
-    { id: 'OBS-COG-019', question: '…', statements: [/* … */] }
+    { id: 'OBS-COG-021', question: '…', statements: [/* … */] }
     // …около 20 заданий; нумерация ID продолжает тему
   ]
 });
