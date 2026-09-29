@@ -287,14 +287,16 @@ test('тема «Деятельность»: все 16 заданий верно
   assert.equal(A.maxScore(a), 31);
 });
 
-test('тема «Познание» в разделе «Человек и общество»: 9 заданий', () => {
+test('тема «Познание» в разделе «Человек и общество»: 18 заданий', () => {
   const EGE = loadBank();
   const topic = EGE.getTopic('OBS-COG');
   assert.equal(topic.title, 'Познание');
   assert.equal(topic.section, 'OBS');
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 9);
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 18);
+  assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
   assert.equal(EGE.getTasksBySection('OBS').length,
-    EGE.getTasksByTopic('OBS-GEN').length + EGE.getTasksByTopic('OBS-ACT').length + 9);
+    EGE.getTasksByTopic('OBS-GEN').length + EGE.getTasksByTopic('OBS-ACT').length + 18);
+  assert.equal(EGE.getTasksBySection('OBS').length, 37);
 });
 
 test('ключи заданий темы «Познание»', () => {
@@ -309,7 +311,17 @@ test('ключи заданий темы «Познание»', () => {
     'OBS-COG-006': ['multiple', [1, 2, 3]],
     'OBS-COG-007': ['multiple', [3, 4, 5, 6]],
     'OBS-COG-008': ['matching', [2, 2, 1, 1, 2]],
-    'OBS-COG-009': ['matching', [1, 1, 2, 1, 2]]
+    'OBS-COG-009': ['matching', [1, 1, 2, 1, 2]],
+    // Подтема «Истина и её критерии».
+    'OBS-COG-010': ['multiple', [2, 3, 5]],
+    'OBS-COG-011': ['matching', [2, 2, 1, 1, 2]],
+    'OBS-COG-012': ['multiple', [1, 2]],
+    'OBS-COG-013': ['multiple', [3, 4, 5]],
+    'OBS-COG-014': ['multiple', [2, 3, 4]],
+    'OBS-COG-015': ['multiple', [1, 2, 5]],
+    'OBS-COG-016': ['multiple', [1, 3, 4]],
+    'OBS-COG-017': ['multiple', [2, 3, 5]],
+    'OBS-COG-018': ['multiple', [1, 3, 5]]
   };
   const topicTasks = EGE.getTasksByTopic('OBS-COG');
   assert.deepEqual([...topicTasks.map((t) => t.id)], Object.keys(keys));
@@ -328,7 +340,7 @@ test('ключи заданий темы «Познание»', () => {
   }
 });
 
-test('тема «Познание»: все 9 заданий верно — 17 баллов из 17', () => {
+test('тема «Познание»: все 18 заданий верно — 35 баллов из 35', () => {
   const EGE = loadBank();
   const A = EGE.attempt;
   const tasks = EGE.getTasksByTopic('OBS-COG');
@@ -337,8 +349,8 @@ test('тема «Познание»: все 9 заданий верно — 17 �
     const answer = A.recordAnswer(a, task, [...EGE.scoring.getCorrect(task)]);
     assert.equal(answer.points, answer.maxPoints, `${task.id}: верный ответ — максимум баллов`);
   }
-  assert.equal(A.totalScore(a), 17);
-  assert.equal(A.maxScore(a), 17);
+  assert.equal(A.totalScore(a), 35);
+  assert.equal(A.maxScore(a), 35);
 });
 
 // Действия с ответом выполняются кнопками — бланковые указания ЕГЭ не показываются.
