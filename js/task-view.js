@@ -146,9 +146,13 @@
   }
 
   /**
-   * Заполняет задание на соответствие.
-   * options.answer — засчитанный ответ: у каждой позиции — свой и правильный вариант
-   * и объяснение. Иначе — выбор: options.selected — номера по позициям (null — не выбран),
+   * Заполняет задание на соответствие — в формате, близком к бланку ЕГЭ:
+   * сверху два столбца рядом (позиции А, Б, В… и варианты 1, 2, 3…),
+   * под ними компактный блок «Ваш ответ»: у каждой буквы — ряд кнопок с номерами
+   * по числу вариантов второго столбца.
+   * options.answer — засчитанный ответ: кнопки показывают свой и правильный вариант,
+   * ниже — краткий разбор каждой позиции с объяснением. Иначе — выбор:
+   * options.selected — номера по позициям (null — не выбран),
    * options.activeRow — позиция, куда попадёт цифра с клавиатуры,
    * options.onChoose(row, number) — обработчик нажатия.
    */
@@ -166,86 +170,124 @@
     box.classList.add('matching');
     box.classList.toggle('is-answered', !!answer);
 
-    var legend = el('div', 'matching__legend');
-    if (columns[1]) legend.appendChild(el('p', 'matching__col-title', columns[1]));
-    var legendList = el('ol', 'matching__options');
-    task.options.forEach(function (text, i) {
-      var li = el('li', 'matching__option');
-      li.appendChild(el('span', 'matching__option-num', String(i + 1)));
-      li.appendChild(el('span', 'matching__option-text', text));
-      legendList.appendChild(li);
-    });
-    legend.appendChild(legendList);
-    box.appendChild(legend);
+    // Два столбца задания рядом (на узком экране — друг под другом).
+    var cols = el('div', 'matching__columns');
 
-    if (columns[0]) box.appendChild(el('p', 'matching__col-title', columns[0]));
-    var rows = el('ol', 'matching__rows');
+    var left = el('div', 'matching__col');
+    if (columns[0]) left.appendChild(el('p', 'matching__col-title', columns[0]));
+    var itemList = el('ol', 'matching__list');
+    task.items.forEach(function (item, row) {
+      var li = el('li', 'matching__entry');
+      li.appendChild(el('span', 'matching__mark', scoring.letter(row + 1) + ')'));
+      li.appendChild(el('span', 'matching__entry-text', item.text));
+      itemList.appendChild(li);
+    });
+    left.appendChild(itemList);
+
+    var right = el('div', 'matching__col');
+    if (columns[1]) right.appendChild(el('p', 'matching__col-title', columns[1]));
+    var optionList = el('ol', 'matching__list');
+    task.options.forEach(function (text, i) {
+      var li = el('li', 'matching__entry');
+      li.appendChild(el('span', 'matching__mark', (i + 1) + '.'));
+      li.appendChild(el('span', 'matching__entry-text', text));
+      optionList.appendChild(li);
+    });
+    right.appendChild(optionList);
+
+    cols.appendChild(left);
+    cols.appendChild(right);
+    box.appendChild(cols);
+
+    // Блок ответа: буква и кнопки с номерами вариантов.
+    var sheet = el('div', 'matching__answer');
+    sheet.appendChild(el('p', 'matching__answer-title', 'Ваш ответ'));
+    var cells = el('ol', 'matching__cells');
 
     task.items.forEach(function (item, row) {
       var letter = scoring.letter(row + 1);
       var value = selected[row] == null ? null : selected[row];
-      var li = el('li', 'match-row');
-      li.dataset.row = String(row);
+      var cell = el('li', 'match-cell');
+      cell.dataset.row = String(row);
+      cell.appendChild(el('span', 'match-cell__letter', letter));
 
-      var head = el('div', 'match-row__head');
-      head.appendChild(el('span', 'match-row__letter', letter));
-      head.appendChild(el('span', 'match-row__text', item.text));
-      li.appendChild(head);
+      var choices = el('div', 'match-cell__choices');
+      choices.setAttribute('role', 'radiogroup');
+      choices.setAttribute('aria-label', letter + ') ' + item.text + ': выберите вариант');
 
       if (answer) {
-        var ok = value === item.match;
-        li.classList.add(ok ? 'status-right' : 'status-wrong');
-        var result = el('div', 'match-row__result');
-        var mine = el('p', 'match-row__line');
-        mine.appendChild(el('span', 'muted', 'Ваш ответ: '));
-        mine.appendChild(el('strong', ok ? 'text-right' : 'text-wrong', optionLabel(task, value)));
-        result.appendChild(mine);
-        if (!ok) {
-          var right = el('p', 'match-row__line');
-          right.appendChild(el('span', 'muted', 'Правильно: '));
-          right.appendChild(el('strong', 'text-right', optionLabel(task, item.match)));
-          result.appendChild(right);
-        }
-        result.appendChild(el('span', 'statement__tag', ok ? 'Соответствие верное' : 'Ошибка'));
-        if (item.explanation) result.appendChild(el('p', 'statement__explanation', item.explanation));
-        li.appendChild(result);
+        cell.classList.add(value === item.match ? 'status-right' : 'status-wrong');
       } else {
-        li.classList.toggle('is-filled', value !== null);
-        li.classList.toggle('is-active', row === options.activeRow);
-        var choices = el('div', 'match-row__choices');
-        choices.setAttribute('role', 'radiogroup');
-        choices.setAttribute('aria-label', letter + ') ' + item.text + ': выберите вариант');
-        task.options.forEach(function (text, i) {
-          var n = i + 1;
-          var btn = el('button', 'match-choice', String(n));
-          btn.type = 'button';
-          btn.dataset.row = String(row);
-          btn.dataset.n = String(n);
-          btn.setAttribute('role', 'radio');
-          btn.setAttribute('aria-checked', String(value === n));
-          var takenBy = used[n];
-          var label = n + ' — ' + text;
-          if (value === n) {
-            btn.classList.add('is-selected');
-          } else if (task.oneToOne && takenBy !== undefined) {
-            btn.classList.add('is-taken');
-            label += ' (сейчас выбран для ' + scoring.letter(takenBy + 1) + ')';
-          }
-          btn.setAttribute('aria-label', label);
-          btn.title = label;
-          if (options.onChoose) {
-            btn.addEventListener('click', function () { options.onChoose(row, n); });
-          }
-          choices.appendChild(btn);
-        });
-        li.appendChild(choices);
-        li.appendChild(el('p', 'match-row__picked', value === null ? 'Вариант не выбран' : '→ ' + optionText(task, value)));
+        cell.classList.toggle('is-filled', value !== null);
+        cell.classList.toggle('is-active', row === options.activeRow);
       }
-      rows.appendChild(li);
+
+      task.options.forEach(function (text, i) {
+        var n = i + 1;
+        var btn = el('button', 'match-choice', String(n));
+        btn.type = 'button';
+        btn.dataset.row = String(row);
+        btn.dataset.n = String(n);
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', String(value === n));
+        var label = letter + ' — ' + n + ': ' + text;
+
+        if (answer) {
+          btn.disabled = true;
+          if (value === n) {
+            btn.classList.add(n === item.match ? 'is-right' : 'is-wrong');
+            label += n === item.match ? ' (ваш ответ, верно)' : ' (ваш ответ, ошибка)';
+          } else if (n === item.match) {
+            btn.classList.add('is-key');
+            label += ' (правильный ответ)';
+          }
+        } else if (value === n) {
+          btn.classList.add('is-selected');
+        } else if (task.oneToOne && used[n] !== undefined) {
+          btn.classList.add('is-taken');
+          label += ' (сейчас выбран для ' + scoring.letter(used[n] + 1) + ')';
+        }
+        btn.setAttribute('aria-label', label);
+        btn.title = label;
+        if (!answer && options.onChoose) {
+          btn.addEventListener('click', function () { options.onChoose(row, n); });
+        }
+        choices.appendChild(btn);
+      });
+      cell.appendChild(choices);
+      cells.appendChild(cell);
     });
-    box.appendChild(rows);
+    sheet.appendChild(cells);
+    box.appendChild(sheet);
 
     if (answer) {
+      // Краткий разбор: по строке на позицию, при ошибке — и правильный вариант.
+      var review = el('ol', 'matching__review');
+      task.items.forEach(function (item, row) {
+        var value = selected[row] == null ? null : selected[row];
+        var ok = value === item.match;
+        var li = el('li', 'match-review ' + (ok ? 'status-right' : 'status-wrong'));
+        li.appendChild(el('span', 'match-review__letter', scoring.letter(row + 1)));
+        var body = el('div', 'match-review__body');
+        var head = el('p', 'match-review__head');
+        head.appendChild(el('strong', null, item.text));
+        head.appendChild(document.createTextNode(' → '));
+        if (ok) {
+          head.appendChild(el('strong', 'text-right', optionLabel(task, item.match)));
+        } else {
+          head.appendChild(el('span', 'muted', 'ваш ответ: '));
+          head.appendChild(el('strong', 'text-wrong', optionLabel(task, value)));
+          head.appendChild(el('span', 'muted', '; правильно: '));
+          head.appendChild(el('strong', 'text-right', optionLabel(task, item.match)));
+        }
+        head.appendChild(el('span', 'statement__tag', ok ? 'Верно' : 'Ошибка'));
+        body.appendChild(head);
+        if (item.explanation) body.appendChild(el('p', 'statement__explanation', item.explanation));
+        li.appendChild(body);
+        review.appendChild(li);
+      });
+      box.appendChild(review);
+
       var key = el('p', 'matching__key');
       key.appendChild(el('span', 'muted', 'Правильное соответствие: '));
       key.appendChild(el('strong', null, scoring.formatTaskAnswer(task, answer.correct)));
