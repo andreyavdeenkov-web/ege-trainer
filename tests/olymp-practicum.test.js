@@ -213,9 +213,12 @@ test('фильтры практикума: нет класса и тура; сл
   const scope = { olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'LAW-CPT' };
   const groups = F.describe(scope, {});
   assert.deepEqual(groups.map((g) => g.key), ['level', 'type']);
+  const pool = F.buildPool(scope, {});
+  const count = (level) => pool.filter((t) => t.level === level).length;
   assert.deepEqual(groups[0].options.map((o) => [o.label, o.count]),
-    [['Все', 3], ['Базовый', 1], ['Применение', 1], ['Олимпиадный', 1]]);
-  assert.deepEqual(F.buildPool(scope, { level: 3 }).map((t) => t.id), ['PR-LAW-CPT-903']);
+    [['Все', pool.length], ['Базовый', count(1)], ['Применение', count(2)], ['Олимпиадный', count(3)]]);
+  const hard = F.buildPool(scope, { level: 3 }).map((t) => t.id);
+  assert.ok(hard.includes('PR-LAW-CPT-903') && !hard.includes('PR-LAW-CPT-901'));
   assert.deepEqual(F.normalize(scope, { level: 2, class: 9 }), { level: 2, type: 'all' });
   // У «Высшей пробы» фильтр сложности не появляется: уровней в заданиях нет.
   assert.ok(!F.describe({ olympiad: 'HP', subject: 'social', discipline: 'POL', topic: 'all' }, {}).some((g) => g.key === 'level'));
@@ -226,8 +229,9 @@ test('порядок тренировки: практикум — учебная
   addBankTasks(OLY);
   const S = OLY.ui.session;
   const pool = OLY.ui.filters.buildPool({ olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'all' }, {});
+  const test9xx = (ids) => ids.filter((id) => /-9\d\d$/.test(id));
   const reversed = [...pool].reverse();
-  assert.deepEqual(S.arrange('PR', reversed).map((t) => t.id), ['PR-LAW-CPT-901', 'PR-LAW-CPT-902', 'PR-LAW-CPT-903']);
+  assert.deepEqual(test9xx(S.arrange('PR', reversed).map((t) => t.id)), ['PR-LAW-CPT-901', 'PR-LAW-CPT-902', 'PR-LAW-CPT-903']);
   assert.deepEqual(S.arrangeIds('PR', ['PR-LAW-CPT-903', 'PR-LAW-CPT-901']), ['PR-LAW-CPT-901', 'PR-LAW-CPT-903']);
   let seed = 7;
   const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -268,4 +272,88 @@ test('отрисовка matching: выбор, снятие выбора, оди
   // Ответ из интерфейса проходит проверку ядра.
   const type = OLY.types.get('matching');
   assert.equal(type.check(classify, type.cleanResponse(classify, [1, 2, 1])).verdict, 'correct');
+});
+
+/* ---------- Банк практикума: «Что такое право?» ---------- */
+
+/** Утверждённые ключи (single-select — номер, matching — номера по позициям А, Б, В…). */
+const CPT_KEYS = {
+  '001': 2,
+  '003': 3,
+  '007': [1, 2, 2, 1, 1, 2],
+  '014': [2, 1, 1, 2, 2, 1],
+  '023': [3, 4, 2, 1, 4, 3],
+  '024': 4
+};
+
+function practicumTasks(OLY) {
+  return OLY.query({ olympiad: 'PR', subject: 'social', topic: 'LAW-CPT' });
+}
+
+test('практикум «Что такое право?»: задания и ключи', () => {
+  const OLY = loadBank();
+  const tasks = practicumTasks(OLY);
+  assert.deepEqual(tasks.map((t) => t.id).sort(), Object.keys(CPT_KEYS).map((n) => 'PR-LAW-CPT-' + n));
+  for (const [n, key] of Object.entries(CPT_KEYS)) {
+    const task = OLY.getTask('PR-LAW-CPT-' + n);
+    assert.deepEqual(OLY.types.get(task.type).getCorrect(task), key, task.id);
+    assert.equal(task.scoring, null, task.id);
+    assert.ok(OLY.ui.views.has(task.type), task.id);
+  }
+});
+
+test('практикум: у каждого варианта и каждой позиции есть объяснение; уровни 2–3 — с типичной ошибкой', () => {
+  const OLY = loadBank();
+  for (const task of practicumTasks(OLY)) {
+    assert.ok(task.explanation.length > 100, `${task.id}: общий разбор слишком короткий`);
+    for (const [i, part] of (task.items || task.options).entries()) {
+      assert.ok(typeof part.explanation === 'string' && part.explanation.length > 40, `${task.id}: позиция ${i + 1} без объяснения`);
+    }
+    if (task.level >= 2) assert.ok(task.typicalMistake, `${task.id}: нет typicalMistake`);
+  }
+});
+
+test('практикум: учебная последовательность — блоки по порядку темы, внутри блока сложность не убывает', () => {
+  const OLY = loadBank();
+  const topic = OLY.getTopic('social', 'LAW-CPT');
+  const blockIndex = (task) => topic.blocks.findIndex((b) => b.id === task.block);
+  const ordered = OLY.sortByOrder(practicumTasks(OLY));
+  for (let i = 1; i < ordered.length; i++) {
+    const prev = ordered[i - 1];
+    const cur = ordered[i];
+    assert.ok(blockIndex(cur) >= blockIndex(prev), `${cur.id}: блок ${cur.block} после ${prev.block}`);
+    if (cur.block === prev.block) assert.ok(cur.level >= prev.level, `${cur.id}: уровень ниже предыдущего в блоке`);
+  }
+  // Финальное задание модуля — формула Радбруха.
+  assert.equal(ordered[ordered.length - 1].id, 'PR-LAW-CPT-024');
+});
+
+test('практикум: варианты single-select без подсказки длиной, классификации без шаблона в ключе', () => {
+  const OLY = loadBank();
+  for (const task of practicumTasks(OLY)) {
+    if (task.type === 'single-select') {
+      const lengths = task.options.map((o) => o.text.length);
+      const correct = lengths[task.options.findIndex((o) => o.correct)];
+      const others = lengths.filter((_, i) => !task.options[i].correct);
+      assert.ok(correct <= Math.max(...others) * 1.2, `${task.id}: верный вариант заметно длиннее остальных`);
+    }
+    if (task.type === 'matching') {
+      const key = task.items.map((item) => item.match);
+      const ascending = key.every((n, i) => i === 0 || n === key[i - 1] + 1);
+      const alternating = key.every((n, i) => i < 2 || n === key[i - 2]);
+      assert.ok(!ascending && !alternating, `${task.id}: ключ ${key} образует шаблон`);
+    }
+  }
+});
+
+test('задание 023: обе классификации заполнены, процессуальная диспозитивность описана с пределами', () => {
+  const OLY = loadBank();
+  const task = OLY.getTask('PR-LAW-CPT-023');
+  assert.deepEqual([...new Set(task.items.map((i) => i.match))].sort(), [1, 2, 3, 4]);
+  const gpk = task.items.find((i) => /ГПК/.test(i.text));
+  assert.equal(gpk.match, 2);
+  assert.match(gpk.explanation, /публично-правовой сфере/);
+  assert.match(gpk.explanation, /принцип диспозитивности/);
+  assert.match(gpk.explanation, /под контролем суда/);
+  assert.match(gpk.explanation, /большинство процессуальных норм .* императивны/);
 });
