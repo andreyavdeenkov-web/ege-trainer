@@ -10,6 +10,11 @@
  * к олимпиаде: все дисциплины видны (пустые — «скоро»), фильтр — сложность,
  * задания идут в учебной последовательности из данных, а не вразброс.
  *
+ * Повторное прохождение регулирует attemptPolicy трека (OLY.ui.progress):
+ * у олимпиад попытка живёт в памяти страницы и тему можно пройти снова;
+ * у практикума попытка по теме сохраняется в браузере, восстанавливается после
+ * перезагрузки, а завершённая тема открывается только для просмотра.
+ *
  * Зависит от ядра js/olymp/*.js, данных data/olympiads/**.js и js/olymp/ui/*.js.
  */
 (function () {
@@ -22,6 +27,8 @@
   var F = ui.filters;
   var S = ui.session;
   var router = ui.router;
+  var P = ui.progress;
+  var store = P.createStore(ui.storage);
   var views = ui.views;
   var el = ui.el;
 
@@ -51,8 +58,13 @@
     disciplineLead: $('discipline-lead'),
     topicList: $('topic-list'),
     setupEyebrow: $('setup-eyebrow'),
+    setupStatus: $('setup-status'),
+    setupStatusLabel: $('setup-status-label'),
+    setupStatusText: $('setup-status-text'),
+    setupStatusBtn: $('setup-status-btn'),
     setupTitle: $('setup-title'),
     setupNote: $('setup-note'),
+    setupWarning: $('setup-warning'),
     setupForm: $('setup-form'),
     filters: $('filters'),
     poolInfo: $('pool-info'),
@@ -95,6 +107,7 @@
     resultScope: $('result-scope'),
     resultStats: $('result-stats'),
     resultPoints: $('result-points'),
+    resultNote: $('result-note'),
     againBtn: $('again-btn'),
     skippedBtn: $('skipped-btn'),
     mistakesBtn: $('mistakes-btn'),
@@ -160,6 +173,48 @@
     return !!a && !!b && a.olympiad === b.olympiad && a.discipline === b.discipline && a.topic === b.topic;
   }
 
+  /* ---------- Сохранение попыток и правила повторного прохождения ---------- */
+
+  function policyOf(route) {
+    return OLY.getAttemptPolicy(route.olympiad);
+  }
+
+  /** Попытка этой области, известная странице: в памяти или сохранённая в браузере. */
+  function attemptFor(route) {
+    if (state.attempt && sameSetup(route, state.attemptRoute)) return state.attempt;
+    return policyOf(route).persistAttempts ? store.load(scopeOf(route)) : null;
+  }
+
+  /** Сохраняет текущую попытку, если трек сохраняет попытки. */
+  function persistAttempt() {
+    if (!state.attempt || !state.attemptRoute || !policyOf(state.attemptRoute).persistAttempts) return;
+    store.save(scopeOf(state.attemptRoute), state.attempt);
+  }
+
+  /**
+   * Делает сохранённую попытку области текущей (после перезагрузки или при
+   * возвращении к теме). Тренировка открывается на первом непроверенном задании.
+   */
+  function adoptStoredAttempt(route) {
+    if (!policyOf(route).persistAttempts || sameSetup(route, state.attemptRoute)) return;
+    var stored = store.load(scopeOf(route));
+    if (!stored) return;
+    state.attempt = stored;
+    state.attemptRoute = router.withName(route, 'setup');
+    var next = S.nextUnchecked(stored, stored.taskIds.length - 1);
+    state.viewIndex = next === -1 ? 0 : next;
+    state.reviewFilter = 'all';
+  }
+
+  /** «Пройдено: 18 из 24 верно» / «Проверено: 5 из 24». */
+  function attemptStatusLine(attempt) {
+    if (attempt.finishedAt) {
+      var o = S.outcome(attempt);
+      return 'Пройдено: ' + o.correct + ' из ' + o.total + ' верно';
+    }
+    return 'Проверено: ' + S.checkedCount(attempt) + ' из ' + attempt.taskIds.length;
+  }
+
   /** Меняет адрес без повторной отрисовки (в песочнице без history — просто ничего). */
   function setHash(route, replace) {
     var hash = router.format(route);
@@ -176,9 +231,13 @@
     setHash(state.route, replace);
   }
 
-  /** Незавершённую тренировку с ответами нельзя покинуть без подтверждения. */
+  /**
+   * Незавершённую тренировку с ответами нельзя покинуть без подтверждения —
+   * если только попытка не сохраняется: тогда к ней можно вернуться.
+   */
   function guardLeave(route) {
     if (!state.route || state.route.name !== 'train') return false;
+    if (state.attemptRoute && P.leavesFreely(policyOf(state.attemptRoute))) return false;
     if (route.name === 'train' && sameSetup(route, state.attemptRoute)) return false;
     if (route.name === 'result' && state.attempt && state.attempt.finishedAt) return false;
     if (!S.hasProgress(state.attempt)) return false;
@@ -208,12 +267,18 @@
       var discipline = OLY.getDiscipline(subjectOf(olympiad), route.discipline);
       if (!discipline || F.buildPool(scopeOf({ olympiad: route.olympiad, discipline: route.discipline }), {}).length === 0) {
         up = { name: 'olympiad', olympiad: route.olympiad };
+      } else if (route.name !== 'discipline' && route.topic === 'all' && P.wholeTopicOnly(policyOf(route))) {
+        // Одна попытка на тему: тренировка «по всем темам» обошла бы это правило.
+        up = { name: 'discipline', olympiad: route.olympiad, discipline: route.discipline };
       } else if (route.name !== 'discipline' && route.topic !== 'all') {
         var topic = OLY.getTopic(subjectOf(olympiad), route.topic);
         if (!topic || topic.discipline !== route.discipline) {
           up = { name: 'discipline', olympiad: route.olympiad, discipline: route.discipline };
         }
       }
+    }
+    if (!up && (route.name === 'setup' || route.name === 'train' || route.name === 'result')) {
+      adoptStoredAttempt(route);
     }
     if (!up && route.name === 'train' && !(state.attempt && !state.attempt.finishedAt && sameSetup(route, state.attemptRoute))) {
       up = state.attempt && state.attempt.finishedAt && sameSetup(route, state.attemptRoute)
@@ -419,8 +484,9 @@
     var topics = discipline.topics.filter(function (topic) {
       return pool.some(function (task) { return task.topic === topic.id; });
     });
-    // В практикуме карточка «Все темы» нужна, только когда тем больше одной.
-    var withAll = !practicum || topics.length > 1;
+    // В практикуме карточка «Все темы» нужна, только когда тем больше одной,
+    // и не показывается, если тему можно пройти лишь один раз.
+    var withAll = (!practicum || topics.length > 1) && !P.wholeTopicOnly(policyOf(route));
     dom.disciplineLead.textContent = withAll ? 'Выберите тему или тренируйтесь сразу по всей дисциплине.' : 'Выберите тему.';
     if (withAll) {
       dom.topicList.appendChild(card(Object.assign({ topic: 'all' }, base),
@@ -441,13 +507,19 @@
       group.topics.forEach(function (topic) {
         var tasks = pool.filter(function (task) { return task.topic === topic.id; });
         dom.topicList.appendChild(card(Object.assign({ topic: topic.id }, base),
-          topic.title, fmt.tasksCount(tasks.length), cardMeta(route, tasks), discipline.color));
+          topic.title, fmt.tasksCount(tasks.length), cardMeta(Object.assign({ topic: topic.id }, base), tasks),
+          discipline.color));
       });
     });
   }
 
-  /** Подпись карточки темы: классы у олимпиады, уровни сложности у практикума. */
+  /**
+   * Подпись карточки темы: классы у олимпиады, уровни сложности у практикума;
+   * если по теме есть сохранённая попытка — её статус.
+   */
   function cardMeta(route, tasks) {
+    var saved = route.topic && route.topic !== 'all' && policyOf(route).persistAttempts ? store.load(scopeOf(route)) : null;
+    if (saved) return attemptStatusLine(saved);
     if (isPracticum(route)) return fmt.levelsLabel(tasks.map(function (t) { return t.level; })) || null;
     return fmt.classesLabel(classesOf(tasks));
   }
@@ -457,10 +529,16 @@
   var SETUP_NOTES = {
     topic: 'Задания разных классов по теме решаются вместе. Класс, этап и тур — фильтры: по умолчанию выбраны все задания.',
     all: 'Задания разных классов и тем дисциплины могут решаться вместе. Класс, этап и тур можно выбрать с помощью фильтров.',
-    practicum: 'Задания идут в учебной последовательности: блок за блоком, внутри блока — от простого к сложному. Фильтр сложности сужает набор, порядок сохраняется.'
+    singleAttempt: 'Задания идут в учебной последовательности: блок за блоком, внутри блока — от простого к сложному. Тему можно пройти один раз: ответы сохраняются в этом браузере, после завершения откроются результаты и разбор.',
+    practicumStart: 'Задания идут в учебной последовательности: от основных понятий к применению и олимпиадным кейсам.',
+    practicumSingleAttempt: 'Практикум сохраняет ваш прогресс. После завершения пройти его заново нельзя, но вы сможете вернуться к своим ответам и разобрать их.',
+    inProgress: 'Ответы сохраняются в этом браузере. Можно продолжить с того места, где вы остановились; после завершения тему можно будет только просматривать.',
+    completed: 'Повторное прохождение темы пока недоступно. В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор.'
   };
 
+  /** Выбранные фильтры; если тренировка охватывает всю тему (практикум) — без фильтров. */
   function currentSelection(scope) {
+    if (!F.hasUserFilters(scope) || P.wholeTopicOnly(OLY.getAttemptPolicy(scope.olympiad))) return {};
     return F.normalize(scope, settings.filters);
   }
 
@@ -472,16 +550,40 @@
     dom.setupEyebrow.textContent = route.topic === 'all' ? 'Все темы дисциплины'
       : discipline.title + (section ? ' · ' + section.title : '');
     dom.setupTitle.textContent = route.topic === 'all' ? discipline.title : topicTitle(route);
-    dom.setupNote.textContent = isPracticum(route) ? SETUP_NOTES.practicum
+    var policy = policyOf(route);
+    dom.setupNote.textContent = isPracticum(route) ? SETUP_NOTES.practicumStart
+      : P.wholeTopicOnly(policy) ? SETUP_NOTES.singleAttempt
       : route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
     setTitle([dom.setupTitle.textContent, olympiad.title]);
+    // Предупреждение об одной попытке — на старте темы практикума, если повторы запрещены.
+    var warn = isPracticum(route) && !policy.allowRetake;
+    dom.setupWarning.hidden = !warn;
+    dom.setupWarning.textContent = warn ? SETUP_NOTES.practicumSingleAttempt : '';
+
+    // Новую попытку начать нельзя — вместо настройки статус и одна основная кнопка.
+    var attempt = attemptFor(route);
+    var locked = !P.canStartNew(policy, attempt);
+    dom.setupStatus.hidden = !locked;
+    dom.setupForm.hidden = locked;
+    if (locked) {
+      var completed = P.topicState(attempt) === 'completed';
+      dom.setupStatusLabel.textContent = completed ? 'Тема пройдена' : 'Тренировка начата';
+      dom.setupStatusText.textContent = attemptStatusLine(attempt);
+      dom.setupStatusBtn.textContent = completed ? 'Посмотреть результаты' : 'Продолжить тренировку';
+      dom.setupNote.textContent = completed ? SETUP_NOTES.completed : SETUP_NOTES.inProgress;
+      dom.setupWarning.hidden = true;
+      return;
+    }
     renderFilters(route);
   }
 
   function renderFilters(route) {
     var scope = scopeOf(route);
     var selection = currentSelection(scope);
-    var groups = F.describe(scope, selection);
+    // Практикум и «одна попытка на тему»: тренировка всегда по всей теме, фильтров нет.
+    var practicum = isPracticum(route);
+    var whole = practicum || P.wholeTopicOnly(policyOf(route));
+    var groups = whole ? [] : F.describe(scope, selection);
     var pool = F.buildPool(scope, selection);
 
     dom.filters.textContent = '';
@@ -516,15 +618,15 @@
     });
 
     var empty = pool.length === 0;
-    dom.poolInfo.textContent = empty
-      ? 'По выбранным фильтрам заданий нет.'
-      : 'Найдено: ' + fmt.tasksCount(pool.length);
+    dom.poolInfo.textContent = empty ? 'По выбранным фильтрам заданий нет.'
+      : practicum ? fmt.practicumScopeLabel(pool)
+      : (whole ? 'В теме: ' : 'Найдено: ') + fmt.tasksCount(pool.length);
     dom.poolInfo.parentNode.classList.toggle('is-empty', empty);
     dom.resetFilters.hidden = F.isDefault(selection);
 
     var counts = COUNT_OPTIONS.filter(function (o) { return o.value === 'all' || Number(o.value) < pool.length; });
     // В практикуме набор — учебная последовательность, его не урезают по количеству.
-    dom.countField.hidden = pool.length <= 10 || isPracticum(route);
+    dom.countField.hidden = pool.length <= 10 || isPracticum(route) || whole;
     dom.countOptions.textContent = '';
     if (!counts.some(function (o) { return o.value === settings.count; })) settings.count = 'all';
     counts.forEach(function (o) {
@@ -544,6 +646,7 @@
       dom.countOptions.appendChild(label);
     });
 
+    dom.startBtn.textContent = practicum ? 'Начать практикум' : 'Начать тренировку';
     dom.startBtn.disabled = empty;
   }
 
@@ -552,13 +655,21 @@
    * и ограниченная по количеству, в практикуме — целиком в учебном порядке.
    */
   function plannedPool(route, filters) {
-    var pool = S.arrange(route.olympiad, F.buildPool(scopeOf(route), filters));
-    var count = pool.length > 10 && !isPracticum(route) ? settings.count : 'all';
+    var whole = isPracticum(route) || P.wholeTopicOnly(policyOf(route));
+    var pool = S.arrange(route.olympiad, F.buildPool(scopeOf(route), whole ? {} : filters));
+    var count = pool.length > 10 && !isPracticum(route) && !whole ? settings.count : 'all';
     return count === 'all' ? pool : pool.slice(0, Number(count));
   }
 
   function startAttempt(route, taskIds) {
     if (!taskIds.length) return;
+    // Правило трека: при запрете повторов уже начатую или завершённую тему не начать заново.
+    var existing = attemptFor(route);
+    if (!P.canStartNew(policyOf(route), existing)) {
+      adoptStoredAttempt(route);
+      go(router.withName(route, existing.finishedAt ? 'result' : 'train'));
+      return;
+    }
     var scope = scopeOf(route);
     state.attempt = A.createAttempt({
       mode: 'practice',
@@ -570,6 +681,7 @@
     state.attemptRoute = router.withName(route, 'setup');
     state.viewIndex = 0;
     state.reviewFilter = 'all';
+    persistAttempt();
     hideConfirm();
     showRoute(router.withName(route, 'train'));
     setHash(state.route, false);
@@ -654,6 +766,7 @@
   function onResponse(response) {
     var task = currentTask();
     A.setResponse(state.attempt, task.id, response);
+    persistAttempt();
     renderActions();
     renderProgress();
     renderNav();
@@ -762,6 +875,7 @@
     if (A.isChecked(attempt, task.id)) return;
     if (OLY.types.get(task.type).isEmpty(task, A.getResponse(attempt, task.id))) return;
     var result = A.check(attempt, task.id);
+    persistAttempt();
     notifyStore('onCheck', [A.snapshot(result), A.snapshot(attempt)]);
     renderTrain();
     dom.nextBtn.focus({ preventScroll: true });
@@ -788,6 +902,7 @@
   function finishAttempt() {
     hideConfirm();
     A.finish(state.attempt);
+    persistAttempt();
     notifyStore('onFinish', [A.snapshot(state.attempt)]);
     state.reviewFilter = 'all';
     showRoute(router.withName(state.attemptRoute, 'result'));
@@ -800,7 +915,9 @@
       var n = confirm.unchecked;
       dom.confirmText.textContent = 'Не ' + fmt.plural(n, 'проверено', 'проверены', 'проверено') + ' ' +
         fmt.tasksCount(n) + ' — ' + fmt.plural(n, 'оно будет засчитано как пропущенное',
-        'они будут засчитаны как пропущенные', 'они будут засчитаны как пропущенные') + '. Завершить тренировку?';
+        'они будут засчитаны как пропущенные', 'они будут засчитаны как пропущенные') + '.' +
+        (policyOf(state.attemptRoute).allowRetake ? '' : ' Пройти тему заново будет нельзя — останется просмотр результатов.') +
+        ' Завершить тренировку?';
       dom.confirmOk.textContent = 'Завершить';
     } else {
       dom.confirmText.textContent = 'Прервать тренировку? Ответы не сохранятся.';
@@ -878,11 +995,19 @@
       dom.resultPoints.appendChild(el('p', null, 'Учтены задания с критериями: ' + o.scoredCount + ' из ' + o.total + '.'));
     }
 
+    // Кнопки новых попыток — только если правила трека их разрешают.
+    var policy = policyOf(route);
+    dom.againBtn.hidden = !policy.allowRetake;
     dom.againBtn.textContent = route.topic === 'all' ? 'Ещё раз по дисциплине' : 'Ещё раз по теме';
-    dom.skippedBtn.hidden = o.skipped === 0;
+    dom.skippedBtn.hidden = o.skipped === 0 || !P.canRetry(policy, 'skipped');
     dom.skippedBtn.textContent = 'Решить пропущенные (' + o.skipped + ')';
-    dom.mistakesBtn.hidden = o.incorrect === 0;
+    dom.mistakesBtn.hidden = o.incorrect === 0 || !P.canRetry(policy, 'mistakes');
     dom.mistakesBtn.textContent = 'Повторить ошибки (' + o.incorrect + ')';
+    dom.topicsBtn.classList.toggle('btn--primary', !policy.allowRetake);
+    dom.topicsBtn.classList.toggle('btn--ghost', policy.allowRetake);
+    dom.resultNote.hidden = policy.allowRetake;
+    dom.resultNote.textContent = policy.allowRetake ? ''
+      : 'Повторное прохождение темы пока недоступно. Ниже — все задания с вашими ответами, правильными ответами и разбором.';
 
     dom.reviewAllLabel.textContent = 'Все (' + o.total + ')';
     dom.reviewMistakesLabel.textContent = 'С ошибками (' + o.incorrect + ')';
@@ -1006,6 +1131,12 @@
     var route = state.route;
     startAttempt(route, plannedPool(route, currentSelection(scopeOf(route))).map(function (t) { return t.id; }));
   });
+  dom.setupStatusBtn.addEventListener('click', function () {
+    var route = state.route;
+    if (!route || route.name !== 'setup') return;
+    var attempt = attemptFor(route);
+    if (attempt) go(router.withName(route, attempt.finishedAt ? 'result' : 'train'));
+  });
   dom.resetFilters.addEventListener('click', function () {
     settings.filters = {};
     saveSettings();
@@ -1022,12 +1153,15 @@
 
   dom.againBtn.addEventListener('click', function () {
     var route = state.attemptRoute;
+    if (!policyOf(route).allowRetake) return;
     startAttempt(route, plannedPool(route, attemptFilters()).map(function (t) { return t.id; }));
   });
   dom.skippedBtn.addEventListener('click', function () {
+    if (!P.canRetry(policyOf(state.attemptRoute), 'skipped')) return;
     startAttempt(state.attemptRoute, S.arrangeIds(state.attemptRoute.olympiad, S.subsetIds(state.attempt, 'skipped')));
   });
   dom.mistakesBtn.addEventListener('click', function () {
+    if (!P.canRetry(policyOf(state.attemptRoute), 'mistakes')) return;
     startAttempt(state.attemptRoute, S.arrangeIds(state.attemptRoute.olympiad, S.subsetIds(state.attempt, 'mistakes')));
   });
   dom.topicsBtn.addEventListener('click', function () {

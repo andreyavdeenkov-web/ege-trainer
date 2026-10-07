@@ -81,6 +81,11 @@
         <p class="eyebrow" id="setup-eyebrow"></p>
         <h1 id="setup-title"></h1>
       </div>
+      <div class="panel setup-status" id="setup-status" hidden>
+        <p class="setup-status__label" id="setup-status-label"></p>
+        <p class="setup-status__text" id="setup-status-text"></p>
+        <button type="button" class="btn btn--primary btn--lg btn--block" id="setup-status-btn"></button>
+      </div>
       <form class="panel" id="setup-form">
         <div id="filters"></div>
         <div class="pool-info">
@@ -94,6 +99,7 @@
         <button type="submit" class="btn btn--primary btn--lg btn--block" id="start-btn">Начать тренировку</button>
       </form>
       <p class="setup-note muted" id="setup-note"></p>
+      <p class="setup-note muted" id="setup-warning" hidden></p>
     </section>
 
     <!-- Тренировка -->
@@ -173,6 +179,7 @@
         <p class="result__scope" id="result-scope"></p>
         <dl class="stats" id="result-stats"></dl>
         <div class="points-box" id="result-points" hidden></div>
+        <p class="result__note muted" id="result-note" hidden></p>
         <div class="result__actions">
           <button type="button" class="btn btn--primary btn--lg" id="again-btn">Ещё раз по теме</button>
           <button type="button" class="btn btn--ghost btn--lg" id="skipped-btn" hidden></button>
@@ -241,6 +248,7 @@
   <script src="js/olymp/ui/views/matching.js"></script>
   <script src="js/olymp/ui/filters.js"></script>
   <script src="js/olymp/ui/session.js"></script>
+  <script src="js/olymp/ui/progress.js"></script>
   <script src="js/olymp/app.js"></script>
 </body>
 </html>

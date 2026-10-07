@@ -124,12 +124,22 @@
   }
 
   /**
+   * Пользовательские фильтры есть только у олимпиад. В практикуме ученик
+   * не выбирает состав тренировки: всегда запускается вся тема в учебном
+   * порядке. Фильтры level и type при этом остаются в реестре и в OLY.query.
+   */
+  function hasUserFilters(scope) {
+    return !OLY.isPracticum(scope.olympiad);
+  }
+
+  /**
    * Видимые фильтры с вариантами и счётчиками:
    * [{ key, label, options: [{ value, label, count, disabled, checked }] }].
    * Счётчик варианта — сколько заданий найдётся, если выбрать его
    * при остальных текущих фильтрах.
    */
   function describe(scope, selection) {
+    if (!hasUserFilters(scope)) return [];
     var sel = selection || {};
     var ctx = { olympiad: OLY.getOlympiad(scope.olympiad), tasks: buildPool(scope, {}) };
     var groups = [];
@@ -175,6 +185,7 @@
     list: function () { return registry.slice(); },
     scopeQuery: scopeQuery,
     buildPool: buildPool,
+    hasUserFilters: hasUserFilters,
     describe: describe,
     normalize: normalize,
     isDefault: isDefault

@@ -140,6 +140,19 @@ a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focu
 }
 .pool-info.is-empty { color: var(--wrong); }
 .setup-note { margin-top: 14px; font-size: 14px; }
+.setup-note + .setup-note { margin-top: 6px; }
+
+/* Тема практикума, по которой уже есть попытка: статус и одна основная кнопка. */
+.setup-status__label {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.setup-status__text { margin-bottom: 16px; font-size: 18px; font-weight: 700; }
+.result__note { margin-top: 12px; font-size: 14px; text-align: center; }
 
 /* ===== Тренировка ===== */
 .progress__side { display: inline-flex; align-items: center; gap: 8px; }

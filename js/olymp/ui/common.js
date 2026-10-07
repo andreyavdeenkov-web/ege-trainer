@@ -137,6 +137,24 @@
     return 'Уровень ' + level + ' · ' + lowerFirst(levelTitle(level));
   }
 
+  /** Уровень в родительном падеже — для «от … до …». */
+  var LEVEL_GENITIVE = { 1: 'базового уровня', 2: 'уровня применения', 3: 'олимпиадного' };
+
+  /**
+   * Состав темы практикума на стартовом экране:
+   * «24 задания · от базового уровня до олимпиадного»; один уровень —
+   * «7 заданий · базовый уровень».
+   */
+  function practicumScopeLabel(tasks) {
+    var levels = tasks.map(function (t) { return t.level; }).filter(function (l) { return l !== undefined; }).sort();
+    var label = tasksCount(tasks.length);
+    if (levels.length === 0) return label;
+    var min = levels[0];
+    var max = levels[levels.length - 1];
+    if (min === max) return label + ' · ' + lowerFirst(levelTitle(min)) + ' уровень';
+    return label + ' · от ' + LEVEL_GENITIVE[min] + ' до ' + LEVEL_GENITIVE[max];
+  }
+
   /** [1, 3, 2] → «Уровни 1–3», [2] → «Уровень 2», [] → ''. */
   function levelsLabel(levels) {
     var list = (levels || []).filter(function (l) { return l !== undefined; }).sort();
@@ -186,6 +204,7 @@
     levelTitle: levelTitle,
     levelLabel: levelLabel,
     levelsLabel: levelsLabel,
+    practicumScopeLabel: practicumScopeLabel,
     disciplineColor: disciplineColor
   };
   ui.storage = storage;
