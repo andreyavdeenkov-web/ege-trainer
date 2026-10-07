@@ -279,9 +279,27 @@ test('отрисовка matching: выбор, снятие выбора, оди
 /** Утверждённые ключи (single-select — номер, matching — номера по позициям А, Б, В…). */
 const CPT_KEYS = {
   '001': 2,
+  '002': 1,
   '003': 3,
+  '004': [1, 2, 2, 1, 2, 1],
+  '005': 4,
+  '006': 3,
   '007': [1, 2, 2, 1, 1, 2],
+  '008': [2, 3, 5],
+  '009': 1,
+  '010': 4,
+  '011': 2,
+  '012': [1, 2, 1, 3, 2, 3],
+  '013': [2, 4, 5],
   '014': [2, 1, 1, 2, 2, 1],
+  '015': [2, 5, 6],
+  '016': 3,
+  '017': [2, 1, 1, 2, 1, 2, 1, 1],
+  '018': [1, 2, 4],
+  '019': [1, 3, 4],
+  '020': 2,
+  '021': [1, 2, 1, 1, 2, 2],
+  '022': [1, 4, 6],
   '023': [3, 4, 2, 1, 4, 3],
   '024': 4
 };
@@ -290,10 +308,12 @@ function practicumTasks(OLY) {
   return OLY.query({ olympiad: 'PR', subject: 'social', topic: 'LAW-CPT' });
 }
 
-test('практикум «Что такое право?»: задания и ключи', () => {
+test('практикум «Что такое право?»: 24 задания по порядку 1–24, ключи', () => {
   const OLY = loadBank();
   const tasks = practicumTasks(OLY);
+  assert.equal(tasks.length, 24);
   assert.deepEqual(tasks.map((t) => t.id).sort(), Object.keys(CPT_KEYS).map((n) => 'PR-LAW-CPT-' + n));
+  assert.deepEqual(OLY.sortByOrder(tasks).map((t) => t.order), tasks.map((_, i) => i + 1));
   for (const [n, key] of Object.entries(CPT_KEYS)) {
     const task = OLY.getTask('PR-LAW-CPT-' + n);
     assert.deepEqual(OLY.types.get(task.type).getCorrect(task), key, task.id);
@@ -344,6 +364,23 @@ test('практикум: варианты single-select без подсказк
       assert.ok(!ascending && !alternating, `${task.id}: ключ ${key} образует шаблон`);
     }
   }
+});
+
+test('практикум: позиции правильных ответов распределены без шаблона', () => {
+  const singles = Object.values(CPT_KEYS).filter((k) => !Array.isArray(k));
+  const counts = [1, 2, 3, 4].map((pos) => singles.filter((k) => k === pos).length);
+  assert.ok(Math.max(...counts) - Math.min(...counts) <= 1, `single-select по позициям: ${counts}`);
+  const OLY = loadBank();
+  const combos = practicumTasks(OLY).filter((t) => t.type === 'multiple-select')
+    .map((t) => OLY.types.get(t.type).getCorrect(t).join(','));
+  assert.equal(new Set(combos).size, combos.length, 'комбинации multiple-select повторяются');
+  for (const combo of combos) {
+    assert.ok(!['1,2,3', '1,2', '1,3,5', '2,4,6', '4,5,6'].includes(combo), `шаблонная комбинация ${combo}`);
+  }
+  // Подряд не идут задания с выбором одного ответа и одинаковой позицией ключа.
+  const ordered = OLY.sortByOrder(practicumTasks(OLY)).filter((t) => t.type === 'single-select');
+  const keys = ordered.map((t) => OLY.types.get(t.type).getCorrect(t));
+  for (let i = 1; i < keys.length; i++) assert.notEqual(keys[i], keys[i - 1], `${ordered[i].id}: тот же номер ответа, что у предыдущего`);
 });
 
 test('задание 023: обе классификации заполнены, процессуальная диспозитивность описана с пределами', () => {
