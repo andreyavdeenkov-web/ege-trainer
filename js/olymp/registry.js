@@ -40,6 +40,23 @@
    * практикум — тематическая подготовка без привязки к конкретной олимпиаде.
    */
   OLY.TRACK_KINDS = ['olympiad', 'practicum'];
+  /**
+   * Правила повторного прохождения трека (attemptPolicy в defineOlympiad).
+   * По умолчанию — как у олимпиад: попытки только в памяти страницы,
+   * тему можно пройти заново, повторить ошибки и пропущенные.
+   *   allowRetake        — начать тему заново (в том числе после завершения);
+   *   allowRetryMistakes — «Повторить ошибки» (новая попытка из ошибочных заданий);
+   *   allowRetrySkipped  — «Решить пропущенные» (новая попытка из пропущенных);
+   *   persistAttempts    — сохранять попытку по теме в браузере и восстанавливать
+   *                        её после перезагрузки страницы.
+   */
+  OLY.ATTEMPT_POLICY_DEFAULTS = {
+    allowRetake: true,
+    allowRetryMistakes: true,
+    allowRetrySkipped: true,
+    persistAttempts: false
+  };
+
   /** Уровни сложности: 1 — базовое понимание, 2 — применение, 3 — олимпиадный уровень. */
   OLY.LEVELS = [1, 2, 3];
 
@@ -212,6 +229,16 @@
     if (olympiad.description !== undefined && !isText(olympiad.description)) {
       errors.push('description должно быть непустой строкой');
     }
+    if (olympiad.attemptPolicy !== undefined) {
+      var policy = olympiad.attemptPolicy;
+      if (!policy || typeof policy !== 'object' || Array.isArray(policy)) errors.push('attemptPolicy должно быть объектом');
+      else {
+        Object.keys(policy).forEach(function (key) {
+          if (!hasKey(OLY.ATTEMPT_POLICY_DEFAULTS, key)) errors.push('attemptPolicy: неизвестная настройка ' + key);
+          else if (typeof policy[key] !== 'boolean') errors.push('attemptPolicy.' + key + ' должно быть true или false');
+        });
+      }
+    }
     if (olympiad.kind === 'practicum') {
       ['classes', 'rounds', 'stages', 'stageTitles'].forEach(function (key) {
         if (olympiad[key] !== undefined) errors.push('у практикума нет классов, этапов и туров: поле ' + key + ' не указывается');
@@ -257,6 +284,17 @@
 
   OLY.getOlympiad = function (olympiadId) {
     return olympiadsById[olympiadId] || null;
+  };
+
+  /** Правила повторного прохождения трека: attemptPolicy поверх значений по умолчанию. */
+  OLY.getAttemptPolicy = function (olympiadId) {
+    var olympiad = olympiadsById[olympiadId];
+    var policy = {};
+    Object.keys(OLY.ATTEMPT_POLICY_DEFAULTS).forEach(function (key) {
+      var own = olympiad && olympiad.attemptPolicy;
+      policy[key] = own && hasKey(own, key) ? own[key] : OLY.ATTEMPT_POLICY_DEFAULTS[key];
+    });
+    return policy;
   };
 
   /** Трек — олимпиадный практикум (а не конкретная олимпиада). */

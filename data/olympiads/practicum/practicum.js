@@ -6,11 +6,23 @@
  * Каждое задание указывает раздел, содержательный блок, место в учебной
  * последовательности (order), уровень сложности (level) и проверяемые понятия (tags).
  * Задания — data/olympiads/practicum/social/<дисциплина>/<тема>.js.
+ *
+ * attemptPolicy — временно одна попытка на тему: попытка сохраняется в браузере
+ * и восстанавливается после перезагрузки; завершённая тема открывается только
+ * для просмотра результатов и разбора. Чтобы снова разрешить повторное
+ * прохождение, достаточно поставить allowRetake / allowRetryMistakes /
+ * allowRetrySkipped в true — механика повторов в ядре и интерфейсе сохранена.
  */
 OLY.defineOlympiad({
   id: 'PR',
   kind: 'practicum',
   title: 'Олимпиадный практикум',
   description: 'Тематическая подготовка по дисциплинам — независимо от конкретной олимпиады',
-  subjects: ['social']
+  subjects: ['social'],
+  attemptPolicy: {
+    allowRetake: false,
+    allowRetryMistakes: false,
+    allowRetrySkipped: false,
+    persistAttempts: true
+  }
 });

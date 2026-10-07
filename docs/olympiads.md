@@ -34,6 +34,7 @@ js/olymp/ui/views/choice.js single-select и multiple-select
 js/olymp/ui/views/matching.js matching: соответствие и классификация
 js/olymp/ui/filters.js      реестр фильтров, выборка заданий
 js/olymp/ui/session.js      логика тренировки: состояния заданий, итоги
+js/olymp/ui/progress.js     сохранение попыток и правила повторного прохождения (attemptPolicy)
 js/olymp/app.js             экраны и события (единственный файл, работающий с DOM при загрузке)
 
 data/olympiads/
@@ -291,6 +292,28 @@ OLY.defineOlympiad({ id: 'PR', kind: 'practicum', title: 'Олимпиадный
 | `typicalMistake` | необязательно | необязательно | показывается **только после неверного ответа** (и в разборе нерешённых и ошибочных) |
 
 `order` задаёт порядок явно, он не выводится из ID. Пояснение к каждому варианту (`options[].explanation`) и к каждой позиции соответствия (`items[].explanation`) показывается после проверки — для неверного выбора оно объясняет, в чём ошибка рассуждения.
+
+### Повторное прохождение: attemptPolicy
+
+Правила задаются в данных трека и проверяются реестром; ядро попытки (`OLY.attempt`) не меняется.
+
+```js
+OLY.defineOlympiad({ id: 'PR', kind: 'practicum', …,
+  attemptPolicy: { allowRetake: false, allowRetryMistakes: false,
+                   allowRetrySkipped: false, persistAttempts: true } });
+OLY.getAttemptPolicy('HP');   // значения по умолчанию: всё разрешено, persistAttempts: false
+```
+
+| Настройка | По умолчанию | Практикум | Что разрешает |
+|---|---|---|---|
+| `allowRetake` | `true` | `false` | начать тему заново (и при начатой, и при завершённой попытке) |
+| `allowRetryMistakes` | `true` | `false` | «Повторить ошибки» |
+| `allowRetrySkipped` | `true` | `false` | «Решить пропущенные» |
+| `persistAttempts` | `false` | `true` | сохранять попытку по теме в браузере и восстанавливать её после перезагрузки |
+
+Логика — `js/olymp/ui/progress.js` (без DOM): `canStartNew`, `canRetry`, `topicState`, хранилище `createStore(OLY.ui.storage)`. Попытки хранятся в `localStorage` под ключом `olymp-trainer:attempts:v1` — словарь `{ 'PR/LAW/LAW-CPT': снимок попытки }`.
+
+Практикум сейчас — одна попытка на тему: тренировка всегда по всей теме (без фильтров, выбора количества и «Все темы»); ответы сохраняются при каждом изменении; выход из тренировки без подтверждения — к ней можно вернуться («Продолжить тренировку»); после завершения тема открывается только для просмотра («Посмотреть результаты», «Пройдено: X из N верно»), кнопок новых попыток нет. Чтобы снова разрешить повторы, достаточно поменять `attemptPolicy`.
 
 ### Модуль «Право → Теория права → Что такое право?» (LAW-CPT)
 
