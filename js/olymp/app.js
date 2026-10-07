@@ -20,6 +20,79 @@
 (function () {
   'use strict';
 
+  /* ---------- Защита от пустого экрана ---------- */
+
+  var RELOAD_FLAG = 'olymp-trainer:reloaded-for-update';
+
+  function sessionFlag(action) {
+    try {
+      if (action === 'get') return window.sessionStorage.getItem(RELOAD_FLAG) === '1';
+      if (action === 'set') window.sessionStorage.setItem(RELOAD_FLAG, '1');
+      else window.sessionStorage.removeItem(RELOAD_FLAG);
+    } catch (e) { /* sessionStorage недоступен */ }
+    return false;
+  }
+
+  /**
+   * Сообщение вместо пустой основной области. Создаётся без зависимостей
+   * от остального интерфейса — работает и при несовпадении версий файлов.
+   */
+  function showFatal(text) {
+    var main = document.getElementById('app') || document.body;
+    var old = document.getElementById('app-fatal');
+    if (old) old.remove();
+    Array.prototype.forEach.call(main.querySelectorAll('.screen'), function (screen) { screen.hidden = true; });
+    var box = document.createElement('div');
+    box.className = 'panel';
+    box.id = 'app-fatal';
+    box.setAttribute('role', 'alert');
+    var p = document.createElement('p');
+    p.textContent = text;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn--primary btn--lg';
+    btn.style.marginTop = '16px';
+    btn.textContent = 'Обновить страницу';
+    btn.addEventListener('click', function () { window.location.reload(); });
+    box.appendChild(p);
+    box.appendChild(btn);
+    main.appendChild(box);
+  }
+
+  /**
+   * Сразу после обновления сайта браузер может взять из кэша старый
+   * olympiad.html и новые скрипты (или наоборот). Тогда части интерфейса нет —
+   * перезагружаем страницу один раз; если не помогло, показываем сообщение.
+   */
+  function missingParts() {
+    var O = window.OLY;
+    var u = O && O.ui;
+    var checks = {
+      'OLY.ui.progress': u && u.progress,
+      'OLY.getAttemptPolicy': O && O.getAttemptPolicy,
+      'OLY.ui.filters.hasUserFilters': u && u.filters && u.filters.hasUserFilters,
+      'OLY.ui.format.practicumScopeLabel': u && u.format && u.format.practicumScopeLabel,
+      '#setup-status': document.getElementById('setup-status'),
+      '#setup-warning': document.getElementById('setup-warning'),
+      '#result-note': document.getElementById('result-note')
+    };
+    return Object.keys(checks).filter(function (name) { return !checks[name]; });
+  }
+
+  var missing = missingParts();
+  if (missing.length) {
+    if (window.console) console.error('Олимпиады: файлы страницы разных версий, нет: ' + missing.join(', '));
+    if (!sessionFlag('get')) {
+      sessionFlag('set');
+      window.location.reload();
+    } else {
+      showFatal('Не удалось загрузить страницу целиком: браузер взял часть файлов из кэша после обновления сайта. ' +
+        'Обновите страницу без кэша (Ctrl+Shift+R, на Mac — ⌘+Shift+R).');
+    }
+    return;
+  }
+  sessionFlag('clear');
+
   var OLY = window.OLY;
   var ui = OLY.ui;
   var A = OLY.attempt;
@@ -257,10 +330,25 @@
     if (router.format(state.route) !== hash) setHash(state.route, true);
   }
 
-  /** Проверяет маршрут, при необходимости поднимается на уровень выше и показывает экран. */
+  /**
+   * Показывает экран. Любая ошибка отрисовки (например, из-за несовместимых
+   * сохранённых данных) не оставляет пустую страницу: выводится сообщение.
+   */
   function showRoute(route) {
+    try {
+      var old = document.getElementById('app-fatal');
+      if (old) old.remove();
+      showRouteUnsafe(route);
+    } catch (e) {
+      if (window.console) console.error('Олимпиады: ошибка отрисовки экрана', e);
+      showFatal('Не удалось показать этот экран. Попробуйте обновить страницу; если ошибка повторяется, вернитесь к списку олимпиад.');
+    }
+  }
+
+  /** Проверяет маршрут, при необходимости поднимается на уровень выше и показывает экран. */
+  function showRouteUnsafe(route) {
     var olympiad = route.olympiad ? OLY.getOlympiad(route.olympiad) : null;
-    if (route.name === 'unknown' || (route.name !== 'home' && !olympiad)) return showRoute({ name: 'home' });
+    if (route.name === 'unknown' || (route.name !== 'home' && !olympiad)) return showRouteUnsafe({ name: 'home' });
 
     var up = null;
     if (route.name === 'discipline' || route.name === 'setup' || route.name === 'train' || route.name === 'result') {
@@ -287,7 +375,7 @@
     if (!up && route.name === 'result' && !(state.attempt && state.attempt.finishedAt && sameSetup(route, state.attemptRoute))) {
       up = router.withName(route, 'setup');
     }
-    if (up) return showRoute(up);
+    if (up) return showRouteUnsafe(up);
 
     var changedScreen = !state.route || state.route.name !== route.name;
     state.route = route;

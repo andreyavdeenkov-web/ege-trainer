@@ -250,3 +250,81 @@ test('«Высшая проба»: повторы разрешены, попыт
   const ids = attempt.taskIds;
   assert.notDeepEqual(OLY.ui.session.arrangeIds('HP', ids, random), ids);
 });
+
+/* ---------- Старые и повреждённые сохранённые данные ---------- */
+
+test('повреждённые черновики и результаты отбрасываются; восстановленная попытка безопасна для отрисовки', () => {
+  const OLY = loadBank();
+  const A = OLY.attempt;
+  const snap = A.snapshot(startPracticum(OLY));
+  const [t1, t2, t3, t4] = snap.taskIds;
+  snap.responses = {
+    [t1]: null,                                  // было в реальном повреждении: TypeError в getResponse
+    [t2]: { value: 99 },                         // номера варианта нет
+    [t3]: { value: 'текст' }                     // не та структура
+  };
+  snap.results = {
+    [t1]: {},                                    // нет вердикта
+    [t2]: { verdict: 'correct', response: 999 }, // ответ не подходит заданию
+    [t4]: { verdict: 'incorrect', response: OLY.types.get(OLY.getTask(t4).type).getCorrect(OLY.getTask(t4)) }
+  };
+  const restored = OLY.ui.progress.restore(snap, PR_SCOPE);
+  assert.ok(restored);
+  assert.deepEqual(restored.responses, {});
+  assert.deepEqual(Object.keys(restored.results), [t4], 'сохранился только корректный результат');
+  // Всё, что вызывает экран тренировки и итогов, работает без исключений.
+  for (const id of restored.taskIds) {
+    A.getResponse(restored, id);
+    OLY.ui.session.taskState(restored, id);
+  }
+  assert.equal(OLY.ui.session.outcome(restored).total, 24);
+});
+
+test('restore и хранилище никогда не бросают исключение на чужих данных', () => {
+  const OLY = loadBank();
+  const P = OLY.ui.progress;
+  const snap = OLY.attempt.snapshot(startPracticum(OLY));
+  const weird = [
+    undefined, null, 0, 'строка', [], {}, { schemaVersion: 1 },
+    { ...snap, taskIds: [null, 5, {}] },
+    { ...snap, taskIds: [snap.taskIds[0], snap.taskIds[0]] },
+    { ...snap, responses: [] }, { ...snap, results: 'x' }, { ...snap, finishedAt: 123 },
+    { ...snap, settings: null }
+  ];
+  for (const value of weird) assert.equal(P.restore(value, PR_SCOPE), null, JSON.stringify(value));
+  const throwing = { read: () => { throw new Error('SecurityError'); }, write: () => { throw new Error('QuotaExceeded'); } };
+  const store = P.createStore(throwing);
+  assert.equal(store.load(PR_SCOPE), null);
+  assert.doesNotThrow(() => store.save(PR_SCOPE, startPracticum(OLY)));
+  // Неразбираемое значение под ключом попыток — как пустое хранилище.
+  for (const raw of [[1, 2], 'x', 42, { 'PR/LAW/LAW-CPT': null }, { 'PR/LAW/LAW-CPT': [] }]) {
+    assert.equal(P.createStore({ read: () => raw, write: () => {} }).load(PR_SCOPE), null);
+  }
+});
+
+test('настройки фильтров старой версии (до PR #9) не влияют на практикум', () => {
+  const OLY = loadBank();
+  const F = OLY.ui.filters;
+  // Ровно то, что версия до PR #9 записывала в olymp-trainer:settings.
+  const old = { level: 2, type: 'single-select' };
+  assert.deepEqual(F.normalize(PR_SCOPE, old), {});
+  assert.equal(F.buildPool(PR_SCOPE, F.normalize(PR_SCOPE, old)).length, 24);
+});
+
+test('olympiad.html: новые модули и элементы на месте, progress.js подключён до app.js', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const { pageScripts } = require('./helpers/olymp.js');
+  const scripts = pageScripts();
+  const at = (s) => scripts.indexOf(s);
+  assert.ok(at('js/olymp/ui/session.js') !== -1 && at('js/olymp/ui/session.js') < at('js/olymp/ui/progress.js'));
+  assert.ok(at('js/olymp/ui/filters.js') < at('js/olymp/app.js') && at('js/olymp/ui/common.js') < at('js/olymp/app.js'));
+  assert.equal(at('js/olymp/ui/progress.js'), at('js/olymp/app.js') - 1);
+  const html = fs.readFileSync(path.join(__dirname, '..', 'olympiad.html'), 'utf8');
+  // Эти элементы app.js проверяет при старте (защита от смеси версий из кэша).
+  for (const id of ['setup-status', 'setup-warning', 'result-note', 'app']) {
+    assert.ok(html.includes(`id="${id}"`), `нет элемента #${id}`);
+  }
+  const app = fs.readFileSync(path.join(__dirname, '..', 'js/olymp/app.js'), 'utf8');
+  for (const id of ['setup-status', 'setup-warning', 'result-note']) assert.ok(app.includes(`'#${id}'`), `app.js не проверяет #${id}`);
+});
