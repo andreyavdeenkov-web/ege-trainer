@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Подготовка к олимпиадам по обществознанию: тренировка по дисциплинам и темам">
+  <meta name="description" content="Подготовка к олимпиадам по обществознанию: олимпиадный практикум по темам и задания конкретных олимпиад">
   <meta name="theme-color" content="#0f766e">
   <meta name="robots" content="noindex">
   <title>Олимпиады по обществознанию</title>
@@ -34,18 +34,24 @@
       <div class="hero">
         <p class="eyebrow">Обществознание</p>
         <h1 id="home-title">Олимпиады</h1>
-        <p class="hero__lead">Задания собраны по дисциплинам и темам. Класс, этап и тур можно выбрать фильтром перед тренировкой.</p>
+        <p class="hero__lead">Два способа подготовки: углублённая тематическая тренировка в практикуме и задания конкретных олимпиад.</p>
       </div>
+      <div id="practicum-block">
+        <h2 class="field__label list-title">Тематическая подготовка</h2>
+        <div class="topic-grid card-grid" id="practicum-list"></div>
+      </div>
+      <h2 class="field__label list-title">Олимпиады</h2>
       <div class="topic-grid card-grid" id="olympiad-list"></div>
     </section>
 
     <!-- Олимпиада: дисциплины -->
     <section class="screen" id="screen-olympiad" hidden aria-labelledby="olympiad-title">
       <div class="hero">
-        <p class="eyebrow">Олимпиада · обществознание</p>
+        <p class="eyebrow" id="olympiad-eyebrow">Олимпиада · обществознание</p>
         <h1 id="olympiad-title"></h1>
+        <p class="hero__lead" id="olympiad-lead" hidden></p>
       </div>
-      <div class="segmented mode-switch" role="radiogroup" aria-label="Режим подготовки">
+      <div class="segmented mode-switch" id="mode-switch" role="radiogroup" aria-label="Режим подготовки">
         <label class="segmented__item">
           <input type="radio" name="mode" id="mode-topic" value="topic" checked>
           <span>Тематическая тренировка</span>
@@ -64,7 +70,7 @@
       <div class="hero">
         <p class="eyebrow" id="discipline-eyebrow"></p>
         <h1 id="discipline-title"></h1>
-        <p class="hero__lead">Выберите тему или тренируйтесь сразу по всей дисциплине.</p>
+        <p class="hero__lead" id="discipline-lead">Выберите тему или тренируйтесь сразу по всей дисциплине.</p>
       </div>
       <div class="topic-grid topic-grid--compact card-grid" id="topic-list"></div>
     </section>
@@ -119,7 +125,9 @@
       <article class="panel task" id="task-card">
         <div class="task__meta">
           <span class="chip" id="task-topic"></span>
+          <span class="level-badge" id="task-level" hidden></span>
         </div>
+        <p class="task__block" id="task-block" hidden></p>
         <div class="sources" id="task-sources"></div>
         <h2 class="task__question" id="task-question"></h2>
         <p class="task__hint" id="task-hint"></p>
@@ -135,6 +143,11 @@
               <div id="feedback-points-row" hidden><span class="muted">Баллы:</span> <strong id="feedback-points"></strong></div>
             </div>
           </div>
+        </div>
+
+        <div class="explanation explanation--mistake" id="typical-mistake" hidden>
+          <h3 class="explanation__title">Типичная ошибка</h3>
+          <p id="typical-mistake-text"></p>
         </div>
 
         <div class="explanation" id="explanation" hidden>
@@ -217,12 +230,15 @@
   <script src="data/olympiads/hp/social/law/family.js"></script>
   <script src="data/olympiads/hp/sources/2026-27-demo-9-1.js"></script>
   <script src="data/olympiads/hp/sources/author-pol-pow.js"></script>
+  <script src="data/olympiads/practicum/practicum.js"></script>
+  <script src="data/olympiads/practicum/social/law/concept.js"></script>
 
   <!-- Интерфейс: помощники, фильтры, отрисовка типов заданий, экраны -->
   <script src="js/olymp/ui/common.js"></script>
   <script src="js/olymp/ui/router.js"></script>
   <script src="js/olymp/ui/views.js"></script>
   <script src="js/olymp/ui/views/choice.js"></script>
+  <script src="js/olymp/ui/views/matching.js"></script>
   <script src="js/olymp/ui/filters.js"></script>
   <script src="js/olymp/ui/session.js"></script>
   <script src="js/olymp/app.js"></script>

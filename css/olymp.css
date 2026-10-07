@@ -40,6 +40,7 @@
 .statement.is-selected .statement__num,
 .task-nav__item.is-current.is-viewed { color: var(--on-primary); }
 .statement.is-selected .statement__check::after { border-color: var(--on-primary); }
+.match-choice.is-selected { color: var(--on-primary); }
 
 .brand__logo { background: var(--accent-gradient); color: var(--on-primary); }
 .progress__fill { background: var(--accent-gradient); }
@@ -90,6 +91,18 @@ a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focu
 .list-title { margin: 22px 0 10px; }
 .empty-note { color: var(--text-muted); }
 
+/* Заголовок раздела дисциплины внутри сетки тем (практикум: «Теория права»). */
+.card-grid .topic-section-title { grid-column: 1 / -1; margin: 14px 0 0; }
+
+/* Олимпиадный практикум на главной: та же карточка, сплошной акцентный край. */
+.topic-option--practicum .topic-option__body { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+
+/* Дисциплина практикума без заданий: не ссылка. */
+.topic-option.is-soon { cursor: default; }
+.topic-option.is-soon .topic-option__body { opacity: .6; border-style: dashed; }
+.topic-option.is-soon:hover .topic-option__body { border-color: var(--border); }
+.topic-option.is-soon .soon-badge { margin-left: 0; }
+
 /* ===== Режимы ===== */
 .mode-switch { max-width: 100%; }
 .segmented__item.is-soon { cursor: not-allowed; }
@@ -131,6 +144,31 @@ a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focu
 /* ===== Тренировка ===== */
 .progress__side { display: inline-flex; align-items: center; gap: 8px; }
 
+/* Уровень сложности задания практикума. */
+.task__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.level-badge[data-level="3"] { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); color: var(--primary); }
+.level-badge--sm { font-size: 12px; padding: 1px 8px; }
+.task__block {
+  margin: -6px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 /* Черновик: ответ введён, но не проверен. */
 .task-nav__item.is-draft { border-color: var(--primary); border-style: dashed; color: var(--primary); }
 
@@ -171,6 +209,12 @@ a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focu
   background: var(--surface-2);
 }
 .explanation__title { font-size: 15px; margin-bottom: 4px; }
+/* Типичная ошибка — после неверного ответа, перед общим разбором. */
+.explanation--mistake {
+  border-color: var(--wrong-border);
+  background: var(--wrong-bg);
+}
+.explanation--mistake .explanation__title { color: var(--wrong); }
 
 /* ===== Итоги ===== */
 .result__scope { margin-top: 6px; color: var(--text-muted); }
@@ -206,6 +250,7 @@ a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focu
 .mistake__points.is-skipped { color: var(--text-muted); }
 .review-item__body .sources { margin: 0 0 10px; }
 .review-item__body .explanation { background: var(--surface); }
+.review-item__body .explanation--mistake { background: var(--wrong-bg); }
 
 @media (max-width: 560px) {
   .progress__row { flex-wrap: wrap; }

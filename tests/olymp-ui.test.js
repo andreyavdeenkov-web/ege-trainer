@@ -69,7 +69,7 @@ test('у каждого типа заданий в банке есть отри�
   for (const task of OLY.tasks) {
     assert.ok(OLY.ui.views.has(task.type), `${task.id}: нет отрисовки для ${task.type}`);
   }
-  assert.deepEqual(OLY.ui.views.list(), ['single-select', 'multiple-select']);
+  assert.deepEqual(OLY.ui.views.list(), ['single-select', 'multiple-select', 'matching']);
 });
 
 test('реестр отрисовки: новый тип подключается регистрацией', () => {
@@ -160,7 +160,7 @@ test('normalize: скрытые и недопустимые значения с�
 test('реестр фильтров расширяется без изменения экранов', () => {
   const OLY = loadBank();
   const F = OLY.ui.filters;
-  assert.deepEqual(F.list().map((f) => f.key), ['class', 'round', 'stage', 'year', 'sourceKind', 'type']);
+  assert.deepEqual(F.list().map((f) => f.key), ['class', 'round', 'stage', 'year', 'sourceKind', 'level', 'type']);
   assert.throws(() => F.register({ key: 'class', label: 'x', values: () => [] }), /уже зарегистрирован/);
   F.register({ key: 'discipline', label: 'Дисциплина', always: true, values: () => ['SOC', 'LAW'], format: (v) => v });
   const groups = F.describe({ olympiad: 'HP', subject: 'social' }, {});

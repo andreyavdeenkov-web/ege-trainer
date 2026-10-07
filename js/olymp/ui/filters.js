@@ -4,7 +4,8 @@
  * Фильтр — описание в реестре; новый фильтр добавляется вызовом
  * OLY.ui.filters.register({ key, label, always?, values(ctx), format(value, ctx) }),
  * где key — поле запроса OLY.query (class, stage, round, year, sourceKind, type…).
- *   always  — показывать всегда (класс и тур); иначе фильтр виден,
+ *   always  — показывать всегда, если у фильтра есть значения (класс и тур
+ *             олимпиады; у практикума их нет); иначе фильтр виден,
  *             только если в выборке больше одного значения;
  *   values  — возможные значения для текущей области (олимпиада, дисциплина, тема);
  *   format  — подпись значения.
@@ -43,12 +44,12 @@
 
   register({
     key: 'class', label: 'Класс', always: true,
-    values: function (ctx) { return ctx.olympiad.classes.slice(); },
+    values: function (ctx) { return (ctx.olympiad.classes || []).slice(); },
     format: function (v) { return String(v); }
   });
   register({
     key: 'round', label: 'Тур', always: true,
-    values: function (ctx) { return ctx.olympiad.rounds.slice(); },
+    values: function (ctx) { return (ctx.olympiad.rounds || []).slice(); },
     format: function (v) { return fmt.roundLabel(v); }
   });
   register({
@@ -71,6 +72,17 @@
       return OLY.SOURCE_KINDS.filter(function (k) { return found.indexOf(k) !== -1; });
     },
     format: function (v) { return fmt.sourceKindTitle(v); }
+  });
+  register({
+    key: 'level', label: 'Сложность',
+    values: function (ctx) {
+      var levels = [];
+      ctx.tasks.forEach(function (t) {
+        if (t.level !== undefined && levels.indexOf(t.level) === -1) levels.push(t.level);
+      });
+      return levels.sort();
+    },
+    format: function (v) { return fmt.levelTitle(v); }
   });
   register({
     key: 'type', label: 'Тип задания',
@@ -123,7 +135,7 @@
     var groups = [];
     registry.forEach(function (filter) {
       var values = filter.values(ctx);
-      if (!filter.always && values.length < 2) return;
+      if (values.length === 0 || (!filter.always && values.length < 2)) return;
       var current = sel[filter.key] === undefined ? ALL : sel[filter.key];
       var options = [{ value: ALL, label: 'Все' }].concat(values.map(function (v) {
         return { value: v, label: filter.format(v, ctx) };

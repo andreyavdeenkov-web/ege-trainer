@@ -110,11 +110,40 @@
     return parts.join(' · ');
   }
 
-  /** «Социология · Образование и профессиональная деятельность». */
+  /**
+   * «Социология · Образование и профессиональная деятельность»;
+   * если у темы есть раздел — «Право · Теория права · Что такое право?».
+   */
   function taskTopicLabel(task) {
     var discipline = OLY.getDiscipline(task.subject, task.discipline);
     var topic = OLY.getTopic(task.subject, task.topic);
-    return (discipline ? discipline.title : task.discipline) + ' · ' + (topic ? topic.title : task.topic);
+    var parts = [discipline ? discipline.title : task.discipline];
+    var section = topic && topic.section ? OLY.getSection(task.subject, task.discipline, topic.section) : null;
+    if (section) parts.push(section.title);
+    parts.push(topic ? topic.title : task.topic);
+    return parts.join(' · ');
+  }
+
+  /** Уровни сложности заданий практикума. */
+  var LEVEL_TITLES = { 1: 'Базовый', 2: 'Применение', 3: 'Олимпиадный' };
+
+  /** Короткое название уровня: «Применение». */
+  function levelTitle(level) {
+    return LEVEL_TITLES[level] || String(level);
+  }
+
+  /** Подпись уровня на карточке задания: «Уровень 2 · применение». */
+  function levelLabel(level) {
+    return 'Уровень ' + level + ' · ' + lowerFirst(levelTitle(level));
+  }
+
+  /** [1, 3, 2] → «Уровни 1–3», [2] → «Уровень 2», [] → ''. */
+  function levelsLabel(levels) {
+    var list = (levels || []).filter(function (l) { return l !== undefined; }).sort();
+    list = list.filter(function (l, i) { return i === 0 || l !== list[i - 1]; });
+    if (list.length === 0) return '';
+    if (list.length === 1) return 'Уровень ' + list[0];
+    return 'Уровни ' + list[0] + '–' + list[list.length - 1];
   }
 
   function disciplineColor(subjectId, disciplineId) {
@@ -154,6 +183,9 @@
     sourceHead: sourceHead,
     sourceLine: sourceLine,
     taskTopicLabel: taskTopicLabel,
+    levelTitle: levelTitle,
+    levelLabel: levelLabel,
+    levelsLabel: levelsLabel,
     disciplineColor: disciplineColor
   };
   ui.storage = storage;
