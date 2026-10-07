@@ -275,3 +275,33 @@ test('shuffle не теряет и не дублирует задания', () =
   assert.deepEqual([...shuffled].sort(), list);
   assert.deepEqual(list, ['a', 'b', 'c', 'd', 'e']);
 });
+
+/* ---------- Авторский брендинг ---------- */
+
+test('брендинг: шапка, подвал, заголовок вкладки и плашка автора на экранах практикума', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'olympiad.html'), 'utf8');
+  assert.match(html, /<span class="brand__logo" aria-hidden="true">АА<\/span>/);
+  assert.match(html, /<span class="brand__title">Андрей Авдеенков<\/span>/);
+  assert.match(html, /<span class="brand__subtitle">Олимпиадное обществознание<\/span>/);
+  assert.match(html, /<footer class="footer">Андрей Авдеенков · Олимпиадное обществознание<\/footer>/);
+  assert.match(html, /<title>Андрей Авдеенков · Олимпиадное обществознание<\/title>/);
+  assert.ok(!/>ОЛ<|%3EОЛ%3C|>Подготовка к олимпиадам по обществознанию</.test(html), 'старый брендинг убран');
+  // Плашка — на экранах дисциплин, тем, настройки, тренировки и итогов; по умолчанию скрыта,
+  // app.js показывает её только для практикума.
+  // Имя уже в шапке, поэтому на обычных экранах — короткая плашка; на итогах — полная,
+  // чтобы авторство было видно на отдельном скриншоте результата.
+  const badgeIn = (screen) => {
+    const start = html.indexOf(`id="${screen}"`);
+    const section = html.slice(start, html.indexOf('</section>', start));
+    const m = section.match(/<p class="author-badge" hidden>.*?<\/span>(.*?)<\/p>/);
+    return m ? m[1] : null;
+  };
+  for (const screen of ['screen-olympiad', 'screen-discipline', 'screen-setup', 'screen-train']) {
+    assert.equal(badgeIn(screen), 'Авторский практикум', screen);
+  }
+  assert.equal(badgeIn('screen-result'), 'Авторский практикум · Андрей Авдеенков');
+  assert.equal((html.match(/class="author-badge"/g) || []).length, 5);
+  assert.ok(!html.slice(html.indexOf('id="screen-home"'), html.indexOf('</section>', html.indexOf('id="screen-home"'))).includes('author-badge'));
+});

@@ -383,6 +383,7 @@
 
     SCREENS.forEach(function (name) { dom.screens[name].hidden = name !== route.name; });
     renderCrumbs(route);
+    renderAuthorBadges(route);
 
     if (route.name === 'home') renderHome();
     else if (route.name === 'olympiad') renderOlympiad(route);
@@ -395,6 +396,14 @@
       releaseFocus();
       window.scrollTo(0, 0);
     }
+  }
+
+  /** Плашка «Авторский практикум · Андрей Авдеенков» — на всех экранах практикума. */
+  function renderAuthorBadges(route) {
+    var show = !!route.olympiad && isPracticum(route);
+    Array.prototype.forEach.call(document.querySelectorAll('.author-badge'), function (badge) {
+      badge.hidden = !show;
+    });
   }
 
   function releaseFocus() {
@@ -481,7 +490,7 @@
   }
 
   function setTitle(parts) {
-    document.title = parts.concat('Олимпиады по обществознанию').join(' — ');
+    document.title = parts.concat('Андрей Авдеенков · Олимпиадное обществознание').join(' — ');
   }
 
   /* ---------- Олимпиады ---------- */
