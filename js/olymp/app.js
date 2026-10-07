@@ -64,6 +64,7 @@
     setupStatusBtn: $('setup-status-btn'),
     setupTitle: $('setup-title'),
     setupNote: $('setup-note'),
+    setupWarning: $('setup-warning'),
     setupForm: $('setup-form'),
     filters: $('filters'),
     poolInfo: $('pool-info'),
@@ -530,6 +531,7 @@
     all: 'Задания разных классов и тем дисциплины могут решаться вместе. Класс, этап и тур можно выбрать с помощью фильтров.',
     singleAttempt: 'Задания идут в учебной последовательности: блок за блоком, внутри блока — от простого к сложному. Тему можно пройти один раз: ответы сохраняются в этом браузере, после завершения откроются результаты и разбор.',
     practicumStart: 'Задания идут в учебной последовательности: от основных понятий к применению и олимпиадным кейсам.',
+    practicumSingleAttempt: 'Практикум сохраняет ваш прогресс. После завершения пройти его заново нельзя, но вы сможете вернуться к своим ответам и разобрать их.',
     inProgress: 'Ответы сохраняются в этом браузере. Можно продолжить с того места, где вы остановились; после завершения тему можно будет только просматривать.',
     completed: 'Повторное прохождение темы пока недоступно. В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор.'
   };
@@ -553,6 +555,10 @@
       : P.wholeTopicOnly(policy) ? SETUP_NOTES.singleAttempt
       : route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
     setTitle([dom.setupTitle.textContent, olympiad.title]);
+    // Предупреждение об одной попытке — на старте темы практикума, если повторы запрещены.
+    var warn = isPracticum(route) && !policy.allowRetake;
+    dom.setupWarning.hidden = !warn;
+    dom.setupWarning.textContent = warn ? SETUP_NOTES.practicumSingleAttempt : '';
 
     // Новую попытку начать нельзя — вместо настройки статус и одна основная кнопка.
     var attempt = attemptFor(route);
@@ -565,6 +571,7 @@
       dom.setupStatusText.textContent = attemptStatusLine(attempt);
       dom.setupStatusBtn.textContent = completed ? 'Посмотреть результаты' : 'Продолжить тренировку';
       dom.setupNote.textContent = completed ? SETUP_NOTES.completed : SETUP_NOTES.inProgress;
+      dom.setupWarning.hidden = true;
       return;
     }
     renderFilters(route);
