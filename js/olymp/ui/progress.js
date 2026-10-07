@@ -29,12 +29,48 @@
     return !!value && typeof value === 'object' && !Array.isArray(value);
   }
 
+  var VERDICTS = ['correct', 'incorrect', 'unanswered'];
+
+  /** Ответ подходит заданию по структуре (как при вводе ученика). */
+  function validResponse(task, value) {
+    if (value === null || value === undefined) return false;
+    try {
+      OLY.types.get(task.type).cleanResponse(task, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** Черновик: { value, updatedAt } с ответом подходящей структуры. */
+  function validDraft(task, entry) {
+    return isObject(entry) && validResponse(task, entry.value);
+  }
+
+  /** Результат проверки: известный вердикт и ответ подходящей структуры (у пропущенного — null). */
+  function validResult(task, entry) {
+    if (!isObject(entry) || VERDICTS.indexOf(entry.verdict) === -1) return false;
+    if (entry.verdict === 'unanswered') return entry.response === null || validResponse(task, entry.response);
+    return validResponse(task, entry.response);
+  }
+
   /**
    * Попытка из сохранённого снимка или null, если снимок не подходит:
    * другая версия схемы, другая область, повреждённая структура.
-   * Задания, которых больше нет в банке, из попытки убираются вместе с ответами.
+   * Задания, которых больше нет в банке, из попытки убираются вместе с ответами;
+   * повреждённые черновики и результаты отбрасываются (задание считается
+   * непроверенным). Функция никогда не бросает исключение: несовместимое
+   * сохранённое состояние безопасно игнорируется.
    */
   function restore(snapshot, scope) {
+    try {
+      return restoreUnsafe(snapshot, scope);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function restoreUnsafe(snapshot, scope) {
     var A = OLY.attempt;
     if (!isObject(snapshot) || snapshot.schemaVersion !== A.SCHEMA_VERSION || snapshot.mode !== 'practice') return null;
     if (snapshot.olympiad !== scope.olympiad || snapshot.subject !== scope.subject) return null;
@@ -49,10 +85,12 @@
       return !!task && task.olympiad === attempt.olympiad && task.subject === attempt.subject;
     });
     if (attempt.taskIds.length === 0) return null;
-    ['responses', 'results'].forEach(function (key) {
-      Object.keys(attempt[key]).forEach(function (id) {
-        if (attempt.taskIds.indexOf(id) === -1) delete attempt[key][id];
-      });
+    if (new Set(attempt.taskIds).size !== attempt.taskIds.length) return null;
+    Object.keys(attempt.responses).forEach(function (id) {
+      if (attempt.taskIds.indexOf(id) === -1 || !validDraft(OLY.getTask(id), attempt.responses[id])) delete attempt.responses[id];
+    });
+    Object.keys(attempt.results).forEach(function (id) {
+      if (attempt.taskIds.indexOf(id) === -1 || !validResult(OLY.getTask(id), attempt.results[id])) delete attempt.results[id];
     });
     return attempt;
   }
@@ -69,13 +107,19 @@
     return {
       /** Сохранённая попытка области или null. */
       load: function (scope) {
-        return restore(readAll()[scopeKey(scope)], scope);
+        try {
+          return restore(readAll()[scopeKey(scope)], scope);
+        } catch (e) {
+          return null;
+        }
       },
       /** Сохраняет копию попытки для области. */
       save: function (scope, attempt) {
-        var all = readAll();
-        all[scopeKey(scope)] = OLY.attempt.snapshot(attempt);
-        backend.write(STORAGE_KEY, all);
+        try {
+          var all = readAll();
+          all[scopeKey(scope)] = OLY.attempt.snapshot(attempt);
+          backend.write(STORAGE_KEY, all);
+        } catch (e) { /* попытка просто не сохранится */ }
       }
     };
   }
