@@ -96,6 +96,19 @@
     return a;
   }
 
+  /**
+   * Порядок заданий новой тренировки. В практикуме — учебная последовательность
+   * из данных (тема, затем order); в олимпиаде — случайный.
+   */
+  function arrange(olympiadId, tasks, random) {
+    return OLY.isPracticum(olympiadId) ? OLY.sortByOrder(tasks) : shuffle(tasks, random);
+  }
+
+  /** То же для списка ID (повтор ошибок, пропущенных). */
+  function arrangeIds(olympiadId, taskIds, random) {
+    return arrange(olympiadId, taskIds.map(OLY.getTask), random).map(function (t) { return t.id; });
+  }
+
   ui.session = {
     taskState: taskState,
     navItems: navItems,
@@ -105,6 +118,8 @@
     hasProgress: hasProgress,
     subsetIds: subsetIds,
     outcome: outcome,
-    shuffle: shuffle
+    shuffle: shuffle,
+    arrange: arrange,
+    arrangeIds: arrangeIds
   };
 })(typeof window !== 'undefined' ? window : globalThis);

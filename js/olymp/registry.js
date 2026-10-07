@@ -32,6 +32,16 @@
   OLY.YEAR_PATTERN = /^\d{4}\/\d{2}$/;
   /** Код этапа олимпиады: qualifying, final. */
   OLY.STAGE_ID_PATTERN = /^[a-z][a-z-]*$/;
+  /** id раздела дисциплины и блока темы: theory, concept. */
+  OLY.SECTION_ID_PATTERN = /^[a-z][a-z-]*$/;
+
+  /**
+   * Виды треков: олимпиада (классы, этапы, туры, источники) и олимпиадный
+   * практикум — тематическая подготовка без привязки к конкретной олимпиаде.
+   */
+  OLY.TRACK_KINDS = ['olympiad', 'practicum'];
+  /** Уровни сложности: 1 — базовое понимание, 2 — применение, 3 — олимпиадный уровень. */
+  OLY.LEVELS = [1, 2, 3];
 
   /** Виды источников: демоверсия, вариант прошлых лет, авторский сборник. */
   OLY.SOURCE_KINDS = ['demo', 'past', 'author-set'];
@@ -69,6 +79,12 @@
    * Регистрирует предмет с дисциплинами и темами. Каталог общий для всех олимпиад
    * по предмету; темы добавляются по мере появления заданий.
    * { id: 'social', title, disciplines: [{ id: 'SOC', title, topics: [{ id: 'SOC-MOB', title }] }] }
+   *
+   * Необязательно:
+   *   discipline.sections — разделы дисциплины [{ id: 'theory', title: 'Теория права' }];
+   *                         topic.section — id раздела, к которому относится тема;
+   *   topic.blocks        — содержательные блоки темы в учебном порядке
+   *                         [{ id: 'concept', title: 'Понятие права' }]; задание указывает block.
    */
   OLY.defineSubject = function (subject) {
     var errors = [];
@@ -85,11 +101,16 @@
       else if (disciplinesById[discipline.id]) errors.push('повторяющаяся дисциплина ' + discipline.id);
       if (!isText(discipline.title)) errors.push('дисциплина ' + discipline.id + ': нет названия');
       disciplinesById[discipline.id] = discipline;
+      var sectionIds = validateParts(discipline.sections, 'дисциплина ' + discipline.id + ': раздел', errors);
       (discipline.topics || []).forEach(function (topic) {
         if (!OLY.TOPIC_ID_PATTERN.test(topic.id) || topic.id.indexOf(discipline.id + '-') !== 0) {
           errors.push('тема ' + topic.id + ' не относится к дисциплине ' + discipline.id);
         } else if (topicsById[topic.id]) errors.push('повторяющаяся тема ' + topic.id);
         if (!isText(topic.title)) errors.push('тема ' + topic.id + ': нет названия');
+        if (topic.section !== undefined && sectionIds.indexOf(topic.section) === -1) {
+          errors.push('тема ' + topic.id + ': неизвестный раздел ' + topic.section);
+        }
+        validateParts(topic.blocks, 'тема ' + topic.id + ': блок', errors);
         topicsById[topic.id] = topic;
       });
     });
@@ -107,6 +128,23 @@
     return subject;
   };
 
+  /** Проверяет список разделов или блоков [{ id, title }]; возвращает их id. */
+  function validateParts(parts, what, errors) {
+    if (parts === undefined) return [];
+    if (!Array.isArray(parts) || parts.length === 0) {
+      errors.push(what + ': ожидается непустой список');
+      return [];
+    }
+    var ids = [];
+    parts.forEach(function (part) {
+      if (!part || !OLY.SECTION_ID_PATTERN.test(part.id)) errors.push(what + ': некорректный id ' + (part && part.id));
+      else if (ids.indexOf(part.id) !== -1) errors.push(what + ' ' + part.id + ' повторяется');
+      else ids.push(part.id);
+      if (part && !isText(part.title)) errors.push(what + ' ' + (part && part.id) + ': нет названия');
+    });
+    return ids;
+  }
+
   OLY.getSubject = function (subjectId) {
     var entry = subjectsById[subjectId];
     return entry ? entry.subject : null;
@@ -122,7 +160,27 @@
     return (entry && entry.topics[topicId]) || null;
   };
 
-  /* ---------- Олимпиады ---------- */
+  /** Раздел дисциплины или null. */
+  OLY.getSection = function (subjectId, disciplineId, sectionId) {
+    var discipline = OLY.getDiscipline(subjectId, disciplineId);
+    if (!discipline || !discipline.sections) return null;
+    for (var i = 0; i < discipline.sections.length; i++) {
+      if (discipline.sections[i].id === sectionId) return discipline.sections[i];
+    }
+    return null;
+  };
+
+  /** Блок темы или null. */
+  OLY.getBlock = function (subjectId, topicId, blockId) {
+    var topic = OLY.getTopic(subjectId, topicId);
+    if (!topic || !topic.blocks) return null;
+    for (var i = 0; i < topic.blocks.length; i++) {
+      if (topic.blocks[i].id === blockId) return topic.blocks[i];
+    }
+    return null;
+  };
+
+  /* ---------- Олимпиады и практикум ---------- */
 
   /**
    * { id: 'HP', title: 'Высшая проба', subjects: ['social'], classes: [9, 10, 11], rounds: [1, 2],
@@ -131,6 +189,11 @@
    * олимпиады этап не указывается. Необязательные подписи для интерфейса:
    * titleGenitive — название в родительном падеже («Высшей пробы»),
    * stageTitles — названия этапов: { qualifying: 'Отборочный этап', … }.
+   *
+   * Олимпиадный практикум регистрируется так же, с kind: 'practicum':
+   * { id: 'PR', kind: 'practicum', title: 'Олимпиадный практикум', subjects: ['social'], description? }.
+   * У практикума нет классов, этапов, туров и источников; его задания обязаны
+   * указывать уровень сложности, теги, порядок и разбор (см. validateTask).
    */
   OLY.defineOlympiad = function (olympiad) {
     var errors = [];
@@ -142,6 +205,21 @@
       olympiad.subjects.forEach(function (id) {
         if (!subjectsById[id]) errors.push('неизвестный предмет ' + id);
       });
+    }
+    if (olympiad.kind !== undefined && OLY.TRACK_KINDS.indexOf(olympiad.kind) === -1) {
+      errors.push('kind должно быть одним из: ' + OLY.TRACK_KINDS.join(', '));
+    }
+    if (olympiad.description !== undefined && !isText(olympiad.description)) {
+      errors.push('description должно быть непустой строкой');
+    }
+    if (olympiad.kind === 'practicum') {
+      ['classes', 'rounds', 'stages', 'stageTitles'].forEach(function (key) {
+        if (olympiad[key] !== undefined) errors.push('у практикума нет классов, этапов и туров: поле ' + key + ' не указывается');
+      });
+      if (errors.length) fail('Практикум ' + olympiad.id, errors);
+      olympiadsById[olympiad.id] = olympiad;
+      OLY.olympiads.push(olympiad);
+      return olympiad;
     }
     ['classes', 'rounds'].forEach(function (key) {
       var values = olympiad[key];
@@ -181,6 +259,12 @@
     return olympiadsById[olympiadId] || null;
   };
 
+  /** Трек — олимпиадный практикум (а не конкретная олимпиада). */
+  OLY.isPracticum = function (olympiadOrId) {
+    var olympiad = typeof olympiadOrId === 'string' ? olympiadsById[olympiadOrId] : olympiadOrId;
+    return !!olympiad && olympiad.kind === 'practicum';
+  };
+
   /* ---------- Задания ---------- */
 
   /** Все ошибки данных задания (пустой массив — задание корректно). */
@@ -216,6 +300,7 @@
     if (task.retired !== undefined && typeof task.retired !== 'boolean') {
       errors.push('retired должно быть true или false');
     }
+    errors = errors.concat(validateLearningFields(task, olympiad, topic));
     if (!Object.prototype.hasOwnProperty.call(task, 'scoring')) {
       errors.push('нет поля scoring (null, если критерии оценивания неизвестны)');
     }
@@ -231,9 +316,65 @@
   }
 
   /**
+   * Учебные поля задания (необязательны для олимпиад, обязательны для практикума):
+   *   section        — раздел дисциплины, должен совпадать с разделом темы;
+   *   block          — содержательный блок темы (если у темы есть блоки);
+   *   order          — место задания в учебной последовательности темы (целое от 1);
+   *   level          — сложность 1–3;
+   *   tags           — проверяемые понятия, непустой список строк без повторов;
+   *   typicalMistake — объяснение типичной ошибки (необязательно и в практикуме).
+   * Практикум также требует общий разбор explanation.
+   */
+  function validateLearningFields(task, olympiad, topic) {
+    var errors = [];
+    var practicum = OLY.isPracticum(olympiad);
+    var topicSection = topic ? topic.section : undefined;
+    if (task.section !== undefined) {
+      if (topic && task.section !== topicSection) errors.push('section должно совпадать с разделом темы (' + topicSection + ')');
+    } else if (practicum && topicSection !== undefined) {
+      errors.push('нет поля section (раздел темы: ' + topicSection + ')');
+    }
+    var blocks = topic && topic.blocks;
+    if (task.block !== undefined) {
+      if (!blocks || !blocks.some(function (b) { return b.id === task.block; })) {
+        errors.push('неизвестный блок темы ' + task.block);
+      }
+    } else if (practicum && blocks) {
+      errors.push('нет поля block: у темы есть содержательные блоки');
+    }
+    if (task.order !== undefined) {
+      if (!(Number.isInteger(task.order) && task.order >= 1)) errors.push('order должно быть целым числом от 1');
+    } else if (practicum) errors.push('нет поля order (место в учебной последовательности)');
+    if (task.level !== undefined) {
+      if (OLY.LEVELS.indexOf(task.level) === -1) errors.push('level должно быть одним из: ' + OLY.LEVELS.join(', '));
+    } else if (practicum) errors.push('нет поля level (сложность 1–3)');
+    if (task.tags !== undefined) {
+      if (!Array.isArray(task.tags) || task.tags.length === 0 || !task.tags.every(isText)) {
+        errors.push('tags должно быть непустым списком строк');
+      } else if (new Set(task.tags).size !== task.tags.length) errors.push('tags: теги повторяются');
+    } else if (practicum) errors.push('нет поля tags (проверяемые понятия)');
+    if (task.typicalMistake !== undefined && !isText(task.typicalMistake)) {
+      errors.push('typicalMistake должно быть непустой строкой');
+    }
+    if (practicum && !isText(task.explanation)) errors.push('нет разбора explanation');
+    return errors;
+  }
+
+  /** Порядок задания уже занят другим заданием той же темы того же трека. */
+  function orderTaken(task) {
+    if (task.order === undefined) return null;
+    for (var i = 0; i < OLY.tasks.length; i++) {
+      var other = OLY.tasks[i];
+      if (other.olympiad === task.olympiad && other.topic === task.topic && other.order === task.order) return other;
+    }
+    return null;
+  }
+
+  /**
    * Регистрирует задания. Каждое задание:
    * { id, olympiad, subject, discipline, topic, type, question, …поля типа,
-   *   explanation?, scoring: null | {…}, version?, retired? }
+   *   explanation?, scoring: null | {…}, version?, retired?,
+   *   section?, block?, order?, level?, tags?, typicalMistake? }
    * ID постоянный: не меняется и не используется повторно. Вместо удаления —
    * retired: true.
    */
@@ -245,6 +386,8 @@
       }
       if (tasksById[task.id]) throw new Error('Повторяющийся id задания: ' + task.id);
       var errors = validateTask(task);
+      var taken = orderTaken(task);
+      if (taken) errors.push('order ' + task.order + ' уже занят заданием ' + taken.id);
       if (errors.length) fail('Задание ' + task.id, errors);
       tasksById[task.id] = task;
       appearancesByTask[task.id] = [];
@@ -289,7 +432,9 @@
     var errors = [];
     var olympiad = olympiadsById[source.olympiad];
     if (!olympiad) errors.push('неизвестная олимпиада ' + source.olympiad);
-    else {
+    else if (OLY.isPracticum(olympiad)) {
+      fail('Источник ' + source.id, ['у практикума нет источников: его задания не привязаны к олимпиаде, классу и туру']);
+    } else {
       if (source.id.indexOf(source.olympiad + '-') !== 0) errors.push('id должен начинаться с ' + source.olympiad + '-');
       if (olympiad.subjects.indexOf(source.subject) === -1) {
         errors.push('предмет ' + source.subject + ' не относится к олимпиаде ' + source.olympiad);
@@ -442,7 +587,7 @@
 
   /**
    * Активные задания по фильтрам (порядок регистрации):
-   * { olympiad, subject, discipline?, topic?, class?, stage?, round?, year?, sourceKind?, type? }.
+   * { olympiad, subject, discipline?, topic?, class?, stage?, round?, year?, sourceKind?, type?, level? }.
    * Значение 'all', null или отсутствие поля — без фильтра.
    * sourceKind — вид источника: 'demo' | 'past' | 'author-set'.
    * Класс, этап, тур, год и вид источника проверяются по одному появлению: «9 класс, II тур» —
@@ -459,9 +604,35 @@
       if (isSet(f.discipline) && task.discipline !== f.discipline) return false;
       if (isSet(f.topic) && task.topic !== f.topic) return false;
       if (isSet(f.type) && task.type !== f.type) return false;
+      if (isSet(f.level) && task.level !== f.level) return false;
       if (byAppearance && !matchesAppearance(task.id, f)) return false;
       return true;
     });
+  };
+
+  /**
+   * Задания в учебной последовательности: по порядку тем в каталоге дисциплины,
+   * внутри темы — по полю order (задания без order — в конце, в порядке регистрации).
+   * Не меняет исходный список.
+   */
+  OLY.sortByOrder = function (tasks) {
+    function topicIndex(task) {
+      var discipline = OLY.getDiscipline(task.subject, task.discipline);
+      if (!discipline) return Infinity;
+      for (var i = 0; i < discipline.topics.length; i++) {
+        if (discipline.topics[i].id === task.topic) return i;
+      }
+      return Infinity;
+    }
+    return tasks.map(function (task, i) { return { task: task, i: i }; }).sort(function (a, b) {
+      var ta = topicIndex(a.task);
+      var tb = topicIndex(b.task);
+      if (ta !== tb) return ta < tb ? -1 : 1;
+      var oa = a.task.order === undefined ? Infinity : a.task.order;
+      var ob = b.task.order === undefined ? Infinity : b.task.order;
+      if (oa !== ob) return oa < ob ? -1 : 1;
+      return a.i - b.i;
+    }).map(function (x) { return x.task; });
   };
 
   /** Дисциплины предмета, в которых по фильтрам есть хотя бы одно задание. */

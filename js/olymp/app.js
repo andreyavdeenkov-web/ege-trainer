@@ -1,9 +1,14 @@
 /**
  * Олимпиады: интерфейс тематической тренировки.
  *
- * Путь: Олимпиады → олимпиада (дисциплины) → дисциплина (темы) → настройка
- * (фильтры) → тренировка → итоги. Класс, этап, тур — только фильтры и подписи.
+ * Путь: Олимпиады → олимпиада или олимпиадный практикум (дисциплины) →
+ * дисциплина (темы, сгруппированные по разделам) → настройка (фильтры) →
+ * тренировка → итоги. Класс, этап, тур — только фильтры и подписи.
  * Предмет берётся из олимпиады и в интерфейсе не выбирается.
+ *
+ * Практикум (kind: 'practicum') — тематическая подготовка без привязки
+ * к олимпиаде: все дисциплины видны (пустые — «скоро»), фильтр — сложность,
+ * задания идут в учебной последовательности из данных, а не вразброс.
  *
  * Зависит от ядра js/olymp/*.js, данных data/olympiads/**.js и js/olymp/ui/*.js.
  */
@@ -34,10 +39,16 @@
     crumbs: $('crumbs'),
     crumbsList: $('crumbs-list'),
     olympiadList: $('olympiad-list'),
+    practicumBlock: $('practicum-block'),
+    practicumList: $('practicum-list'),
+    olympiadEyebrow: $('olympiad-eyebrow'),
     olympiadTitle: $('olympiad-title'),
+    olympiadLead: $('olympiad-lead'),
+    modeSwitch: $('mode-switch'),
     disciplineList: $('discipline-list'),
     disciplineEyebrow: $('discipline-eyebrow'),
     disciplineTitle: $('discipline-title'),
+    disciplineLead: $('discipline-lead'),
     topicList: $('topic-list'),
     setupEyebrow: $('setup-eyebrow'),
     setupTitle: $('setup-title'),
@@ -61,6 +72,8 @@
     taskNav: $('task-nav'),
     taskCard: $('task-card'),
     taskTopic: $('task-topic'),
+    taskLevel: $('task-level'),
+    taskBlock: $('task-block'),
     taskSources: $('task-sources'),
     taskQuestion: $('task-question'),
     taskHint: $('task-hint'),
@@ -71,6 +84,8 @@
     feedbackUser: $('feedback-user'),
     feedbackPointsRow: $('feedback-points-row'),
     feedbackPoints: $('feedback-points'),
+    typicalMistake: $('typical-mistake'),
+    typicalMistakeText: $('typical-mistake-text'),
     explanation: $('explanation'),
     explanationText: $('explanation-text'),
     prevBtn: $('prev-btn'),
@@ -293,21 +308,54 @@
     return a;
   }
 
+  /** Карточка раздела, где заданий ещё нет: не ссылка, с пометкой «скоро». */
+  function soonCard(title, color) {
+    var div = el('div', 'topic-option is-soon');
+    div.setAttribute('aria-disabled', 'true');
+    if (color) div.style.setProperty('--topic-color', color);
+    var body = el('span', 'topic-option__body');
+    body.appendChild(el('span', 'topic-option__dot'));
+    body.appendChild(el('span', 'topic-option__title', title));
+    var count = el('span', 'topic-option__count', 'Задания готовятся ');
+    count.appendChild(el('small', 'soon-badge', 'скоро'));
+    body.appendChild(count);
+    div.appendChild(body);
+    return div;
+  }
+
+  function isPracticum(route) {
+    return OLY.isPracticum(route.olympiad);
+  }
+
   function setTitle(parts) {
     document.title = parts.concat('Олимпиады по обществознанию').join(' — ');
   }
 
   /* ---------- Олимпиады ---------- */
 
+  var OLYMPIAD_CARD_META = 'Задания и тренировочные туры этой олимпиады';
+
+  /**
+   * Главная: два блока. Практикум — тематическая подготовка без привязки
+   * к олимпиаде (показывается, даже пока заданий нет: дисциплины — «скоро»);
+   * олимпиады — задания конкретных олимпиад (только с заданиями).
+   */
   function renderHome() {
     setTitle([]);
     dom.olympiadList.textContent = '';
+    dom.practicumList.textContent = '';
     OLY.olympiads.forEach(function (olympiad) {
       var n = F.buildPool({ olympiad: olympiad.id, subject: subjectOf(olympiad) }, {}).length;
+      var route = { name: 'olympiad', olympiad: olympiad.id };
+      if (OLY.isPracticum(olympiad)) {
+        dom.practicumList.appendChild(card(route, olympiad.title,
+          n ? fmt.tasksCount(n) : 'Задания готовятся', olympiad.description || null, 'var(--primary)', 'topic-option--practicum'));
+        return;
+      }
       if (n === 0) return;
-      dom.olympiadList.appendChild(card({ name: 'olympiad', olympiad: olympiad.id },
-        olympiad.title, fmt.tasksCount(n), OLY.getSubject(subjectOf(olympiad)).title, 'var(--primary)'));
+      dom.olympiadList.appendChild(card(route, olympiad.title, fmt.tasksCount(n), OLYMPIAD_CARD_META, 'var(--primary)'));
     });
+    dom.practicumBlock.hidden = dom.practicumList.children.length === 0;
     if (!dom.olympiadList.children.length) {
       dom.olympiadList.appendChild(el('p', 'empty-note', 'Заданий пока нет.'));
     }
@@ -318,13 +366,23 @@
   function renderOlympiad(route) {
     var olympiad = OLY.getOlympiad(route.olympiad);
     var subject = OLY.getSubject(subjectOf(olympiad));
+    var practicum = OLY.isPracticum(olympiad);
     setTitle([olympiad.title]);
+    dom.olympiadEyebrow.textContent = practicum ? 'Тематическая подготовка · обществознание' : 'Олимпиада · обществознание';
     dom.olympiadTitle.textContent = olympiad.title;
+    dom.olympiadLead.textContent = practicum
+      ? (olympiad.description || '') + '. Выберите дисциплину и тему: задания идут от базового понимания к олимпиадному уровню.'
+      : '';
+    dom.olympiadLead.hidden = !practicum;
+    dom.modeSwitch.hidden = practicum;
     dom.disciplineList.textContent = '';
     subject.disciplines.forEach(function (discipline) {
       var scope = { olympiad: olympiad.id, subject: subject.id, discipline: discipline.id };
       var pool = F.buildPool(scope, {});
-      if (pool.length === 0) return;
+      if (pool.length === 0) {
+        if (practicum) dom.disciplineList.appendChild(soonCard(discipline.title, discipline.color));
+        return;
+      }
       var topics = discipline.topics.filter(function (t) {
         return pool.some(function (task) { return task.topic === t.id; });
       }).length;
@@ -357,23 +415,49 @@
     dom.topicList.textContent = '';
 
     var base = { name: 'setup', olympiad: route.olympiad, discipline: route.discipline };
-    dom.topicList.appendChild(card(Object.assign({ topic: 'all' }, base),
-      'Все темы дисциплины', fmt.tasksCount(pool.length), fmt.classesLabel(classesOf(pool)),
-      discipline.color, 'topic-option--all'));
-
-    discipline.topics.forEach(function (topic) {
-      var tasks = pool.filter(function (task) { return task.topic === topic.id; });
-      if (tasks.length === 0) return;
-      dom.topicList.appendChild(card(Object.assign({ topic: topic.id }, base),
-        topic.title, fmt.tasksCount(tasks.length), fmt.classesLabel(classesOf(tasks)), discipline.color));
+    var practicum = isPracticum(route);
+    var topics = discipline.topics.filter(function (topic) {
+      return pool.some(function (task) { return task.topic === topic.id; });
     });
+    // В практикуме карточка «Все темы» нужна, только когда тем больше одной.
+    var withAll = !practicum || topics.length > 1;
+    dom.disciplineLead.textContent = withAll ? 'Выберите тему или тренируйтесь сразу по всей дисциплине.' : 'Выберите тему.';
+    if (withAll) {
+      dom.topicList.appendChild(card(Object.assign({ topic: 'all' }, base),
+        'Все темы дисциплины', fmt.tasksCount(pool.length), cardMeta(route, pool),
+        discipline.color, 'topic-option--all'));
+    }
+
+    // Темы группируются по разделам дисциплины; темы без раздела — в начале, без заголовка.
+    var groups = [{ section: null, topics: [] }];
+    (discipline.sections || []).forEach(function (section) { groups.push({ section: section, topics: [] }); });
+    topics.forEach(function (topic) {
+      var group = groups.filter(function (g) { return g.section && g.section.id === topic.section; })[0] || groups[0];
+      group.topics.push(topic);
+    });
+    groups.forEach(function (group) {
+      if (group.topics.length === 0) return;
+      if (group.section) dom.topicList.appendChild(el('h2', 'field__label list-title topic-section-title', group.section.title));
+      group.topics.forEach(function (topic) {
+        var tasks = pool.filter(function (task) { return task.topic === topic.id; });
+        dom.topicList.appendChild(card(Object.assign({ topic: topic.id }, base),
+          topic.title, fmt.tasksCount(tasks.length), cardMeta(route, tasks), discipline.color));
+      });
+    });
+  }
+
+  /** Подпись карточки темы: классы у олимпиады, уровни сложности у практикума. */
+  function cardMeta(route, tasks) {
+    if (isPracticum(route)) return fmt.levelsLabel(tasks.map(function (t) { return t.level; })) || null;
+    return fmt.classesLabel(classesOf(tasks));
   }
 
   /* ---------- Настройка тренировки ---------- */
 
   var SETUP_NOTES = {
     topic: 'Задания разных классов по теме решаются вместе. Класс, этап и тур — фильтры: по умолчанию выбраны все задания.',
-    all: 'Задания разных классов и тем дисциплины могут решаться вместе. Класс, этап и тур можно выбрать с помощью фильтров.'
+    all: 'Задания разных классов и тем дисциплины могут решаться вместе. Класс, этап и тур можно выбрать с помощью фильтров.',
+    practicum: 'Задания идут в учебной последовательности: блок за блоком, внутри блока — от простого к сложному. Фильтр сложности сужает набор, порядок сохраняется.'
   };
 
   function currentSelection(scope) {
@@ -383,9 +467,13 @@
   function renderSetup(route) {
     var olympiad = OLY.getOlympiad(route.olympiad);
     var discipline = OLY.getDiscipline(subjectOf(olympiad), route.discipline);
-    dom.setupEyebrow.textContent = route.topic === 'all' ? 'Все темы дисциплины' : discipline.title;
+    var topic = route.topic === 'all' ? null : OLY.getTopic(subjectOf(olympiad), route.topic);
+    var section = topic && topic.section ? OLY.getSection(subjectOf(olympiad), discipline.id, topic.section) : null;
+    dom.setupEyebrow.textContent = route.topic === 'all' ? 'Все темы дисциплины'
+      : discipline.title + (section ? ' · ' + section.title : '');
     dom.setupTitle.textContent = route.topic === 'all' ? discipline.title : topicTitle(route);
-    dom.setupNote.textContent = route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
+    dom.setupNote.textContent = isPracticum(route) ? SETUP_NOTES.practicum
+      : route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
     setTitle([dom.setupTitle.textContent, olympiad.title]);
     renderFilters(route);
   }
@@ -435,7 +523,8 @@
     dom.resetFilters.hidden = F.isDefault(selection);
 
     var counts = COUNT_OPTIONS.filter(function (o) { return o.value === 'all' || Number(o.value) < pool.length; });
-    dom.countField.hidden = pool.length <= 10;
+    // В практикуме набор — учебная последовательность, его не урезают по количеству.
+    dom.countField.hidden = pool.length <= 10 || isPracticum(route);
     dom.countOptions.textContent = '';
     if (!counts.some(function (o) { return o.value === settings.count; })) settings.count = 'all';
     counts.forEach(function (o) {
@@ -458,10 +547,13 @@
     dom.startBtn.disabled = empty;
   }
 
-  /** Задания новой тренировки: выборка по фильтрам, перемешанная и ограниченная по количеству. */
+  /**
+   * Задания новой тренировки: выборка по фильтрам; в олимпиаде — перемешанная
+   * и ограниченная по количеству, в практикуме — целиком в учебном порядке.
+   */
   function plannedPool(route, filters) {
-    var pool = S.shuffle(F.buildPool(scopeOf(route), filters));
-    var count = pool.length > 10 ? settings.count : 'all';
+    var pool = S.arrange(route.olympiad, F.buildPool(scopeOf(route), filters));
+    var count = pool.length > 10 && !isPracticum(route) ? settings.count : 'all';
     return count === 'all' ? pool : pool.slice(0, Number(count));
   }
 
@@ -525,6 +617,12 @@
 
     setTitle(['Задание ' + (state.viewIndex + 1), topicTitle(state.attemptRoute)]);
     topicChip(dom.taskTopic, task);
+    dom.taskLevel.hidden = task.level === undefined;
+    dom.taskLevel.textContent = task.level === undefined ? '' : fmt.levelLabel(task.level);
+    if (task.level !== undefined) dom.taskLevel.dataset.level = String(task.level);
+    var block = task.block ? OLY.getBlock(task.subject, task.topic, task.block) : null;
+    dom.taskBlock.hidden = !block;
+    dom.taskBlock.textContent = block ? block.title : '';
     renderSources(dom.taskSources, task.id);
     dom.taskQuestion.textContent = task.question;
     dom.taskHint.textContent = result ? 'Ответ проверен — изменить его нельзя.' : view.hint(task);
@@ -541,6 +639,10 @@
       });
     }
     dom.feedback.hidden = !result;
+    // Типичная ошибка — только после неверного ответа.
+    var showMistake = !!(result && result.verdict === 'incorrect' && task.typicalMistake);
+    dom.typicalMistake.hidden = !showMistake;
+    dom.typicalMistakeText.textContent = showMistake ? task.typicalMistake : '';
     dom.explanation.hidden = !(result && task.explanation);
     dom.explanationText.textContent = result && task.explanation ? task.explanation : '';
 
@@ -570,6 +672,8 @@
       if (result.details.extra.length) parts.push('лишних: ' + result.details.extra.length);
       caption = parts.join(' · ');
       caption = caption.charAt(0).toUpperCase() + caption.slice(1);
+    } else if (!correct && result.details && Array.isArray(result.details.perItem)) {
+      caption = 'Ошибок в позициях: ' + result.details.mistakes + ' из ' + result.details.perItem.length;
     }
     if (caption) dom.verdict.appendChild(el('span', 'points__caption', caption));
     dom.feedbackCorrect.textContent = type.formatResponse(task, result.correct);
@@ -818,6 +922,11 @@
       var chip = el('span', 'chip chip--sm');
       topicChip(chip, task);
       head.appendChild(chip);
+      if (task.level !== undefined) {
+        var level = el('span', 'level-badge level-badge--sm', fmt.levelLabel(task.level));
+        level.dataset.level = String(task.level);
+        head.appendChild(level);
+      }
       var mark = solved
         ? el('span', 'mistake__points points--' + (taskState === 'correct' ? 'full' : 'none'), VERDICT_TEXT[taskState])
         : el('span', 'mistake__points is-skipped', 'Не решено');
@@ -846,6 +955,12 @@
       var box = el('div', 'answer');
       views.get(task.type).renderReview(box, task, { result: solved ? result : null });
       body.appendChild(box);
+      if (task.typicalMistake && taskState !== 'correct') {
+        var mistake = el('div', 'explanation explanation--mistake');
+        mistake.appendChild(el('h4', 'explanation__title', 'Типичная ошибка'));
+        mistake.appendChild(el('p', null, task.typicalMistake));
+        body.appendChild(mistake);
+      }
       if (task.explanation) {
         var expl = el('div', 'explanation');
         expl.appendChild(el('h4', 'explanation__title', 'Разбор'));
@@ -910,10 +1025,10 @@
     startAttempt(route, plannedPool(route, attemptFilters()).map(function (t) { return t.id; }));
   });
   dom.skippedBtn.addEventListener('click', function () {
-    startAttempt(state.attemptRoute, S.shuffle(S.subsetIds(state.attempt, 'skipped')));
+    startAttempt(state.attemptRoute, S.arrangeIds(state.attemptRoute.olympiad, S.subsetIds(state.attempt, 'skipped')));
   });
   dom.mistakesBtn.addEventListener('click', function () {
-    startAttempt(state.attemptRoute, S.shuffle(S.subsetIds(state.attempt, 'mistakes')));
+    startAttempt(state.attemptRoute, S.arrangeIds(state.attemptRoute.olympiad, S.subsetIds(state.attempt, 'mistakes')));
   });
   dom.topicsBtn.addEventListener('click', function () {
     var route = state.attemptRoute;
