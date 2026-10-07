@@ -206,22 +206,38 @@ function addBankTasks(OLY) {
   ]);
 }
 
-test('фильтры практикума: нет класса и тура; сложность — когда уровней больше одного', () => {
+test('практикум: на стартовом экране нет пользовательских фильтров — ни сложности, ни типа задания', () => {
   const OLY = loadBank();
   addBankTasks(OLY);
   const F = OLY.ui.filters;
   const scope = { olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'LAW-CPT' };
-  const groups = F.describe(scope, {});
-  assert.deepEqual(groups.map((g) => g.key), ['level', 'type']);
-  const pool = F.buildPool(scope, {});
-  const count = (level) => pool.filter((t) => t.level === level).length;
-  assert.deepEqual(groups[0].options.map((o) => [o.label, o.count]),
-    [['Все', pool.length], ['Базовый', count(1)], ['Применение', count(2)], ['Олимпиадный', count(3)]]);
+  assert.equal(F.hasUserFilters(scope), false);
+  assert.deepEqual(F.describe(scope, {}), []);
+  assert.deepEqual(F.describe(scope, { level: 3, type: 'matching' }), []);
+  // Сохранённый когда-то выбор сбрасывается: тренировка всегда по всей теме.
+  assert.deepEqual(F.normalize(scope, { level: 2, type: 'matching', class: 9 }), {});
+  // level и type остаются в реестре фильтров и в запросах.
+  assert.ok(F.list().some((f) => f.key === 'level') && F.list().some((f) => f.key === 'type'));
   const hard = F.buildPool(scope, { level: 3 }).map((t) => t.id);
   assert.ok(hard.includes('PR-LAW-CPT-903') && !hard.includes('PR-LAW-CPT-901'));
-  assert.deepEqual(F.normalize(scope, { level: 2, class: 9 }), { level: 2, type: 'all' });
-  // У «Высшей пробы» фильтр сложности не появляется: уровней в заданиях нет.
-  assert.ok(!F.describe({ olympiad: 'HP', subject: 'social', discipline: 'POL', topic: 'all' }, {}).some((g) => g.key === 'level'));
+  // У «Высшей пробы» пользовательские фильтры на месте.
+  const hp = { olympiad: 'HP', subject: 'social', discipline: 'POL', topic: 'all' };
+  assert.equal(F.hasUserFilters(hp), true);
+  assert.deepEqual(F.describe(hp, {}).map((g) => g.key), ['class', 'round', 'sourceKind', 'type']);
+});
+
+test('практикум «Что такое право?»: запускается вся тема — 24 задания в порядке order; подпись состава', () => {
+  const OLY = loadBank();
+  const F = OLY.ui.filters;
+  const scope = { olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'LAW-CPT' };
+  const pool = OLY.ui.session.arrange('PR', F.buildPool(scope, F.normalize(scope, { level: 1, type: 'single-select' })));
+  assert.equal(pool.length, 24);
+  assert.deepEqual(pool.map((t) => t.order), pool.map((_, i) => i + 1));
+  const f = OLY.ui.format;
+  assert.equal(f.practicumScopeLabel(pool), '24 задания · от базового уровня до олимпиадного');
+  assert.equal(f.practicumScopeLabel(pool.filter((t) => t.level === 1)), '7 заданий · базовый уровень');
+  assert.equal(f.practicumScopeLabel(pool.filter((t) => t.level >= 2)), '17 заданий · от уровня применения до олимпиадного');
+  assert.equal(f.practicumScopeLabel([]), '0 заданий');
 });
 
 test('порядок тренировки: практикум — учебная последовательность, олимпиада — перемешивание', () => {

@@ -528,15 +528,15 @@
   var SETUP_NOTES = {
     topic: 'Задания разных классов по теме решаются вместе. Класс, этап и тур — фильтры: по умолчанию выбраны все задания.',
     all: 'Задания разных классов и тем дисциплины могут решаться вместе. Класс, этап и тур можно выбрать с помощью фильтров.',
-    practicum: 'Задания идут в учебной последовательности: блок за блоком, внутри блока — от простого к сложному. Фильтр сложности сужает набор, порядок сохраняется.',
     singleAttempt: 'Задания идут в учебной последовательности: блок за блоком, внутри блока — от простого к сложному. Тему можно пройти один раз: ответы сохраняются в этом браузере, после завершения откроются результаты и разбор.',
+    practicumStart: 'Задания идут в учебной последовательности: от основных понятий к применению и олимпиадным кейсам.',
     inProgress: 'Ответы сохраняются в этом браузере. Можно продолжить с того места, где вы остановились; после завершения тему можно будет только просматривать.',
     completed: 'Повторное прохождение темы пока недоступно. В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор.'
   };
 
-  /** Выбранные фильтры; если тренировка охватывает всю тему — без фильтров. */
+  /** Выбранные фильтры; если тренировка охватывает всю тему (практикум) — без фильтров. */
   function currentSelection(scope) {
-    if (P.wholeTopicOnly(OLY.getAttemptPolicy(scope.olympiad))) return {};
+    if (!F.hasUserFilters(scope) || P.wholeTopicOnly(OLY.getAttemptPolicy(scope.olympiad))) return {};
     return F.normalize(scope, settings.filters);
   }
 
@@ -549,8 +549,8 @@
       : discipline.title + (section ? ' · ' + section.title : '');
     dom.setupTitle.textContent = route.topic === 'all' ? discipline.title : topicTitle(route);
     var policy = policyOf(route);
-    dom.setupNote.textContent = P.wholeTopicOnly(policy) ? SETUP_NOTES.singleAttempt
-      : isPracticum(route) ? SETUP_NOTES.practicum
+    dom.setupNote.textContent = isPracticum(route) ? SETUP_NOTES.practicumStart
+      : P.wholeTopicOnly(policy) ? SETUP_NOTES.singleAttempt
       : route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
     setTitle([dom.setupTitle.textContent, olympiad.title]);
 
@@ -573,8 +573,9 @@
   function renderFilters(route) {
     var scope = scopeOf(route);
     var selection = currentSelection(scope);
-    // Одна попытка на тему: тренировка всегда по всей теме, фильтры не показываются.
-    var whole = P.wholeTopicOnly(policyOf(route));
+    // Практикум и «одна попытка на тему»: тренировка всегда по всей теме, фильтров нет.
+    var practicum = isPracticum(route);
+    var whole = practicum || P.wholeTopicOnly(policyOf(route));
     var groups = whole ? [] : F.describe(scope, selection);
     var pool = F.buildPool(scope, selection);
 
@@ -610,8 +611,8 @@
     });
 
     var empty = pool.length === 0;
-    dom.poolInfo.textContent = empty
-      ? 'По выбранным фильтрам заданий нет.'
+    dom.poolInfo.textContent = empty ? 'По выбранным фильтрам заданий нет.'
+      : practicum ? fmt.practicumScopeLabel(pool)
       : (whole ? 'В теме: ' : 'Найдено: ') + fmt.tasksCount(pool.length);
     dom.poolInfo.parentNode.classList.toggle('is-empty', empty);
     dom.resetFilters.hidden = F.isDefault(selection);
@@ -638,6 +639,7 @@
       dom.countOptions.appendChild(label);
     });
 
+    dom.startBtn.textContent = practicum ? 'Начать практикум' : 'Начать тренировку';
     dom.startBtn.disabled = empty;
   }
 
@@ -646,7 +648,7 @@
    * и ограниченная по количеству, в практикуме — целиком в учебном порядке.
    */
   function plannedPool(route, filters) {
-    var whole = P.wholeTopicOnly(policyOf(route));
+    var whole = isPracticum(route) || P.wholeTopicOnly(policyOf(route));
     var pool = S.arrange(route.olympiad, F.buildPool(scopeOf(route), whole ? {} : filters));
     var count = pool.length > 10 && !isPracticum(route) && !whole ? settings.count : 'all';
     return count === 'all' ? pool : pool.slice(0, Number(count));
