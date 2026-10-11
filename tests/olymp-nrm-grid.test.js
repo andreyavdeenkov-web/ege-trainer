@@ -191,11 +191,11 @@ test('analysis-grid: структура ответа проверяется; у�
 /* ---------- Попытка ---------- */
 
 test('analysis-grid в попытке: «частично» в итогах, баллы по компонентам, восстановление после перезагрузки', () => {
-  const OLY = loadBank('olympiad-demo.html');
+  const OLY = loadBank('olympiad-work.html');
   const A = OLY.attempt;
-  const task = OLY.getTask('DEMO-LAW-NRM-001');
+  const task = OLY.getTask('PR-LAW-NRM-006');
   const type = OLY.types.get(task.type);
-  const attempt = A.createAttempt({ mode: 'practice', olympiad: 'DEMO', subject: 'social', taskIds: [task.id],
+  const attempt = A.createAttempt({ mode: 'practice', olympiad: 'PR', subject: 'social', taskIds: [task.id],
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   const response = type.getCorrect(task);
   response['method-narrow'] = { c: 1, f: [], e: ['f2'] };
@@ -218,12 +218,13 @@ test('analysis-grid в попытке: «частично» в итогах, б�
   assert.deepEqual(OLY.ui.session.subsetIds(attempt, 'skipped'), []);
 
   A.finish(attempt);
-  const scope = { olympiad: 'DEMO', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
+  const scope = { olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);
   assert.ok(restored, 'попытка с вердиктом «частично» должна восстанавливаться');
   assert.deepEqual(restored.results[task.id], attempt.results[task.id]);
   assert.equal(OLY.ui.progress.topicState(restored), 'completed');
-  assert.deepEqual(OLY.getAttemptPolicy('DEMO'), OLY.getAttemptPolicy('PR'));
+  assert.equal(OLY.getAttemptPolicy('PR').allowRetake, false, 'одна оцениваемая попытка');
+  assert.deepEqual(loadBank('olympiad-demo.html').getAttemptPolicy('DEMO'), OLY.getAttemptPolicy('PR'));
 });
 
 /* ---------- Демонстрационная страница и публикуемый банк ---------- */
@@ -237,7 +238,7 @@ test('Демо-данные и новые механики не подключе
   const scripts = pageScripts();
   assert.ok(!scripts.some((s) => s.startsWith('demo/')), 'демо-данные на основной странице');
   const OLY = loadBank();
-  assert.equal(OLY.getTask('DEMO-LAW-NRM-001'), null);
+  assert.equal(OLY.getTask('DEMO-LAW-NRM-006'), null);
   assert.equal(OLY.getOlympiad('DEMO'), null);
 });
 

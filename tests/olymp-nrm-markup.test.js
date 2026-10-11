@@ -191,11 +191,11 @@ test('text-markup: структура ответа проверяется', () =
 /* ---------- Демонстрационные задания ---------- */
 
 test('Демо: разметка ч. 3 ст. 38 Конституции и п. 2 ст. 89 СК — эталон 16 и 11 баллов, тексты помечены несверенными', () => {
-  const OLY = loadBank('olympiad-demo.html');
-  for (const [id, max] of [['DEMO-LAW-NRM-002', 16], ['DEMO-LAW-NRM-004', 11]]) {
+  const OLY = loadBank('olympiad-work.html');
+  for (const [id, max] of [['PR-LAW-NRM-009', 16], ['PR-LAW-NRM-010', 11]]) {
     const task = OLY.getTask(id);
     assert.equal(task.type, 'text-markup');
-    assert.equal(task.demo, true);
+    assert.equal(task.draft, true);
     assert.ok(task.legal.every((b) => b.verified === false), id);
     const g = OLY.grade.gradeTask(task, OLY.types.get(task.type).getCorrect(task));
     assert.equal(g.verdict, 'correct', id);
@@ -204,8 +204,8 @@ test('Демо: разметка ч. 3 ст. 38 Конституции и п. 2 
 });
 
 test('Демо ч. 3 ст. 38: санкцию в тексте не размечают; судебное взыскание как мера ответственности — ½', () => {
-  const OLY = loadBank('olympiad-demo.html');
-  const task = OLY.getTask('DEMO-LAW-NRM-002');
+  const OLY = loadBank('olympiad-work.html');
+  const task = OLY.getTask('PR-LAW-NRM-009');
   const response = OLY.types.get(task.type).getCorrect(task);
   response.marks.k3 = 'S';
   response.rows['role-c'] = { c: 5, f: [], e: [] };
@@ -218,10 +218,10 @@ test('Демо ч. 3 ст. 38: санкцию в тексте не размеч�
 });
 
 test('text-markup в попытке: «частично», баллы по компонентам, восстановление', () => {
-  const OLY = loadBank('olympiad-demo.html');
+  const OLY = loadBank('olympiad-work.html');
   const A = OLY.attempt;
-  const task = OLY.getTask('DEMO-LAW-NRM-004');
-  const attempt = A.createAttempt({ mode: 'practice', olympiad: 'DEMO', subject: 'social', taskIds: [task.id],
+  const task = OLY.getTask('PR-LAW-NRM-010');
+  const attempt = A.createAttempt({ mode: 'practice', olympiad: 'PR', subject: 'social', taskIds: [task.id],
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   const response = OLY.types.get(task.type).getCorrect(task);
   response.marks.a4 = 'S';   // «в судебном порядке» как санкция — одна ошибка, один балл
@@ -233,7 +233,7 @@ test('text-markup в попытке: «частично», баллы по ко�
   const outcome = OLY.ui.session.outcome(attempt);
   assert.deepEqual(outcome.components.T, { earned: 3, max: 4 });
   A.finish(attempt);
-  const scope = { olympiad: 'DEMO', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
+  const scope = { olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);
   assert.ok(restored);
   assert.deepEqual(restored.results[task.id], attempt.results[task.id]);

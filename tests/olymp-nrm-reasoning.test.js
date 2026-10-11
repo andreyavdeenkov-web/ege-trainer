@@ -177,10 +177,10 @@ test('reasoning-check: структура ответа проверяется, �
 /* ---------- Демонстрационное задание ---------- */
 
 test('Демо V-2 (ст. 125 УК): эталон 11 баллов; шаг 2 зависит от подхода и не входит в ключ', () => {
-  const OLY = loadBank('olympiad-demo.html');
-  const task = OLY.getTask('DEMO-LAW-NRM-003');
+  const OLY = loadBank('olympiad-work.html');
+  const task = OLY.getTask('PR-LAW-NRM-011');
   assert.equal(task.type, 'reasoning-check');
-  assert.equal(task.demo, true);
+  assert.equal(task.draft, true);
   assert.ok(task.legal.every((b) => b.verified === false));
   const type = OLY.types.get(task.type);
   let g = OLY.grade.gradeTask(task, type.getCorrect(task));
@@ -197,10 +197,10 @@ test('Демо V-2 (ст. 125 УК): эталон 11 баллов; шаг 2 за
 });
 
 test('reasoning-check в попытке: «частично», компоненты, восстановление', () => {
-  const OLY = loadBank('olympiad-demo.html');
+  const OLY = loadBank('olympiad-work.html');
   const A = OLY.attempt;
-  const task = OLY.getTask('DEMO-LAW-NRM-003');
-  const attempt = A.createAttempt({ mode: 'practice', olympiad: 'DEMO', subject: 'social', taskIds: [task.id],
+  const task = OLY.getTask('PR-LAW-NRM-011');
+  const attempt = A.createAttempt({ mode: 'practice', olympiad: 'PR', subject: 'social', taskIds: [task.id],
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   const response = OLY.types.get(task.type).getCorrect(task);
   response.steps.s5.type = 'T5';
@@ -210,7 +210,7 @@ test('reasoning-check в попытке: «частично», компонен�
   assert.equal(result.points, 10);
   assert.deepEqual(OLY.ui.session.outcome(attempt).components.R, { earned: 10, max: 11 });
   A.finish(attempt);
-  const scope = { olympiad: 'DEMO', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
+  const scope = { olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);
   assert.ok(restored);
   assert.deepEqual(restored.results[task.id], attempt.results[task.id]);

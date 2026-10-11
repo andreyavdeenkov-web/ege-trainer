@@ -173,7 +173,7 @@ test('compound: ошибки данных', () => {
 
 test('Демо: оценка доводов (указ о помиловании) и составное задание (ПВТР и ТК) — эталон, тексты несверенные', () => {
   const OLY = loadBank('olympiad-demo.html');
-  for (const [id, type, max] of [['DEMO-LAW-NRM-009', 'argument-check', 14], ['DEMO-LAW-NRM-010', 'compound', 19]]) {
+  for (const [id, type, max] of [['DEMO-LAW-NRM-009', 'argument-check', 14], ['DEMO-LAW-NRM-010', 'compound', 18]]) {
     const task = OLY.getTask(id);
     assert.equal(task.type, type);
     assert.equal(task.demo, true);
@@ -211,7 +211,7 @@ test('Оценка доводов и составное задание в поп
   A.setResponse(attempt, ids[1], r10);
   const res = A.check(attempt, ids[1]);
   assert.equal(res.verdict, 'partial');
-  assert.equal(res.points, 18);
+  assert.equal(res.points, 17);
   A.finish(attempt);
   const scope = { olympiad: 'DEMO', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);

@@ -87,7 +87,7 @@
         a.c = a.c === i ? null : i;
         if (!R.needsFollowUp(row, a)) a.f = [];
         changed();
-      }, false);
+      }, false, N.displayOrder(task, row));
       card.appendChild(choice.node);
 
       var follow = null;

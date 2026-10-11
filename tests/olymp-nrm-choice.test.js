@@ -168,7 +168,7 @@ test('link-map: пары (K) и утверждения (R); определени
 
 test('Демо: конструктор, систематизация, карта связей — эталон даёт полный балл, тексты несверенные', () => {
   const OLY = loadBank('olympiad-demo.html');
-  for (const [id, type, max] of [['DEMO-LAW-NRM-005', 'formula-builder', 3], ['DEMO-LAW-NRM-007', 'systematize', 7], ['DEMO-LAW-NRM-008', 'link-map', 7]]) {
+  for (const [id, type, max] of [['DEMO-LAW-NRM-007', 'systematize', 7], ['DEMO-LAW-NRM-008', 'link-map', 7]]) {
     const task = OLY.getTask(id);
     assert.equal(task.type, type);
     assert.equal(task.demo, true);
@@ -212,7 +212,7 @@ test('link-map: при упорядоченном правиле «связи н
 test('Новые типы в попытке: «частично», компоненты, восстановление', () => {
   const OLY = loadBank('olympiad-demo.html');
   const A = OLY.attempt;
-  const ids = ['DEMO-LAW-NRM-005', 'DEMO-LAW-NRM-007', 'DEMO-LAW-NRM-008'];
+  const ids = ['DEMO-LAW-NRM-007', 'DEMO-LAW-NRM-008'];
   const attempt = A.createAttempt({ mode: 'practice', olympiad: 'DEMO', subject: 'social', taskIds: ids,
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   for (const id of ids) {
@@ -223,9 +223,9 @@ test('Новые типы в попытке: «частично», компон�
     A.setResponse(attempt, id, r);
     assert.equal(A.check(attempt, id).verdict, 'partial', id);
   }
-  assert.equal(A.summary(attempt).partial, 3);
+  assert.equal(A.summary(attempt).partial, 2);
   const o = OLY.ui.session.outcome(attempt);
-  assert.equal(o.components.possible, 17);
+  assert.equal(o.components.possible, 14);
   A.finish(attempt);
   const scope = { olympiad: 'DEMO', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);

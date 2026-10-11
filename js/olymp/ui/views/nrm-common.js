@@ -55,14 +55,29 @@
   }
 
   function demoNotice(task) {
-    if (!task.demo) return null;
-    var box = el('p', 'nrm-demo-note');
-    box.appendChild(el('strong', null, 'Демонстрационное задание. '));
-    box.appendChild(document.createTextNode('Тексты норм приведены по вторичным источникам и не сверены с официальной публикацией.'));
-    return box;
+    var box;
+    if (task.demo) {
+      box = el('p', 'nrm-demo-note');
+      box.appendChild(el('strong', null, 'Демонстрационное задание. '));
+      box.appendChild(document.createTextNode('Тексты норм приведены по вторичным источникам и не сверены с официальной публикацией.'));
+      return box;
+    }
+    var v = task.verification;
+    if (v && v.status === 'unconfirmed') {
+      box = el('p', 'nrm-demo-note');
+      box.appendChild(el('strong', null, 'Неподтверждённое задание. '));
+      box.appendChild(document.createTextNode('Нормативные тексты не сверены с официальной публикацией (попытка сверки ' + String(v.checked).split('-').reverse().join('.') + '); задание не входит в публикуемый банк.'));
+      return box;
+    }
+    if (task.draft) {
+      box = el('p', 'nrm-demo-note');
+      box.appendChild(el('strong', null, 'Черновик. '));
+      box.appendChild(document.createTextNode('Задание на методической проверке.'));
+      return box;
+    }
+    return null;
   }
 
-  /** Подробное объяснение, раскрывающееся отдельно. */
   function more(title, paragraphs, open) {
     var list = paragraphs.filter(function (p) { return R.isText(p); });
     if (!list.length) return null;
@@ -157,7 +172,28 @@
    * Группа кнопок-вариантов. multi — несколько значений (aria-pressed у каждой).
    * Возвращает { node, paint(selected) } (selected — номер или список номеров).
    */
-  function chipGroup(options, label, onToggle, multi) {
+  /**
+   * Стабильный «перемешанный» порядок показа вариантов строки (row.shuffle: true):
+   * снимает подсказку позицией (правильный вариант не всегда первый), но одинаков
+   * при каждой отрисовке и после перезагрузки. Номера вариантов в ответе не меняются.
+   */
+  function displayOrder(task, row) {
+    var order = row.options.map(function (o, i) { return i; });
+    if (!row.shuffle) return order;
+    var seed = 0;
+    var key = String(task && task.id) + '/' + row.id;
+    for (var k = 0; k < key.length; k++) seed = (seed * 31 + key.charCodeAt(k)) >>> 0;
+    for (var i = order.length - 1; i > 0; i--) {
+      seed = (seed * 1103515245 + 12345) >>> 0;
+      var j = seed % (i + 1);
+      var t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    // Порядок, совпадающий с исходным, сдвигается: иначе правильный вариант мог бы остаться на месте автора.
+    if (order.every(function (v, idx) { return v === idx; })) order.push(order.shift());
+    return order;
+  }
+
+  function chipGroup(options, label, onToggle, multi, order) {
     var group = el('div', 'nrm-chips');
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', label);
@@ -166,9 +202,9 @@
       b.type = 'button';
       b.setAttribute('aria-pressed', 'false');
       b.addEventListener('click', function () { onToggle(i); });
-      group.appendChild(b);
       return b;
     });
+    (order || options.map(function (o, i) { return i; })).forEach(function (i) { group.appendChild(buttons[i]); });
     return {
       node: group,
       buttons: buttons,
@@ -415,7 +451,7 @@
       a.c = a.c === i ? null : i;
       if (!R.needsFollowUp(row, a)) a.f = [];
       onChanged();
-    }, !!row.multi);
+    }, !!row.multi, displayOrder(task, row));
     card.appendChild(choice.node);
     if (row.multi) {
       card.insertBefore(el('p', 'nrm-row__note', 'Выберите от 1 до ' + row.multi.max + '.'), choice.node);
@@ -538,6 +574,7 @@
     renderLegal: renderLegal,
     fragmentText: fragmentText,
     chipGroup: chipGroup,
+    displayOrder: displayOrder,
     keyText: keyText,
     chosenText: chosenText,
     choiceReason: choiceReason,

@@ -9,7 +9,8 @@ const { estimate } = require('../scripts/estimate-time.js');
 test('estimate-time: оценка есть для каждого демо-задания и лежит в разумных пределах', () => {
   const OLY = loadBank('olympiad-demo.html');
   const demo = OLY.tasks.filter((t) => t.olympiad === 'DEMO');
-  assert.ok(demo.length >= 10);
+  assert.ok(demo.length >= 5);
+  demo.push(...loadBank('olympiad-work.html').tasks.filter((t) => t.topic === 'LAW-NRM' && t.olympiad === 'PR'));
   for (const task of demo) {
     const e = estimate(task);
     assert.ok(e, task.id + ': нет оценки для типа ' + task.type);
