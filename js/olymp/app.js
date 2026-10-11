@@ -930,7 +930,7 @@
     dom.prevBtn.hidden = state.viewIndex === 0;
     dom.skipBtn.hidden = checked || !otherTarget;
     dom.checkBtn.hidden = checked;
-    dom.checkBtn.disabled = checked || OLY.types.get(task.type).isEmpty(task, A.getResponse(attempt, task.id));
+    dom.checkBtn.disabled = checked || !canCheck(task, A.getResponse(attempt, task.id));
     dom.nextBtn.hidden = !checked;
     dom.nextBtn.textContent = otherTarget ? 'Следующее задание' : 'Посмотреть итоги';
   }
@@ -996,11 +996,19 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  /** Можно ли проверять: ответ не пуст и (если отрисовка это задаёт) готов к проверке —
+   *  например, в составном задании открыты все части. */
+  function canCheck(task, response) {
+    if (OLY.types.get(task.type).isEmpty(task, response)) return false;
+    var view = views.get(task.type);
+    return !view.canCheck || view.canCheck(task, response);
+  }
+
   function checkAnswer() {
     var attempt = state.attempt;
     var task = currentTask();
     if (A.isChecked(attempt, task.id)) return;
-    if (OLY.types.get(task.type).isEmpty(task, A.getResponse(attempt, task.id))) return;
+    if (!canCheck(task, A.getResponse(attempt, task.id))) return;
     var result = A.check(attempt, task.id);
     persistAttempt();
     notifyStore('onCheck', [A.snapshot(result), A.snapshot(attempt)]);

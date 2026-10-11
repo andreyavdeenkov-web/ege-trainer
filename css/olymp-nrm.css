@@ -410,3 +410,30 @@
 .nrm-chips--codes { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); }
 .nrm-chips--codes .nrm-chip { min-width: 0; padding: 7px 2px; }
 .nrm-provs-wrap > summary { font-weight: 800; font-size: 16px; }
+
+/* ----- Оценка доводов ----- */
+.nrm-issue { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--primary); }
+.nrm-issue p { margin: 0; line-height: 1.5; }
+.nrm-issue__c { margin-top: 6px !important; }
+.nrm-arg__body { margin-left: 40px; }
+@media (max-width: 480px) { .nrm-arg__body { margin-left: 0; } }
+
+/* ----- Составное задание ----- */
+.nrm-stages { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
+.nrm-stage {
+  flex: 1 1 0; display: flex; align-items: center; gap: 6px; padding: 6px 8px; min-width: 0;
+  border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); font-size: 13px;
+}
+.nrm-stage__code { flex: none; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; background: var(--surface-2); }
+.nrm-stage__text { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nrm-stage.is-done { border-color: var(--right-border); }
+.nrm-stage.is-done .nrm-stage__code { background: var(--right-bg); color: var(--right); }
+.nrm-stage.is-current { border-color: var(--primary); box-shadow: 0 0 0 2px var(--focus); }
+.nrm-stage.is-current .nrm-stage__code { background: var(--primary); color: var(--on-primary, #fff); }
+.nrm-locked__list { margin: 0; padding-left: 18px; font-size: 14px; color: var(--text-muted); }
+.nrm-lock { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding-top: 8px; border-top: 1px dashed var(--border); }
+.nrm-lock__note { margin: 0; font-size: 14px; color: var(--text-muted); }
+.nrm-closed { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px dashed var(--border); color: var(--text-muted); font-size: 14px; }
+.nrm-part .nrm-block__title:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.nrm-arg__body .nrm-follow__label { margin-top: 10px; }
+.nrm-arg__body .nrm-follow__label:first-child { margin-top: 6px; }

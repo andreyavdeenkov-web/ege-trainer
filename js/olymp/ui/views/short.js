@@ -53,6 +53,37 @@
 
   /* ---------- Решение ---------- */
 
+  /** Поле краткого ответа с подсказкой распознавания (используется и в составных заданиях). */
+  function itemEditor(task, item, answers, onChanged) {
+    var card = el('div', 'nrm-row');
+    card.id = N.anchorId(task, item.id);
+    var label = el('label', 'nrm-row__label', item.label);
+    var inputId = 'nrm-in-' + task.id + '-' + item.id;
+    label.setAttribute('for', inputId);
+    card.appendChild(label);
+    var input = el('input', 'nrm-input');
+    input.type = 'text';
+    input.id = inputId;
+    input.autocomplete = 'off';
+    input.setAttribute('autocapitalize', 'off');
+    input.spellcheck = false;
+    input.maxLength = 120;
+    input.placeholder = PLACEHOLDER[item.kind];
+    input.value = answers[item.id];
+    var hintId = inputId + '-hint';
+    var hint = el('p', 'nrm-input__hint');
+    hint.id = hintId;
+    hint.setAttribute('aria-live', 'polite');
+    input.setAttribute('aria-describedby', hintId);
+    input.addEventListener('input', function () {
+      answers[item.id] = input.value;
+      onChanged();
+    });
+    card.appendChild(input);
+    card.appendChild(hint);
+    return { card: card, input: input, hint: hint };
+  }
+
   function render(container, task, ctx) {
     var answers = copy(task, ctx.response);
     var parts = {};
@@ -71,35 +102,12 @@
     block.appendChild(el('p', 'nrm-block__hint', 'Ответ вводится в поле. Номер статьи — с частью или без неё, кодекс можно указать сокращённо; число — цифрами или словами; регистр и буква «ё» не учитываются.'));
     var list = el('div', 'nrm-rows');
     task.items.forEach(function (item) {
-      var card = el('div', 'nrm-row');
-      card.id = N.anchorId(task, item.id);
-      var label = el('label', 'nrm-row__label', item.label);
-      var inputId = 'nrm-in-' + task.id + '-' + item.id;
-      label.setAttribute('for', inputId);
-      card.appendChild(label);
-      var input = el('input', 'nrm-input');
-      input.type = 'text';
-      input.id = inputId;
-      input.autocomplete = 'off';
-      input.setAttribute('autocapitalize', 'off');
-      input.spellcheck = false;
-      input.maxLength = 120;
-      input.placeholder = PLACEHOLDER[item.kind];
-      input.value = answers[item.id];
-      var hintId = inputId + '-hint';
-      var hint = el('p', 'nrm-input__hint');
-      hint.id = hintId;
-      hint.setAttribute('aria-live', 'polite');
-      input.setAttribute('aria-describedby', hintId);
-      input.addEventListener('input', function () {
-        answers[item.id] = input.value;
+      var e = itemEditor(task, item, answers, function () {
         paint();
         ctx.onChange(JSON.parse(JSON.stringify(answers)));
       });
-      card.appendChild(input);
-      card.appendChild(hint);
-      list.appendChild(card);
-      parts[item.id] = { card: card, input: input, hint: hint };
+      list.appendChild(e.card);
+      parts[item.id] = e;
     });
     block.appendChild(list);
     box.appendChild(block);
@@ -223,6 +231,8 @@
     }
     N.summary(container, task, result, mistakes);
   }
+
+  ui.nrmShort = { itemEditor: itemEditor, itemReview: itemReview, recognized: recognized, HINT: 'Ответ вводится в поле. Номер статьи — с частью или без неё, кодекс можно указать сокращённо; число — цифрами или словами; регистр и буква «ё» не учитываются.' };
 
   ui.views.register('short-answer', {
     hint: function () { return 'Введите краткие ответы в поля: номер статьи, число или термин.'; },

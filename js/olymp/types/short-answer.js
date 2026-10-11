@@ -131,9 +131,17 @@
 
   function validateTask(task) {
     var errors = task.legal === undefined ? [] : R.validateLegal(task.legal, { required: false, requireMain: false });
-    if (!Array.isArray(task.items) || task.items.length === 0) return errors.concat('нет items');
+    errors = errors.concat(validateItems(task.items));
+    if (errors.length === 0) errors = errors.concat(R.validateScoringTotal(task, maxPoints(task)));
+    return errors;
+  }
+
+  /** Проверка пунктов ответа — используется и составными заданиями. */
+  function validateItems(items) {
+    var errors = [];
+    if (!Array.isArray(items) || items.length === 0) return ['нет items'];
     var ids = {};
-    task.items.forEach(function (item, i) {
+    items.forEach(function (item, i) {
       var name = 'items[' + i + ']';
       if (!item || !R.isText(item.id)) { errors.push(name + ': нет id'); return; }
       name = 'ответ ' + item.id;
@@ -170,7 +178,6 @@
         });
       }
     });
-    if (errors.length === 0) errors = errors.concat(R.validateScoringTotal(task, maxPoints(task)));
     return errors;
   }
 
@@ -304,6 +311,8 @@
 
   OLY.shortAnswer = {
     CODES: CODES,
+    validateItems: validateItems,
+    componentOf: componentOf,
     parseArticle: parseArticle,
     parseNumber: parseNumber,
     normTerm: normTerm,
