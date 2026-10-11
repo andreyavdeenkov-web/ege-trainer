@@ -349,3 +349,64 @@
   .nrm-flag { width: 100%; justify-content: center; }
   .nrm-chips--grid3 .nrm-chip, .nrm-chips--grid2 .nrm-chip { font-size: 13px; min-height: 44px; }
 }
+
+/* ----- Конструктор формулировки ----- */
+.nrm-context__p { margin: 0; line-height: 1.55; }
+.nrm-formula { margin: 0; font-size: 17px; line-height: 2.1; }
+.nrm-slot {
+  display: inline; font: inherit; font-size: 16px; line-height: 1.5; cursor: pointer;
+  padding: 3px 8px; margin: 0 1px; border-radius: 6px;
+  border: 1px dashed var(--primary); background: var(--primary-soft); color: var(--text);
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.nrm-slot.is-filled { border-style: solid; font-weight: 600; }
+.nrm-slot.is-open { outline: 3px solid var(--focus); outline-offset: 1px; }
+.nrm-slot:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.nrm-slot-panel {
+  padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--primary); background: var(--surface);
+}
+.nrm-slot-panel__title { margin: 0; font-weight: 700; font-size: 14px; }
+.nrm-slot-val {
+  padding: 2px 6px; border-radius: 6px; font-weight: 600;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.nrm-slot-val.is-ok, .nrm-slot-val.is-key { background: var(--right-bg); color: var(--right); }
+.nrm-slot-val.is-partial { background: var(--warn-bg, var(--surface-2)); }
+.nrm-slot-val.is-wrong, .nrm-slot-val.is-empty { background: var(--wrong-bg); color: var(--wrong); text-decoration: line-through; }
+
+/* ----- Краткий ответ ----- */
+.nrm-input {
+  display: block; width: 100%; box-sizing: border-box; margin-top: 8px; min-height: 44px;
+  padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px;
+}
+.nrm-input:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; border-color: var(--primary); }
+.nrm-input__hint { margin: 4px 0 0; min-height: 1.2em; font-size: 13px; color: var(--text-muted); }
+
+/* ----- Систематизация ----- */
+.nrm-cats { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); }
+.nrm-cats__title { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.nrm-cats__list { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; font-size: 14px; }
+.nrm-cats__item { display: flex; gap: 6px; align-items: baseline; }
+.nrm-cats__code { flex: none; min-width: 30px; text-align: center; font-weight: 800; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 0 4px; background: var(--surface-2); }
+.nrm-chips--codes .nrm-chip { min-width: 48px; text-align: center; font-weight: 700; border-radius: var(--radius-sm); }
+.nrm-row__chosen { margin: 6px 0 0; font-size: 14px; color: var(--text-muted); }
+
+/* ----- Карта связей ----- */
+.nrm-provs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.nrm-prov { display: flex; gap: 10px; align-items: flex-start; }
+.nrm-prov__code { flex: none; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; background: var(--primary-soft); }
+.nrm-prov__body { flex: 1 1 auto; min-width: 0; }
+.nrm-prov__ref { margin: 0; font-weight: 700; font-size: 14px; color: var(--primary); }
+.nrm-prov__text { margin: 2px 0 0; font-size: 15px; line-height: 1.5; }
+.nrm-rel-list { margin: 6px 0 0; font-size: 14px; }
+.nrm-rel-list dt { font-weight: 700; margin-top: 6px; }
+.nrm-rel-list dd { margin: 0; color: var(--text-muted); }
+@media (max-width: 480px) {
+  .nrm-formula { font-size: 16px; }
+  .nrm-chips--grid2.nrm-chips { grid-template-columns: 1fr 1fr; }
+  .nrm-cats__list { grid-template-columns: 1fr; }
+}
+.nrm-chips--codes { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); }
+.nrm-chips--codes .nrm-chip { min-width: 0; padding: 7px 2px; }
+.nrm-provs-wrap > summary { font-weight: 800; font-size: 16px; }
