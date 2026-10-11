@@ -87,6 +87,22 @@
   .res__small { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
   .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--text-muted); margin-top: 10px; }
   .dot { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -1px; margin-right: 4px; border: 1px solid; }
+  .st { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 8px; border: 1px solid; white-space: nowrap; }
+  .st--ok { color: var(--right); border-color: var(--right-border); background: var(--right-bg); }
+  .st--half { color: var(--warn); border-color: var(--warn-border); background: var(--warn-bg); }
+  .st--cond { color: #1d4ed8; border-color: #93c5fd; background: #eff6ff; }
+  .st--claim { color: #1d4ed8; border: 1px dashed #60a5fa; background: #eff6ff; }
+  .st--none { color: var(--text-muted); border-color: var(--border); background: var(--surface-2); }
+  .st--bad { color: var(--wrong); border-color: var(--wrong-border); background: var(--wrong-bg); }
+  .points--cond .points__value { color: #1d4ed8; }
+  .comp__cond { font-size: 12px; font-weight: 700; color: #1d4ed8; }
+  .cond-note { margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+  .res3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .res__box--cond { border: 1px dashed #93c5fd; background: #eff6ff; }
+  .res__box--cond .res__label { color: #1d4ed8; }
+  .task-nav__item.is-done.points--cond { color: #1d4ed8; background: #eff6ff; border: 1px dashed #60a5fa; }
+  .status-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  @media (max-width: 760px) { .res3 { grid-template-columns: 1fr; } }
   @media (max-width: 560px) { .rv { grid-template-columns: 1fr 1fr; } .rv .rv__wide { grid-column: span 2; } .res { grid-template-columns: 1fr; } .comp__val { font-size: 18px; } }
 </style>
 </head>
@@ -135,37 +151,39 @@
 
 <!-- ============ 2. III-3: после проверки ============ -->
 <section class="mock" id="m-grid-review">
-  <p class="mock__cap">III-3 · после проверки · компоненты оценки и самопроверка</p>
+  <p class="mock__cap">III-3 · после проверки · условная альтернатива «диспозитивная»</p>
   <article class="panel task is-review">
     <div class="task__meta"><span class="chip" style="--topic-color:#ef4444">Право · Теория права · Норма права</span><span class="level-badge" data-level="3">Олимпиадный уровень</span></div>
     <h2 class="task__question">Классифицируйте положение ч. 1 ст. 39 ГПК РФ</h2>
     <p class="task__hint">Ответ проверен — изменить его нельзя.</p>
     <div class="feedback feedback--static" style="margin-top:14px">
-      <div class="points points--partial"><span class="points__value">Частично</span><span class="points__caption">Автоматически подтверждено 10 из 11</span></div>
+      <div class="points points--cond"><span class="points__value">Верно при обосновании</span><span class="points__caption">Подтверждено 10 из 11 · 1 балл условно</span></div>
       <div class="comp">
-        <div class="comp__item"><div class="comp__label">Квалификация</div><div class="comp__val">7 / 8</div><div class="comp__src src-auto">подтверждено</div></div>
+        <div class="comp__item"><div class="comp__label">Квалификация</div><div class="comp__val">7 / 8</div><div class="comp__src src-auto">подтверждено</div><div class="comp__cond">+ 1 условно</div></div>
         <div class="comp__item"><div class="comp__label">Доказательство</div><div class="comp__val">3 / 3</div><div class="comp__src src-auto">подтверждено</div></div>
         <div class="comp__item comp__item--self"><div class="comp__label">Аргументация</div><div class="comp__val">— / 4</div><div class="comp__src src-self">ждёт самопроверки</div></div>
       </div>
+      <p class="cond-note">Условные баллы не входят в подтверждённые. Их может подтвердить преподаватель по выгрузке ответов.</p>
     </div>
     <div class="rv">
-      <div class="rv__h">Основание</div><div class="rv__h">Ваш ответ</div><div class="rv__h">Эталон</div><div class="rv__h">Т</div>
-      <div>3. По средствам</div><div class="text-right"><strong>Управомочивающая</strong></div><div>Управомочивающая</div><div class="text-right">✓</div>
-      <div>4. По способу установления</div><div class="text-right"><strong>Императивная</strong></div><div>Императивная</div><div class="text-right">✓</div>
-      <div>6. По кругу лиц</div><div class="text-right"><strong>Спорно</strong></div><div>Спорно / специальная</div><div class="muted">—</div>
-      <div>8. По роли в правовой системе</div><div class="text-wrong"><strong>Учредительная</strong></div><div>Неприменимо</div><div class="muted">—</div>
+      <div class="rv__h">Основание</div><div class="rv__h">Ваш ответ</div><div class="rv__h">Эталон</div><div class="rv__h">Статус</div>
+      <div>3. По средствам</div><div><strong>Управомочивающая</strong></div><div>Управомочивающая</div><div><span class="st st--ok">✓ подтверждено</span></div>
+      <div>4. По способу установления</div><div><strong>Диспозитивная</strong></div><div>Императивная · альтернатива: диспозитивная (С1)</div><div><span class="st st--cond">◇ условно</span></div>
+      <div>6. По кругу лиц</div><div><strong>Спорно</strong></div><div>Спорно · ½ специальная</div><div><span class="st st--ok">✓ подтверждено</span></div>
+      <div>8. По роли в правовой системе</div><div><strong>Неприменимо</strong></div><div>Неприменимо / тривиально</div><div><span class="st st--ok">✓ подтверждено</span></div>
     </div>
-    <div class="explanation explanation--mistake"><h3 class="explanation__title">Строка 8</h3><p>Статья реализует принцип диспозитивности процесса, но сама его не формулирует: это обычная регулятивная норма. Учредительные нормы по лекции — нормы-принципы.</p></div>
+    <div class="alt"><strong>Строка 4 — условная альтернатива.</strong> Ответ «диспозитивная» допустим, если вы пользуетесь определением лекции («позволяют субъектам определять вариант поведения») и объясняете, чем тогда это основание отличается от деления на управомочивающие, обязывающие и запрещающие нормы (критерий А3). Основной ответ — «императивная»: стороны не могут соглашением отменить эти права (ч. 2 ст. 39, ср. ст. 32).</div>
     <div class="check">
       <div class="check__title">Самопроверка аргументации <span class="src-self">не входит в подтверждённые баллы</span></div>
-      <div class="yours"><span class="muted">Ваш ответ:</span> «Вправе» означает, что истец сам решает, пользоваться ли правом… даже распорядительные действия контролирует суд (ч. 2 ст. 39)…</div>
+      <div class="yours"><span class="muted">Ваш ответ:</span> По определению лекции диспозитивная норма позволяет выбрать вариант поведения; истец сам решает, отказаться ли от иска…</div>
       <label><input type="checkbox" checked> Различил свободу выбора поведения управомоченного и возможность изменить правило соглашением <span class="req">обязательный</span></label>
-      <label><input type="checkbox" checked> Привёл системный довод (ч. 2 ст. 39 и/или ст. 32), не ограничившись отсутствием оговорки</label>
-      <label><input type="checkbox"> Объяснил, что норма реализует принцип диспозитивности, но сама не диспозитивна</label>
+      <label><input type="checkbox"> Привёл системный довод (ч. 2 ст. 39 и/или ст. 32), не ограничившись отсутствием оговорки</label>
+      <label><input type="checkbox" checked> Назвал определение, которым пользуется, и объяснил соотношение оснований 3 и 4 <span class="req">обязательный · строка 4</span></label>
       <label><input type="checkbox"> Указал, что деление «императивная / диспозитивная» к процессуальным управомочивающим нормам применяется с оговорками</label>
+      <p class="cond-note">После фиксации строка 4 получит статус «◆ условно: обоснование заявлено» — подтверждённым балл не станет.</p>
       <div class="task__actions" style="margin-top:12px"><button class="btn btn--primary">Зафиксировать самопроверку</button></div>
     </div>
-    <div class="explanation"><h3 class="explanation__title">Разбор</h3><p>Императивность нельзя вывести только из отсутствия оговорки «если иное не предусмотрено соглашением». Довод строится на системе процессуального закона: контроль суда за распорядительными действиями (ч. 2 ст. 39) и прямое разрешение соглашения там, где закон его допускает (ст. 32)…</p></div>
+    <div class="status-legend"><span class="st st--ok">✓ подтверждено</span><span class="st st--half">½ частично</span><span class="st st--cond">◇ условно: ждёт обоснования</span><span class="st st--claim">◆ условно: обоснование заявлено</span><span class="st st--none">○ не обосновано</span><span class="st st--bad">✗ не засчитано</span></div>
   </article>
 </section>
 
@@ -199,20 +217,21 @@
   <article class="panel task">
     <div class="task__meta"><span class="chip" style="--topic-color:#ef4444">Право · Теория права · Норма права</span><span class="level-badge" data-level="3">Олимпиадный уровень</span></div>
     <p class="task__block">Найдите ошибку юриста</p>
-    <h2 class="task__question">Где рассуждение студента впервые становится неверным?</h2>
-    <p class="task__hint">Отметьте первый ошибочный шаг и остальные ошибочные. Верные шаги не отмечайте.</p>
+    <h2 class="task__question">Какие шаги неверны при любом научном подходе?</h2>
+    <p class="task__hint">Верные шаги и шаги, оценка которых зависит от подхода, не отмечайте.</p>
     <details class="refs"><summary>УК РФ, ст. 125 — текст</summary></details>
     <div class="steps">
       <div class="step"><span class="step__n">1</span><span class="step__t">В уголовном праве часть статьи до слова «наказывается» называют диспозицией статьи.</span><span class="step__flag">ошибка?</span></div>
-      <div class="step is-err"><span class="step__n">2</span><span class="step__t">Значит, в терминах теории права эта часть — диспозиция нормы, то есть правило поведения.</span><span class="step__flag">ошибка</span></div>
-      <div class="step is-err"><span class="step__n">3</span><span class="step__t">Тогда норма двухэлементная — диспозиция и санкция; гипотезы нет.</span><span class="step__flag">ошибка</span></div>
-      <div class="step"><span class="step__n">4</span><span class="step__t">«Был обязан иметь о нём заботу» отсылает к другим актам — бланкетный способ.</span><span class="step__flag">ошибка?</span></div>
-      <div class="step"><span class="step__n">5</span><span class="step__t">Правило «окажи помощь…» прямо не выражено, значит, такой регулятивной нормы нет.</span><span class="step__flag">ошибка?</span></div>
+      <div class="step"><span class="step__n">2</span><span class="step__t">Значит, в терминах теории права эта часть — диспозиция правовой нормы.</span><span class="step__flag">ошибка?</span></div>
+      <div class="step is-err"><span class="step__n">3</span><span class="step__t">Следовательно, гипотезы нет, а значит, нет и условий применения: наказание грозит любому, кто оставил беспомощного без помощи.</span><span class="step__flag">ошибка</span></div>
+      <div class="step"><span class="step__n">4</span><span class="step__t">«Был обязан иметь о нём заботу» не указывает, откуда обязанность: нужны другие нормы, договор или профессиональные обязанности.</span><span class="step__flag">ошибка?</span></div>
+      <div class="step is-err"><span class="step__n">5</span><span class="step__t">Правило «не оставляй без помощи…» прямо не сформулировано, значит, такого правила поведения нет.</span><span class="step__flag">ошибка</span></div>
     </div>
-    <p class="sec-title">(а) В чём ошибка первого неверного шага?</p>
-    <textarea class="ta" placeholder="Своими словами"></textarea>
-    <p class="sec-title">(б) Реконструкция: «если — то — иначе»</p>
-    <textarea class="ta" placeholder="Если … , то … , иначе …"></textarea>
+    <p class="sec-title">Шаг 2. Какой шаг оценивается по-разному в разных подходах?</p>
+    <div class="chips"><span class="ch">1</span><span class="ch is-on">2</span><span class="ch">3</span><span class="ch">4</span><span class="ch">5</span><span class="ch">такого нет</span></div>
+    <p class="sec-title">(в) Реконструкция «если — то — иначе»</p>
+    <div class="chips"><span class="ch is-on">Подход «охранительной нормы»</span><span class="ch">Подход «единой нормы-запрета»</span></div>
+    <textarea class="ta" style="margin-top:8px" placeholder="Если … , то … , иначе …"></textarea>
   </article>
 </section>
 
@@ -224,13 +243,14 @@
     <h2 class="task__question">ГК РФ, ст. 1066 — часть Б. Краткие ответы</h2>
     <div class="sa">
       <div class="sa__row"><div class="sa__q">1. По отношению к какой статье ГК ст. 1066 — исключительная норма?</div>
-        <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong class="text-right">ст. 1064 ГК</strong> <span class="statement__tag">Принят</span></div></div>
+        <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong class="text-right">ст. 1064 ГК</strong> <span class="st st--ok">✓ подтверждено</span></div></div>
       <div class="sa__row"><div class="sa__q">2. Выпишите условие, ограничивающее исключение</div>
         <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong>если оборона была соразмерной</strong></div>
         <div class="sa__line"><span class="muted">Эталон:</span> <strong class="text-right">«если при этом не были превышены ее пределы»</strong></div>
-        <label class="equiv"><input type="checkbox" checked> Мой ответ равнозначен эталону — засчитать как самопроверку</label></div>
+        <label class="equiv"><input type="checkbox" checked> Мой ответ равнозначен эталону</label>
+        <div class="sa__line"><span class="st st--cond">◇ условно</span> <span class="muted">— балл не входит в подтверждённые; обоснование — критерий А4 в самопроверке</span></div></div>
       <div class="sa__row"><div class="sa__q">4. Сколько условий в гипотезе ст. 1066?</div>
-        <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong class="text-wrong">1</strong> · <span class="muted">Эталон:</span> <strong class="text-right">2</strong></div>
+        <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong class="text-wrong">1</strong> · <span class="muted">Эталон:</span> <strong class="text-right">2</strong> <span class="st st--bad">✗ не засчитано</span></div>
         <div class="explanation explanation--mistake" style="margin-top:8px"><h3 class="explanation__title">Типичная ошибка</h3><p>Не замечено второе условие — непревышение пределов обороны. Гипотеза сложная: оба условия должны быть одновременно.</p></div></div>
     </div>
   </article>
@@ -243,14 +263,15 @@
     <p class="author-badge"><span class="author-badge__mark" aria-hidden="true">АА</span>Авторский практикум · Андрей Авдеенков</p>
     <h2 class="result__title">Тема завершена</h2>
     <p class="result__scope">Социальные нормы и норма права · обязательная часть · 11 заданий</p>
-    <div class="res">
-      <div class="res__box"><div class="res__label src-auto">Подтверждено автоматически</div><div class="res__big">47 из 58</div><div class="res__small">квалификация 33 / 40 · доказательство 14 / 18<br>верно 6 · частично 4 · неверно 1</div></div>
-      <div class="res__box res__box--self"><div class="res__label src-self">Самопроверка</div><div class="res__big">19 из 26</div><div class="res__small">оценено вами по критериям, не подтверждено автоматически<br>не выполнена: 1 задание</div></div>
+    <div class="res3">
+      <div class="res__box"><div class="res__label src-auto">Подтверждено автоматически</div><div class="res__big">45 из 58</div><div class="res__small">квалификация 31 / 40 · доказательство 14 / 18<br>верно 5 · верно при обосновании 1 · частично 4 · неверно 1</div></div>
+      <div class="res__box res__box--cond"><div class="res__label">Условно</div><div class="res__big">2 балла</div><div class="res__small">альтернативные решения, допустимые при обосновании<br>обоснование заявлено — 2 · не обосновано — 0<br>подтверждает преподаватель</div></div>
+      <div class="res__box res__box--self"><div class="res__label src-self">Самопроверка аргументации</div><div class="res__big">19 из 26</div><div class="res__small">оценено вами по критериям<br>не выполнена: 1 задание</div></div>
     </div>
     <nav class="task-nav" style="margin-top:16px"><ol class="task-nav__list">
-      <li><button class="task-nav__item is-done points--full">1</button></li><li><button class="task-nav__item is-done points--full">2</button></li><li><button class="task-nav__item is-done points--partial">3</button></li><li><button class="task-nav__item is-done points--full">4</button></li><li><button class="task-nav__item is-done points--partial">5</button></li><li><button class="task-nav__item is-done points--partial">6</button></li><li><button class="task-nav__item is-done points--full">7</button></li><li><button class="task-nav__item is-done points--none">8</button></li><li><button class="task-nav__item is-done points--full">9</button></li><li><button class="task-nav__item is-done points--partial">10</button></li><li><button class="task-nav__item is-done points--full">11</button></li>
+      <li><button class="task-nav__item is-done points--full">1</button></li><li><button class="task-nav__item is-done points--full">2</button></li><li><button class="task-nav__item is-done points--partial">3</button></li><li><button class="task-nav__item is-done points--full">4</button></li><li><button class="task-nav__item is-done points--partial">5</button></li><li><button class="task-nav__item is-done points--cond">6</button></li><li><button class="task-nav__item is-done points--full">7</button></li><li><button class="task-nav__item is-done points--none">8</button></li><li><button class="task-nav__item is-done points--full">9</button></li><li><button class="task-nav__item is-done points--partial">10</button></li><li><button class="task-nav__item is-done points--full">11</button></li>
     </ol></nav>
-    <div class="chips" style="margin-top:14px"><span class="ch is-on">Все</span><span class="ch">С ошибками</span><span class="ch">Частично</span><span class="ch">Самопроверка не выполнена</span></div>
+    <div class="chips" style="margin-top:14px"><span class="ch is-on">Все</span><span class="ch">С ошибками</span><span class="ch">Частично</span><span class="ch">Условно</span><span class="ch">Самопроверка не выполнена</span></div>
     <p class="result__note muted" style="margin-top:12px">Повторное прохождение не предусмотрено. Вы можете открыть любое задание и изучить свой ответ, эталон и разбор — результат не изменится.</p>
   </div>
 </section>
