@@ -85,7 +85,7 @@ function estimate(task) {
 
 if (require.main === module) {
   const OLY = loadBank(process.argv[2] || 'olympiad-demo.html');
-  for (const t of OLY.tasks.filter((x) => x.topic === 'LAW-NRM')) {
+  for (const t of OLY.tasks.filter((x) => /^LAW-NR[MA-D]$/.test(x.topic))) {
     const e = estimate(t);
     if (e) console.log([t.id, t.type, e.readMin.toFixed(1), e.workMin.toFixed(1), e.total].join('\t'));
   }

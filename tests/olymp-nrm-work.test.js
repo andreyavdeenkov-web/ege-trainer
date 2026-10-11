@@ -15,6 +15,8 @@ const { build } = require('../scripts/build-demo-page.js');
 const root = path.join(__dirname, '..');
 const work = () => loadBank('olympiad-work.html');
 const nrm = (OLY) => OLY.tasks.filter((t) => t.topic === 'LAW-NRM' && t.olympiad === 'PR');
+/** Все задания практикума в рабочем банке: обязательная часть и блоки А–Г (темы LAW-NRA…LAW-NRD). */
+const bank = (OLY) => OLY.tasks.filter((t) => /^LAW-NR[MA-D]$/.test(t.topic) && t.olympiad === 'PR');
 
 /** Строки выбора задания любого типа (для проверки формы вариантов). */
 function choiceRows(task) {
@@ -55,7 +57,7 @@ test('Обязательная часть: 11 заданий по реестру
 
 test('Неподтверждённые нормативные тексты помечены и не могут попасть в публикуемый банк', () => {
   const OLY = work();
-  for (const task of nrm(OLY)) {
+  for (const task of bank(OLY)) {
     const legal = task.type === 'compound' ? OLY.compound.allLegal(task) : (task.legal || []);
     const v = task.verification;
     assert.ok(v && ['unconfirmed', 'no-legal-text', 'confirmed'].includes(v.status), task.id + ': нет статуса сверки');
@@ -74,7 +76,7 @@ test('Неподтверждённые нормативные тексты по�
 
 test('Форма вариантов не подсказывает ответ: длина и позиция правильного варианта', () => {
   const OLY = work();
-  const all = nrm(OLY).flatMap((t) => choiceRows(t).map((r) => ({ t, r })));
+  const all = bank(OLY).flatMap((t) => choiceRows(t).map((r) => ({ t, r })));
   const listCount = {};
   all.forEach(({ r }) => { const k = r.options.join('|'); listCount[k] = (listCount[k] || 0) + 1; });
   // Авторские перечни (встречаются один раз) — не канонические наборы вроде «запрещающая / обязывающая / управомочивающая».
@@ -93,7 +95,7 @@ test('Форма вариантов не подсказывает ответ: д
 
 test('Перемешанный порядок показа: стабилен, это перестановка, правильный вариант не всегда первый', () => {
   const OLY = work();
-  const rows = nrm(OLY).flatMap((t) => choiceRows(t).filter((r) => r.shuffle).map((r) => ({ t, r })));
+  const rows = bank(OLY).flatMap((t) => choiceRows(t).filter((r) => r.shuffle).map((r) => ({ t, r })));
   assert.ok(rows.length >= 8);
   let keyFirst = 0;
   for (const { t, r } of rows) {
@@ -107,10 +109,10 @@ test('Перемешанный порядок показа: стабилен, э
 
 test('Демо-задания не дублируются в рабочем банке', () => {
   const demo = loadBank('olympiad-demo.html').tasks.filter((t) => t.olympiad === 'DEMO');
-  const bank = nrm(work());
+  const all = bank(work());
   const texts = (t) => JSON.stringify([t.legal, t.steps, t.sections, t.parts, t.items, t.arguments]);
   for (const d of demo) {
-    for (const b of bank) assert.notEqual(texts(d), texts(b), d.id + ' дублирует ' + b.id);
+    for (const b of all) assert.notEqual(texts(d), texts(b), d.id + ' дублирует ' + b.id);
   }
 });
 
@@ -131,10 +133,30 @@ test('IV-1 и IV-2: размечаются только выраженные ф�
   assert.equal(g.details.components.T.earned, 4);
 });
 
+test('Блок А (LAW-NRA): 5 заданий по реестру, черновики, эталон даёт полный балл; отдельная тема — отдельная попытка', () => {
+  const OLY = work();
+  const tasks = OLY.tasks.filter((t) => t.topic === 'LAW-NRA');
+  assert.equal(tasks.length, 5);
+  assert.deepEqual(tasks.map((t) => t.order), [1, 2, 3, 4, 5]);
+  for (const task of tasks) {
+    assert.equal(task.draft, true, task.id);
+    assert.equal(task.olympiad, 'PR', task.id);
+    const type = OLY.types.get(task.type);
+    assert.deepEqual(type.validateTask(task), [], task.id);
+    const g = OLY.grade.gradeTask(task, type.getCorrect(task));
+    assert.equal(g.verdict, 'correct', task.id);
+    assert.equal(g.points, task.scoring.maxPoints, task.id);
+  }
+  const topic = OLY.getTopic('social', 'LAW-NRA');
+  assert.ok(topic && topic.discipline === 'LAW' && topic.section === 'theory');
+  // Темы блоков не видны на основной странице: там нет их заданий.
+  assert.equal(loadBank().tasks.filter((t) => /^LAW-NR/.test(t.topic)).length, 0);
+});
+
 test('Тема классификации социальных норм исключена из обязательной части', () => {
   const OLY = work();
   const re = /морал|корпоратив|этикет|религиоз|обыча|традици/i;
-  for (const task of nrm(OLY)) assert.doesNotMatch(JSON.stringify(task), re, task.id);
+  for (const task of bank(OLY)) assert.doesNotMatch(JSON.stringify(task), re, task.id);
   const social = fs.readFileSync(path.join(root, 'data/olympiads/subjects/social.js'), 'utf8');
   assert.match(social, /title: 'Норма права: понятие, признаки, классификация и структура'/);
   assert.doesNotMatch(social, /id: 'regulators'/);
@@ -226,7 +248,7 @@ test('Журнал сверки: есть запись по каждому по�
     assert.ok(['pending', 'confirmed', 'differs'].includes(journal.entries[k].status), k);
   }
   const OLY = work();
-  for (const task of nrm(OLY)) {
+  for (const task of bank(OLY)) {
     const blocks = task.type === 'compound' ? OLY.compound.allLegal(task) : (task.legal || []);
     for (const b of blocks) {
       if (b.fictional) { assert.equal(b.verified, false, b.id); continue; }

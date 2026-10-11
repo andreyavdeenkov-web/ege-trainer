@@ -15,7 +15,7 @@
 </head>
 <body class="olymp">
   <div class="nrm-demo-banner" role="note">
-    <span><strong>Рабочий банк — не опубликован.</strong> Задания обязательной части на методической проверке; нормативные тексты не сверены с официальными источниками (задания помечены как неподтверждённые).</span>
+    <span><strong>Рабочий банк — не опубликован.</strong> Обязательная часть и дополнительные блоки на методической проверке; нормативные тексты не сверены с официальными источниками (задания помечены как неподтверждённые).</span>
     <button type="button" class="btn btn--ghost btn--sm" id="nrm-demo-reset">Сбросить попытку рабочего банка</button>
   </div>
   <header class="topbar">
@@ -263,6 +263,7 @@
   <script src="data/olympiads/practicum/practicum.js"></script>
   <script src="data/olympiads/practicum/social/law/concept.js"></script>
   <script src="work/law-nrm/mandatory.js"></script>
+  <script src="work/law-nrm/block-a.js"></script>
 
   <!-- Интерфейс: помощники, фильтры, отрисовка типов заданий, экраны -->
   <script src="js/olymp/ui/common.js"></script>
@@ -290,7 +291,7 @@
       var KEY = 'olymp-trainer:attempts:v1';
       try {
         var all = JSON.parse(localStorage.getItem(KEY) || '{}');
-        Object.keys(all).forEach(function (scope) { if (scope.indexOf('PR/LAW/LAW-NRM') === 0) delete all[scope]; });
+        Object.keys(all).forEach(function (scope) { if (scope.indexOf('PR/LAW/LAW-NR') === 0) delete all[scope]; });
         localStorage.setItem(KEY, JSON.stringify(all));
       } catch (e) { /* хранилище недоступно — сбрасывать нечего */ }
       window.location.hash = '#/';

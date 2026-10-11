@@ -26,7 +26,7 @@ const textOf = (b) => b.fragments.map((f) => f.text).join('');
 function collect() {
   const OLY = loadBank('olympiad-work.html');
   const map = new Map();
-  for (const t of OLY.tasks.filter((x) => x.topic === 'LAW-NRM' && x.olympiad === 'PR')) {
+  for (const t of OLY.tasks.filter((x) => /^LAW-NR[MA-D]$/.test(x.topic) && x.olympiad === 'PR')) {
     const blocks = t.type === 'compound' ? OLY.compound.allLegal(t) : (t.legal || []);
     for (const b of blocks) {
       if (b.fictional) continue;   // учебный документ из условия (например, условный указ) — не сверяется

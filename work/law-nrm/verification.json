@@ -253,6 +253,61 @@
       "tasks": [
         "PR-LAW-NRM-002"
       ]
+    },
+    "УК РФ | ст. 14, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRA-003"
+      ]
+    },
+    "ГК РФ | ст. 1, п. 1 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRA-003"
+      ]
+    },
+    "ТК РФ | ст. 5 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRA-003"
+      ]
+    },
+    "ГК РФ | ст. 810, п. 1 (первое предложение)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRA-003"
+      ]
+    },
+    "ГК РФ | ст. 10, пп. 1–2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRA-004"
+      ]
     }
   }
 }
