@@ -12,6 +12,8 @@
  *   legal: [{ id: 'gk-1064', role: 'main' | 'reference', act, ref, verified, fragments }],
  *   relations: [{ label: 'Исключение из общего правила', definition: '…' }, …],   // 3–8
  *   none: 6,                              // номер вида «связи нет»
+ *   ordered?: true,                       // упорядоченное правило: выбирается первый подходящий вид —
+ *                                         // так виды связи взаимно исключают друг друга
  *   pairs: [{ id, a: 'gk-1064', b: 'gk-1083', key: [3], partial?, wrong: {…}, explanation }],
  *   sections?: [...]                      // строки выбора, как в analysis-grid, без доказательства
  * }
@@ -63,6 +65,8 @@
       if (!r || !R.isText(r.definition)) errors.push('relations[' + i + ']: нет definition — определение вида связи задаётся в условии');
     });
     if (!Number.isInteger(task.none) || !task.relations[task.none]) errors.push('none — номер вида «связи нет» в relations');
+    else if (task.ordered === true && task.none !== task.relations.length - 1) errors.push('при упорядоченном правиле «связи нет» — последний вид');
+    if (task.ordered !== undefined && typeof task.ordered !== 'boolean') errors.push('ordered — true или false');
     if (!Array.isArray(task.pairs) || task.pairs.length < 2) return errors.concat('pairs — не меньше двух пар');
     task.pairs.forEach(function (pair, i) {
       var name = 'pairs[' + i + ']';

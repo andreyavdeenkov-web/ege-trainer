@@ -9,7 +9,8 @@
  * Данные задания:
  * {
  *   type: 'systematize',
- *   categories: [{ label: 'Норма права', short?: 'НП' }, …],   // 3–8
+ *   categories: [{ label: 'Норма права', short?: 'НП', definition?: '…' }, …],   // 3–8;
+ *                                   // определения показываются в условии — по ним задание решается однозначно
  *   categoriesTitle?: 'Виды социальных норм',
  *   items: [{ id, text, source?: 'пересказ ст. 136 ТК', key: [0], partial?, wrong: {…},
  *             explanation, component?: 'K' | 'R' }],
@@ -51,7 +52,11 @@
       else if (seen[c.label]) errors.push('categories: повторяется «' + c.label + '»');
       else seen[c.label] = true;
       if (c && c.short !== undefined && (!R.isText(c.short) || c.short.length > 4)) errors.push('categories[' + i + ']: short — до 4 символов');
+      if (c && c.definition !== undefined && !R.isText(c.definition)) errors.push('categories[' + i + ']: definition — строка');
     });
+    var withDef = task.categories.filter(function (c) { return c && c.definition !== undefined; }).length;
+    if (withDef && withDef !== task.categories.length) errors.push('categories: определения задаются для всех категорий или ни для одной');
+    if (task.criterion !== undefined && !R.isText(task.criterion)) errors.push('criterion — строка');
     if (!Array.isArray(task.items) || task.items.length < 3) errors.push('items — не меньше трёх позиций');
     else task.items.forEach(function (item, i) {
       if (!item || !R.isText(item.text)) errors.push('items[' + i + ']: нет text');

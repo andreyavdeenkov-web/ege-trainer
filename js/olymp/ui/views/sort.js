@@ -32,6 +32,19 @@
       list.appendChild(li);
     });
     box.appendChild(list);
+    if (task.categories[0].definition) {
+      // Определения — часть условия: по ним классификация однозначна. На смартфоне свёрнуты.
+      var d = el('details', 'nrm-more nrm-cats__defs');
+      d.open = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(min-width: 700px)').matches : true;
+      d.appendChild(el('summary', null, 'Определения категорий'));
+      var dl = el('dl', 'nrm-rel-list');
+      task.categories.forEach(function (c) {
+        dl.appendChild(el('dt', null, (c.short ? c.short + ' — ' : '') + c.label));
+        dl.appendChild(el('dd', null, c.definition));
+      });
+      d.appendChild(dl);
+      box.appendChild(d);
+    }
     return box;
   }
 
@@ -52,7 +65,7 @@
     var count = el('span', 'nrm-block__count');
     head.appendChild(count);
     block.appendChild(head);
-    block.appendChild(el('p', 'nrm-block__hint', 'Категории могут повторяться, не все обязательно нужны.'));
+    block.appendChild(el('p', 'nrm-block__hint', (task.criterion ? task.criterion + ' ' : '') + 'Категории могут повторяться, не все обязательно нужны.'));
     block.appendChild(legend(task));
     var list = el('div', 'nrm-rows');
     rows.forEach(function (row, i) {

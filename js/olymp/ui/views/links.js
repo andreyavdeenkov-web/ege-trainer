@@ -58,9 +58,12 @@
     var d = el('details', 'nrm-more nrm-rel-help');
     d.open = true;
     d.appendChild(el('summary', null, 'Виды связи (определения для этого задания)'));
+    if (task.ordered) {
+      d.appendChild(el('p', 'nrm-more__text', 'Проверяйте виды связи по порядку и выбирайте первый подходящий — так ответ однозначен, даже если пара формально подходит под два вида.'));
+    }
     var dl = el('dl', 'nrm-rel-list');
-    task.relations.forEach(function (r) {
-      dl.appendChild(el('dt', null, r.label));
+    task.relations.forEach(function (r, i) {
+      dl.appendChild(el('dt', null, (task.ordered ? (i + 1) + '. ' : '') + r.label));
       dl.appendChild(el('dd', null, r.definition));
     });
     d.appendChild(dl);
@@ -114,7 +117,7 @@
       headRow.appendChild(el('span', 'nrm-row__label', pairLabel(task, pair)));
       card.appendChild(headRow);
       card.appendChild(pairTexts(task, pair));
-      var group = N.chipGroup(row.options, 'Вид связи: ' + row.label, function (k) {
+      var group = N.chipGroup(row.options.map(function (o, k) { return task.ordered ? (k + 1) + '. ' + o : o; }), 'Вид связи: ' + row.label, function (k) {
         var a = answers[row.id];
         a.c = a.c === k ? null : k;
         changed();

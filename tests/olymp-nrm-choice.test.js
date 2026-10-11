@@ -179,17 +179,29 @@ test('Демо: конструктор, систематизация, карта
   }
 });
 
-test('Демо карты связей: «ст. 39 УК исключает возмещение» — ошибка с объяснением; конкретизация vs исключение — ½', () => {
+test('Демо карты связей: упорядоченное правило, «исключение» для ст. 1067 и ст. 39 УК — ошибки с объяснением границ интерпретации', () => {
   const OLY = loadBank('olympiad-demo.html');
   const task = OLY.getTask('DEMO-LAW-NRM-008');
+  assert.equal(task.ordered, true);
+  assert.equal(task.none, task.relations.length - 1);
+  assert.ok(task.pairs.every((p) => p.partial === undefined), 'при взаимоисключающих определениях частичных ответов нет');
+  const EXC = task.relations.findIndex((r) => r.label === 'Исключение из правила');
   const r = OLY.types.get(task.type).getCorrect(task);
-  r.p1 = { c: 1, f: [], e: [] };
-  r.p5 = { c: 1, f: [], e: [] };
+  r.p1 = { c: EXC, f: [], e: [] };
+  r.p5 = { c: EXC, f: [], e: [] };
   const g = OLY.grade.gradeTask(task, r);
-  assert.equal(g.details.rows.p1.choice, 'partial');
+  assert.equal(g.details.rows.p1.choice, 'wrong');
   assert.equal(g.details.rows.p5.choice, 'wrong');
-  assert.equal(g.points, 6.5);
-  assert.ok(task.pairs[4].wrong[1].full);
+  assert.equal(g.points, 6);
+  assert.match(task.pairs[0].wrong[EXC].full, /Границы интерпретации/);
+  assert.ok(task.pairs[4].wrong[EXC].full);
+});
+
+test('link-map: при упорядоченном правиле «связи нет» должен быть последним', () => {
+  const OLY = loadChoiceCore();
+  assert.throws(() => OLY.addTasks([linkTask({ ordered: true, none: 0, relations: [
+    { label: 'Связи нет', definition: 'нет' }, { label: 'Исключение', definition: 'о' }, { label: 'Конкретизация', definition: 'у' }
+  ] })]), /«связи нет» — последний вид/);
 });
 
 test('Новые типы в попытке: «частично», компоненты, восстановление', () => {
