@@ -901,12 +901,18 @@
     var extra = dom.feedback.querySelector('.feedback__extra');
     if (extra) extra.remove();
     if (typeof view.feedbackSummary === 'function') {
+      // Компактный результат — над подробным разбором.
+      dom.answer.parentNode.insertBefore(dom.feedback, dom.answer);
+      dom.verdict.hidden = true;
       answers.hidden = true;
       extra = el('div', 'feedback__extra');
       view.feedbackSummary(extra, task, result);
       dom.feedback.appendChild(extra);
       return;
     }
+    // Прежнее место блока результата — перед «Типичной ошибкой».
+    dom.typicalMistake.parentNode.insertBefore(dom.feedback, dom.typicalMistake);
+    dom.verdict.hidden = false;
     answers.hidden = false;
     dom.feedbackCorrect.textContent = type.formatResponse(task, result.correct);
     dom.feedbackUser.textContent = type.formatResponse(task, result.response);
@@ -1360,6 +1366,8 @@
       // Enter на обычной кнопке и так нажимает её; на вариантах ответа — «Проверить».
       if (tag === 'BUTTON' && !e.target.classList.contains('statement__btn')) return;
       if (tag === 'A') return;
+      // Раскрывающиеся пояснения и интерактивные фрагменты текста обрабатывают Enter сами.
+      if (tag === 'SUMMARY' || (e.target.getAttribute && e.target.getAttribute('role') === 'button')) return;
       e.preventDefault();
       if (checked) nextAfterCheck();
       else if (!dom.checkBtn.disabled) checkAnswer();

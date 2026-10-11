@@ -1,10 +1,12 @@
 /*
  * Олимпиадный практикум «Норма права»: стили новых типов заданий.
  * Отдельный файл: существующие классы css/styles.css и css/olymp.css
- * не переопределяются, все классы — с префиксом nrm-.
+ * не переопределяются, все классы — с префиксом nrm- (кроме .feedback__extra
+ * и .stat--partial, которые добавляют новые элементы в общие экраны).
+ * Цвета — только переменные темы, поэтому тёмная тема работает автоматически.
  */
 
-.nrm-grid { display: flex; flex-direction: column; gap: 10px; }
+.nrm-grid { display: flex; flex-direction: column; gap: 12px; }
 
 .nrm-demo-note {
   margin: 0;
@@ -17,7 +19,7 @@
 }
 
 /* ----- Нормативный текст ----- */
-.nrm-legal-wrap { display: flex; flex-direction: column; gap: 8px; }
+.nrm-legal-wrap { display: flex; flex-direction: column; gap: 8px; scroll-margin-top: 84px; }
 .nrm-legal {
   border: 1px solid var(--border);
   border-left: 4px solid var(--primary);
@@ -25,7 +27,8 @@
   background: var(--surface-2);
   padding: 12px 14px;
 }
-.nrm-legal--ref { border-left-color: var(--text-muted); margin-top: 8px; }
+.nrm-legal--ref { border-left-color: var(--text-muted); }
+.nrm-refs .nrm-legal { margin-top: 8px; }
 .nrm-legal__ref {
   display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline;
   margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--primary);
@@ -35,33 +38,37 @@
 .nrm-legal__edition.is-unverified { color: var(--warn); }
 .nrm-legal__text { margin: 0; font-size: 16px; line-height: 1.9; }
 
+/* Фрагмент — строчный элемент: подсветка повторяется на каждой строке переноса. */
 .nrm-frag {
-  font: inherit; color: inherit; background: transparent;
-  border: 0; padding: 1px 2px; margin: 0; border-radius: 4px;
-  border-bottom: 2px dashed color-mix(in srgb, var(--text-muted) 45%, transparent);
-  cursor: default; text-align: left;
+  padding: 1px 2px; border-radius: 4px;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
 }
-/* Фрагмент остаётся строчным: подсветка повторяется на каждой строке переноса. */
-.nrm-frag { box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-.nrm-frag.is-button { cursor: pointer; }
-.nrm-grid.is-picking .nrm-frag.is-button.is-pickable {
-  border-bottom-color: var(--primary);
-  background: color-mix(in srgb, var(--primary-soft) 55%, transparent);
+.nrm-frag.is-button {
+  cursor: pointer;
+  border-bottom: 2px dashed var(--primary);
+  background: color-mix(in srgb, var(--primary-soft) 60%, transparent);
 }
-.nrm-frag.is-ev,
-.nrm-grid.is-picking .nrm-frag.is-button.is-ev {
-  background: var(--primary); color: var(--on-primary, #fff);
-  border-bottom: 2px solid var(--primary);
-}
-.nrm-frag.is-key { border-bottom: 3px solid var(--right); background: var(--right-bg); }
+.nrm-frag.is-button:hover { background: var(--primary-soft); }
 .nrm-frag.is-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.nrm-frag.is-ev { background: var(--primary); color: var(--on-primary, #fff); border-bottom: 2px solid var(--primary); }
+.nrm-frag.is-key { border-bottom: 3px solid var(--right); background: var(--right-bg); }
 
 .nrm-refs summary { cursor: pointer; font-weight: 600; color: var(--primary); font-size: 15px; padding: 4px 0; }
 
-/* ----- Разделы и строки ----- */
-.nrm-progress { margin: 2px 0 0; font-size: 14px; color: var(--text-muted); }
-.nrm-section__title { margin: 14px 0 0; font-size: 16px; font-weight: 800; }
-.nrm-section__hint { margin: 0; font-size: 14px; color: var(--text-muted); }
+/* ----- Смысловые блоки и строки ----- */
+.nrm-block {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px; border-radius: var(--radius);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.nrm-block__head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.nrm-block__title { margin: 0; font-size: 16px; font-weight: 800; }
+.nrm-block__count {
+  flex: none; font-size: 13px; font-weight: 700; color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; background: var(--surface);
+}
+.nrm-block__count.is-done { color: var(--right); border-color: var(--right-border); background: var(--right-bg); }
+.nrm-block__hint { margin: -4px 0 0; font-size: 14px; color: var(--text-muted); }
 .nrm-rows { display: flex; flex-direction: column; gap: 10px; }
 
 .nrm-row {
@@ -69,8 +76,11 @@
   border-radius: var(--radius-sm);
   background: var(--surface);
   padding: 10px 12px;
+  scroll-margin-top: 84px;
+  transition: box-shadow .2s;
 }
 .nrm-row.is-active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus); }
+.nrm-row.is-flash, .nrm-step.is-flash { box-shadow: 0 0 0 4px var(--focus); }
 .nrm-row__head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
 .nrm-row__label { font-weight: 700; }
 .nrm-row__badge {
@@ -89,40 +99,50 @@
 .nrm-chip:hover { border-color: var(--primary); }
 .nrm-chip.is-on { background: var(--primary); border-color: var(--primary); color: var(--on-primary, #fff); font-weight: 600; }
 .nrm-chip--multi.is-on::before { content: "✓ "; }
-.nrm-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.nrm-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .nrm-follow { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
 .nrm-follow__label { margin: 0; font-size: 14px; color: var(--text-muted); }
 
+/* ----- Доказательство в строке ----- */
 .nrm-ev { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .nrm-ev__list { display: flex; flex-wrap: wrap; gap: 6px; }
-.nrm-ev__tag { background: var(--primary-soft); border-radius: 6px; padding: 2px 8px; font-size: 13px; }
-
-/* Панель режима отметки доказательства — закреплена внизу экрана. */
-.nrm-evbar {
-  position: sticky; bottom: 0; z-index: 5;
-  display: flex; gap: 10px; align-items: center; justify-content: space-between;
-  margin: 4px -4px 0; padding: 10px 12px;
-  border: 1px solid var(--primary); border-radius: var(--radius-sm);
-  background: var(--surface); box-shadow: 0 -6px 18px rgba(20, 24, 60, 0.12);
-  font-size: 14px;
+.nrm-ev__tag { background: var(--primary-soft); color: var(--text); border-radius: 6px; padding: 2px 8px; font-size: 13px; }
+.nrm-ev__panel {
+  align-self: stretch; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  margin-top: 4px; padding: 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--primary); background: var(--surface);
 }
-.nrm-evbar__text { flex: 1 1 auto; }
+.nrm-ev__panel .nrm-legal-wrap { align-self: stretch; }
+.nrm-ev__hint, .nrm-ev__status { margin: 0; font-size: 14px; color: var(--text-muted); }
+
+/* Индикатор заполнения: закреплён внизу экрана, пока решается задание. */
+.nrm-fillbar {
+  display: flex; gap: 10px; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); font-size: 14px; font-weight: 600;
+}
+.nrm-fillbar--sticky { position: sticky; bottom: 8px; z-index: 5; box-shadow: 0 -4px 16px rgba(20, 24, 60, 0.12); }
+.nrm-fillbar.is-done { border-color: var(--right-border); color: var(--right); }
 
 /* ----- Разбор ----- */
-.nrm-legend { margin: 0; font-size: 13px; color: var(--text-muted); }
+.nrm-legend { margin: -4px 0 0; font-size: 13px; color: var(--text-muted); }
 .nrm-rv { border-left-width: 4px; }
 .nrm-rv--ok { border-left-color: var(--right-border); }
 .nrm-rv--partial { border-left-color: var(--warn-border); }
 .nrm-rv--wrong { border-left-color: var(--wrong-border); }
 .nrm-rv__pts { flex: none; font-size: 13px; font-weight: 700; color: var(--text-muted); }
 .nrm-rv__line { margin: 6px 0 0; font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.nrm-rv__k { color: var(--text-muted); }
 .nrm-rv__mistake {
   margin: 8px 0 0; padding: 8px 10px; border-radius: 8px;
   background: var(--wrong-bg); color: var(--text); font-size: 14px;
 }
-.nrm-rv__why { margin: 8px 0 0; font-size: 14px; color: var(--text-muted); }
 .nrm-rv__ev { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.nrm-more { margin-top: 8px; }
+.nrm-more summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--primary); padding: 2px 0; }
+.nrm-more summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.nrm-more__text { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--text); }
 .text-warn { color: var(--warn); }
 
 .nrm-st {
@@ -134,17 +154,28 @@
 .nrm-st--bad { color: var(--wrong); border-color: var(--wrong-border); background: var(--wrong-bg); }
 .nrm-st--none { color: var(--text-muted); border-color: var(--border); background: var(--surface-2); }
 
-/* Сводка баллов по компонентам под вердиктом. */
-.feedback__extra { margin-top: 10px; width: 100%; }
-.nrm-sum__total { margin: 0 0 8px; font-weight: 700; }
-.nrm-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+/* ----- Компактный результат (над разбором) ----- */
+.feedback__extra { width: 100%; }
+.nrm-sum__head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+.nrm-sum__status { font-size: 15px; padding: 3px 12px; }
+.nrm-sum__total { font-size: 18px; font-weight: 800; }
+.nrm-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .nrm-sum__tile {
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--surface); padding: 8px 10px;
 }
-.nrm-sum__label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
-.nrm-sum__val { font-size: 22px; font-weight: 800; }
+.nrm-sum__tile.is-full { border-color: var(--right-border); }
+.nrm-sum__label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; overflow-wrap: anywhere; }
+.nrm-sum__val { font-size: 20px; font-weight: 800; }
+.nrm-sum__mistakes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; font-size: 14px; }
+.nrm-sum__mistakes-label { color: var(--text-muted); font-weight: 600; }
+.nrm-sum__jump {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 2px 10px;
+  border-radius: 999px; border: 1px solid var(--wrong-border); background: var(--wrong-bg);
+  color: var(--wrong); font-weight: 700; text-decoration: none;
+}
+.nrm-sum__jump:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .stat--partial dd { color: var(--warn); }
 
@@ -152,19 +183,19 @@
 .nrm-demo-banner {
   display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: center;
   padding: 8px 16px; background: var(--warn-bg); border-bottom: 1px solid var(--warn-border);
-  font-size: 14px; text-align: center;
+  color: var(--text); font-size: 14px; text-align: center;
 }
 .nrm-demo-banner button { font: inherit; font-size: 13px; }
 
 @media (max-width: 560px) {
   .nrm-legal__text { font-size: 15.5px; }
-  .nrm-sum__val { font-size: 19px; }
-  .nrm-evbar { flex-direction: column; align-items: stretch; }
+  .nrm-block { padding: 10px 8px; }
+  .nrm-sum { grid-template-columns: 1fr; }
+  .nrm-sum__tile { flex-direction: row; justify-content: space-between; align-items: baseline; }
+  .nrm-sum__val { font-size: 18px; }
   .nrm-demo-banner { font-size: 12.5px; padding: 6px 12px; }
 }
 
-/* Прокрутка к тексту нормы и к строке — с учётом закреплённой шапки сайта. */
-.nrm-legal-wrap, .nrm-row { scroll-margin-top: 84px; }
-
-.nrm-rv__more { margin-top: 4px; }
-.nrm-rv__more summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); padding: 2px 0; }
+@media (prefers-reduced-motion: reduce) {
+  .nrm-row { transition: none; }
+}

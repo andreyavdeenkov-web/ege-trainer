@@ -19,7 +19,7 @@ const root = path.join(__dirname, '..');
 /** Ядро + тип analysis-grid + правило components. */
 function loadGridCore() {
   const OLY = loadCore();
-  for (const src of ['js/olymp/types/analysis-grid.js', 'js/olymp/rules/components.js']) {
+  for (const src of ['js/olymp/types/nrm-rows.js', 'js/olymp/types/analysis-grid.js', 'js/olymp/rules/components.js']) {
     const code = fs.readFileSync(path.join(root, src), 'utf8');
     vm.runInThisContext('(function (window, globalThis) {\n' + code + '\n})', { filename: src })(undefined, { OLY });
   }
@@ -92,7 +92,7 @@ test('analysis-grid: ошибки данных — partial в key, неизве�
   const cases = [
     [(t) => { t.sections[0].rows[1].partial = [3]; }, /одновременно в key и partial/],
     [(t) => { t.sections[0].rows[0].evidence.key = ['zz']; }, /неизвестный фрагмент zz/],
-    [(t) => { t.scoring.maxPoints = 6; }, /сумме баллов строк: 5/],
+    [(t) => { t.scoring.maxPoints = 6; }, /сумме баллов элементов: 5/],
     [(t) => { t.legal[0].verified = true; }, /нужна редакция/],
     [(t) => { t.sections[0].rows[1].followUp.when = 0; }, /when должно быть одним из правильных/],
     [(t) => { t.legal = t.legal.filter((b) => b.role !== 'main'); }, /основной блок legal/],
