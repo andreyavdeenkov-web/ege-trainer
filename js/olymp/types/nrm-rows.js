@@ -10,8 +10,10 @@
  *   • сводка баллов по компонентам K / T / R и вердикт.
  *
  * Строка с множественным выбором (row.multi = { max: 2, contra: [номера] }): ученик выбирает
- * от 1 до max вариантов (ответ — answer.m); строка засчитывается, если выбран хотя бы один
- * вариант из key и ни одного из contra («противоречащих»). Остальные варианты нейтральны.
+ * от 1 до max вариантов (ответ — answer.m); строка засчитывается, только если КАЖДЫЙ выбранный
+ * вариант входит в key (один решающий признак или два решающих вместе). Любой лишний вариант —
+ * ошибка, поэтому добавление вариантов наугад не помогает. contra — варианты, прямо
+ * противоречащие случаю: в разборе они объясняются как противоречие, остальные — как «не решающий».
  * Используется, например, для «решающего признака» разграничения социальных норм.
  *
  * Объяснение ошибки (row.wrong[i]) — строка (краткая причина) или объект
@@ -358,10 +360,7 @@
     if (row.multi) {
       var picked = answer.m || [];
       if (!picked.length) return { status: 'empty', points: 0, follow: null };
-      var contra = row.multi.contra || [];
-      var good = picked.some(function (i) { return row.key.indexOf(i) !== -1; });
-      var bad = picked.some(function (i) { return contra.indexOf(i) !== -1; });
-      var ok = good && !bad && picked.length <= row.multi.max;
+      var ok = picked.length <= row.multi.max && picked.every(function (i) { return row.key.indexOf(i) !== -1; });
       return { status: ok ? 'ok' : 'wrong', points: ok ? 1 : 0, follow: null };
     }
     if (answer.c === null || answer.c === undefined) return { status: 'empty', points: 0, follow: null };

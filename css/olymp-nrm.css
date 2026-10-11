@@ -437,3 +437,12 @@
 .nrm-part .nrm-block__title:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .nrm-arg__body .nrm-follow__label { margin-top: 10px; }
 .nrm-arg__body .nrm-follow__label:first-child { margin-top: 6px; }
+/* Невысокие экраны (смартфоны 640–700 px): панель разметки компактнее, чтобы не закрывать текст нормы. */
+@media (max-height: 720px) and (max-width: 480px) {
+  .nrm-dock { padding: 4px 6px; gap: 2px; bottom: 4px; }
+  .nrm-tool { min-height: 40px; }
+  .nrm-tool__label { display: none; }
+  .nrm-tool--erase .nrm-tool__short { font-size: 16px; }
+  .nrm-dock .nrm-fillbar { padding: 0 4px; font-size: 13px; min-height: 0; }
+  .nrm-dock .nrm-fillbar .btn { padding: 4px 10px; min-height: 32px; }
+}

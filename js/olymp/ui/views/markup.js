@@ -89,6 +89,16 @@
       'Выберите инструмент внизу экрана и нажимайте фрагменты текста. Если элемента в тексте нет — не размечайте его. Повторное нажатие тем же инструментом снимает метку.'));
     var mains = task.legal.filter(function (b) { return b.role === 'main'; });
     var legal = N.renderLegal(task, { blocks: mains, onFragment: applyTool });
+    // Фрагмент, получивший фокус с клавиатуры, не должен оставаться под закреплённой панелью инструментов.
+    Object.keys(legal.fragments).forEach(function (id) {
+      legal.fragments[id].addEventListener('focus', function () {
+        var dockNode = box.querySelector('.nrm-dock');
+        if (!dockNode) return;
+        var r = legal.fragments[id].getBoundingClientRect();
+        var top = dockNode.getBoundingClientRect().top;
+        if (r.bottom > top - 8) window.scrollBy(0, r.bottom - top + 24);
+      });
+    });
     Object.keys(legal.fragments).forEach(function (id) { fragmentsText[id] = legal.fragments[id].textContent; });
     markBlock.appendChild(legal.node);
     markBlock.appendChild(legend(task));

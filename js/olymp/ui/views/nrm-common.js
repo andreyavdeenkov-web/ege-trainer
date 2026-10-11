@@ -252,7 +252,7 @@
       var wrongPicked = answer.m.filter(function (i) { return contra.indexOf(i) !== -1; });
       var shown = (wrongPicked.length ? wrongPicked : answer.m.filter(function (i) { return row.key.indexOf(i) === -1; }))
         .map(function (i) { return R.explanation(row.wrong && row.wrong[i]); }).filter(Boolean);
-      var lead = wrongPicked.length ? 'Выбран признак, который противоречит этому случаю.' : 'Не выбран ни один решающий признак.';
+      var lead = wrongPicked.length ? 'Выбран признак, который противоречит этому случаю.' : 'Выбран признак, который здесь не решающий.';
       return { short: lead + (shown.length ? ' ' + shown.map(function (r) { return r.short; }).join(' ') : ''), full: shown.map(function (r) { return r.full; }).filter(Boolean).join(' ') || null };
     }
     if (detail.choice === 'ok' || answer.c === null || answer.c === undefined) return null;
@@ -454,7 +454,7 @@
     }, !!row.multi, displayOrder(task, row));
     card.appendChild(choice.node);
     if (row.multi) {
-      card.insertBefore(el('p', 'nrm-row__note', 'Выберите от 1 до ' + row.multi.max + '.'), choice.node);
+      card.insertBefore(el('p', 'nrm-row__note', 'Выберите от 1 до ' + row.multi.max + ' решающих признаков. Засчитывается, если все выбранные — решающие.'), choice.node);
       limit = el('p', 'nrm-ev__status');
       limit.setAttribute('aria-live', 'polite');
       card.appendChild(limit);

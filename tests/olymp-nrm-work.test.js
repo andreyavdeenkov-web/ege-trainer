@@ -144,3 +144,49 @@ test('I-3: системный анализ ст. 8 и ст. 189 ТК; I-1: ре�
   assert.equal(g.details.parts.A.rows.f1.choice, 'ok');
   assert.equal(g.points, 14);
 });
+
+test('Журнал сверки: есть запись по каждому положению; verified: true — только при подтверждённой записи и совпадении текста', () => {
+  const { collect, keyOf, textOf, JOURNAL } = require('../scripts/legal-checklist.js');
+  const journal = JSON.parse(fs.readFileSync(JOURNAL, 'utf8'));
+  const items = collect();
+  for (const k of items.keys()) {
+    assert.ok(journal.entries[k], 'нет записи журнала: ' + k + ' (node scripts/legal-checklist.js)');
+    assert.ok(['pending', 'confirmed', 'differs'].includes(journal.entries[k].status), k);
+  }
+  const OLY = work();
+  for (const task of nrm(OLY)) {
+    const blocks = task.type === 'compound' ? OLY.compound.allLegal(task) : (task.legal || []);
+    for (const b of blocks) {
+      const e = journal.entries[keyOf(b)];
+      if (e.status === 'confirmed') {
+        assert.ok(e.edition && e.source && e.checked && e.officialText, keyOf(b) + ': подтверждённая запись без редакции, источника, даты или текста');
+      }
+      if (b.verified === true) {
+        assert.equal(e.status, 'confirmed', keyOf(b) + ': verified без подтверждённой сверки');
+        assert.ok(e.officialText.replace(/\s+/g, ' ').includes(textOf(b).replace(/\s*\[…\]\s*/g, ' ').trim().split(' ').slice(0, 6).join(' ')), keyOf(b) + ': текст задания не совпадает с официальным');
+      }
+    }
+    if (task.verification.status === 'confirmed') {
+      assert.ok(blocks.every((b) => b.verified === true), task.id + ': статус «подтверждено», но не все положения сверены');
+    }
+  }
+});
+
+test('I-1: решающие признаки — засчитывается только выбор из решающих; лишний признак «на всякий случай» — ошибка', () => {
+  const OLY = work();
+  const t = OLY.getTask('PR-LAW-NRM-001');
+  const base = OLY.types.get('compound').getCorrect(t);
+  const grade = (m) => {
+    const r = JSON.parse(JSON.stringify(base));
+    r.parts.A.f1 = { c: null, f: [], e: [], m };
+    return OLY.grade.gradeTask(t, r).details.parts.A.rows.f1.choice;
+  };
+  assert.equal(grade([0]), 'ok');
+  assert.equal(grade([0, 2]), 'ok');
+  assert.equal(grade([0, 4]), 'wrong', 'решающий + нейтральный');
+  assert.equal(grade([0, 1]), 'wrong', 'решающий + противоречащий');
+  // Вероятность угадать наугад одной отметкой — не выше 3 из 5, двумя — не выше 3 из 10.
+  for (const row of t.parts[0].rows.filter((r) => r.multi)) {
+    assert.ok(row.key.length <= 3, row.id);
+  }
+});

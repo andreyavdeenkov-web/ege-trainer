@@ -1,0 +1,192 @@
+{
+  "note": "Журнал официальной сверки. status: pending | confirmed | differs. Заполняется только по официальному источнику (pravo.gov.ru или официальная публикация); дата — день проверки.",
+  "entries": {
+    "ТК РФ | ст. 8, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "ТК РФ | ст. 189, ч. 4": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "Федеральный закон «Об образовании в Российской Федерации» | ст. 30, чч. 1–2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "ГК РФ | ст. 210": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-005"
+      ]
+    },
+    "ГПК РФ | ст. 39, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-006"
+      ]
+    },
+    "ГПК РФ | ст. 39, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-006"
+      ]
+    },
+    "ГПК РФ | ст. 32": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-006"
+      ]
+    },
+    "ГПК РФ | ст. 3, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-006"
+      ]
+    },
+    "СК РФ | ст. 80, пп. 1 и 3": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-007"
+      ]
+    },
+    "ТК РФ | ст. 122, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-008"
+      ]
+    },
+    "Конституция РФ | ст. 38, ч. 3": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-009"
+      ]
+    },
+    "СК РФ | ст. 87, п. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-009"
+      ]
+    },
+    "СК РФ | ст. 87, п. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-009"
+      ]
+    },
+    "СК РФ | ст. 115 «Ответственность за несвоевременную уплату алиментов», п. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-009"
+      ]
+    },
+    "СК РФ | ст. 89, п. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-010"
+      ]
+    },
+    "СК РФ | ст. 89, п. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-010"
+      ]
+    },
+    "УК РФ | ст. 125": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-011"
+      ]
+    }
+  }
+}
