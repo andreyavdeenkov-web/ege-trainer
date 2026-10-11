@@ -155,6 +155,15 @@ test('I-3: природа ЛНА, теоретический компонент,
   // П3 и П4 доказываются одним предложением ст. 12 ч. 4 — в разные стороны.
   assert.deepEqual(row('p3').evidence.key, ['e9']);
   assert.deepEqual(row('p4').evidence.key, ['e9']);
+  // Ключевой фрагмент — сама норма о правах и обязанностях, а не вводная часть предложения.
+  const frag = (id) => t.legal.flatMap((b) => b.fragments).find((f) => f.id === id).text;
+  assert.match(frag('e9'), /применяется к правам и обязанностям, возникшим после введения его в действие/);
+  assert.doesNotMatch(frag('e9a'), /правам и обязанностям/);
+  {
+    const ev = (e) => { const x = OLY.types.get(t.type).getCorrect(t); x.p4.e = e; return OLY.grade.gradeTask(t, x).details.rows.p4.evidence; };
+    assert.equal(ev(['e9a']), 'wrong', 'одна вводная часть не доказывает');
+    assert.equal(ev(['e9a', 'e9']), 'ok', 'вводная часть вместе с нормой — допустимо');
+  }
   const type = OLY.types.get(t.type);
   const r = type.getCorrect(t);
   r.p4 = { c: 0, f: [], e: ['e8'], m: undefined };
@@ -186,6 +195,13 @@ test('I-1: составное задание; доказательство — �
   // Части Б не видно, пока часть А не зафиксирована.
   assert.deepEqual(OLY.compound.visibleLegal(t, 0).map((b) => b.id), ['ukaz-3', 'fz68-11', 'koap-20-6-1']);
   assert.match(JSON.stringify(t.parts[1].rows.find((x) => x.id === 'b4').context), /Гипотетическое условие/);
+  // Б1 — поимённые адресаты и единичный случай; Б3 — только о значении самой подачи иска.
+  const b1 = t.parts[1].rows.find((x) => x.id === 'b1');
+  assert.match(b1.context, /Петрову Ивану Ивановичу и Сидоровой Ольге Андреевне/);
+  assert.doesNotMatch(JSON.stringify(b1), /рейс/);
+  const b3 = t.parts[1].rows.find((x) => x.id === 'b3');
+  assert.match(b3.label, /сама подача иска/);
+  assert.match(b3.options[b3.key[0]], /сама подача иска не приостанавливает/);
 });
 
 test('Множественный выбор строки: засчитывается только выбор из решающих вариантов', () => {

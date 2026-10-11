@@ -40,7 +40,9 @@
 
   function quote(text) {
     var t = String(text).trim().replace(/[\s,.;:]+$/, '');
-    return '«' + (t.length > 60 ? t.slice(0, 57) + '…' : t) + '»';
+    // Фрагмент-доказательство показывается целиком до 110 знаков: по началу длинного предложения
+    // нельзя понять, отмечена ли его решающая часть.
+    return '«' + (t.length > 110 ? t.slice(0, 107) + '…' : t) + '»';
   }
 
   /** Короткая метка строки для указателя ошибок: «4б» из «4б. По способу…». */
@@ -176,10 +178,13 @@
       dlg.appendChild(body);
       dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
       dlg.addEventListener('close', function () {
+        document.documentElement.classList.remove('nrm-ctx-open');
         dlg.remove();
         btn.focus({ preventScroll: true });
       });
       document.body.appendChild(dlg);
+      // Страница под диалогом не прокручивается: прокручивается только его содержимое.
+      document.documentElement.classList.add('nrm-ctx-open');
       if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
       close.focus({ preventScroll: true });
     });

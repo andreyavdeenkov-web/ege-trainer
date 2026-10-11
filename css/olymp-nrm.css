@@ -480,18 +480,22 @@
   .nrm-split .nrm-ctxbtn { display: none; }
 }
 
-/* Диалог «Ситуация и нормы» (узкий экран). */
+/* Диалог «Ситуация и нормы» (узкий экран): занимает почти весь экран и перекрывает нижнюю
+   панель ответов; заголовок с кнопкой «Закрыть» всегда виден, прокручивается только содержимое. */
 .nrm-ctxdlg {
-  width: min(680px, calc(100vw - 16px)); max-height: 80vh; padding: 0;
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg, var(--surface)); color: var(--text);
+  width: min(680px, calc(100vw - 16px)); height: min(820px, calc(100dvh - 16px)); max-height: none; max-width: none;
+  margin: auto; padding: 0; overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);
 }
-.nrm-ctxdlg::backdrop { background: rgba(10, 12, 30, 0.45); }
+.nrm-ctxdlg[open] { display: flex; flex-direction: column; }
+.nrm-ctxdlg::backdrop { background: rgba(10, 12, 30, 0.6); }
 .nrm-ctxdlg__bar {
-  position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px;
   padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
 }
-.nrm-ctxdlg__body { padding: 12px; }
+.nrm-ctxdlg__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px; -webkit-overflow-scrolling: touch; }
 .nrm-ctxdlg__content { display: flex; flex-direction: column; gap: 12px; }
+html.nrm-ctx-open { overflow: hidden; }
 .nrm-split__aside:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 /* В нижней панели три элемента: на узком экране кнопки переносятся на вторую строку. */
 .nrm-split .nrm-fillbar { flex-wrap: wrap; }
