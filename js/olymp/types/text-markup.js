@@ -25,12 +25,12 @@
  * Ответ: { marks: { fragmentId: 'H' | null }, rows: { rowId: { c, f, e } } }.
  *
  * Баллы:
- *   T — по 1 за каждый элемент палитры. Элемент размечен верно, если каждый фрагмент,
- *       который в ключе относится только к нему, помечен им; спорный фрагмент со
- *       списком помечен любой меткой из списка (неразмеченный спорный фрагмент —
- *       ошибка первого элемента списка); ни один фрагмент вне ключа элемента не помечен им.
- *       Элемент, которого в тексте нет, размечен верно, если им не помечен ни один фрагмент
- *       («санкцию в тексте не дописывают»).
+ *   T — по 1 за каждый элемент палитры. Балл элемента снимается, если хотя бы один
+ *       его фрагмент (по эталону) пропущен или помечен другим элементом. Спорный фрагмент
+ *       со списком засчитывается с любой меткой из списка. Одна неверная метка снимает
+ *       не больше одного балла (см. scoreMarkup). Метка элементом, которого в тексте нет
+ *       («дописанная» санкция), и метка на фрагменте вне всех элементов снимают балл
+ *       элемента, которым поставлены.
  *   K / R — строки выбора (компонент строки, по умолчанию K).
  */
 (function (root) {
@@ -175,29 +175,51 @@
 
   /* ---------- Проверка ---------- */
 
-  /** Оценка разметки: по элементам и по фрагментам. */
+  /**
+   * Оценка разметки: по элементам и по фрагментам.
+   *
+   * Каждый неверно размеченный или пропущенный фрагмент — одна ошибка, и она снимает
+   * не больше одного балла: ошибка засчитывается элементу, к которому фрагмент относится
+   * по эталону (для спорного фрагмента — первому элементу списка). Метка, поставленная
+   * не тем элементом, отмечается у этого элемента как замечание без снятия балла.
+   * Ошибка засчитывается элементу, которым помечен фрагмент, если фрагмент по эталону
+   * не относится ни к одному элементу (null) или если этого элемента в тексте нет вовсе
+   * («дописанная» санкция): тогда у элемента фрагмента по эталону — замечание.
+   */
   function scoreMarkup(task, marks) {
     var elements = {};
-    task.palette.forEach(function (p) { elements[p.id] = { status: 'ok', points: 1, missing: [], extra: [], present: false }; });
+    task.palette.forEach(function (p) { elements[p.id] = { status: 'ok', points: 1, missing: [], extra: [], noted: [], present: false }; });
     var fragments = {};
+    markable(task).forEach(function (id) {
+      accepted(task, id).forEach(function (label) { elements[label].present = true; });
+    });
     markable(task).forEach(function (id) {
       var acc = accepted(task, id);
       var m = marks[id] || null;
-      acc.forEach(function (label) { elements[label].present = true; });
       var ok = acc.length === 0 ? m === null : (m !== null && acc.indexOf(m) !== -1);
-      fragments[id] = { status: ok ? 'ok' : (m === null ? 'missed' : 'wrong'), mark: m, accepted: acc };
-      if (ok) return;
-      if (m !== null && acc.indexOf(m) === -1) elements[m].extra.push(id);
-      if (acc.length && (m === null || acc.indexOf(m) === -1)) {
-        // Пропущенный или неверно помеченный фрагмент — ошибка элемента(ов) ключа.
-        if (acc.length === 1) elements[acc[0]].missing.push(id);
-        else if (m === null) elements[acc[0]].missing.push(id);
-        else acc.forEach(function (label) { elements[label].missing.push(id); });
+      var charged = null;
+      if (!ok) {
+        if (m !== null && !elements[m].present) {
+          // «Дописан» элемент, которого в тексте нет: это и есть ошибка, балл снимается у него;
+          // у элемента фрагмента по эталону — замечание.
+          charged = m;
+          elements[m].extra.push(id);
+          if (acc.length) elements[acc[0]].noted.push(id);
+        } else if (acc.length) {
+          charged = acc[0];
+          elements[charged].missing.push(id);
+          if (m !== null) elements[m].noted.push(id);
+        } else {
+          charged = m;
+          elements[m].extra.push(id);
+        }
       }
+      fragments[id] = { status: ok ? 'ok' : (m === null ? 'missed' : 'wrong'), mark: m, accepted: acc, charged: charged };
     });
     Object.keys(elements).forEach(function (label) {
       var e = elements[label];
       if (e.missing.length || e.extra.length) { e.status = 'wrong'; e.points = 0; }
+      else if (e.noted.length) e.status = 'note';
     });
     return { elements: elements, fragments: fragments };
   }

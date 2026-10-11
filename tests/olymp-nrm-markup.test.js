@@ -118,20 +118,50 @@ test('text-markup: неразмеченный спорный фрагмент �
   assert.equal(g.points, 4);
 });
 
-test('text-markup: «дописанная» санкция и метка на нейтральном фрагменте снимают балл элемента', () => {
+test('text-markup: одна неверная метка снимает не больше одного балла', () => {
+  const { OLY, task } = setup();
+  // Фрагмент гипотезы помечен диспозицией: балл снимается у гипотезы, у диспозиции — замечание.
+  const g = OLY.grade.gradeTask(task, { marks: { a: 'D', b: 'D', c: 'H', d: null }, rows });
+  const el = g.details.markup.elements;
+  assert.deepEqual(el.H.missing, ['a']);
+  assert.equal(el.H.points, 0);
+  assert.equal(el.D.status, 'note');
+  assert.equal(el.D.points, 1);
+  assert.deepEqual(el.D.noted, ['a']);
+  assert.equal(g.details.markup.fragments.a.charged, 'H');
+  assert.equal(g.details.components.T.earned, 2);
+});
+
+test('text-markup: «дописанная» санкция снимает балл санкции (одна ошибка — один балл)', () => {
   const { OLY, task } = setup();
   let g = OLY.grade.gradeTask(task, { marks: { a: 'H', b: 'S', c: 'H', d: null }, rows });
   let el = g.details.markup.elements;
-  assert.deepEqual(el.S.extra, ['b']);
-  assert.deepEqual(el.D.missing, ['b']);
-  assert.equal(el.H.status, 'ok');
   assert.equal(el.S.present, false);
-  assert.equal(g.details.components.T.earned, 1);
+  assert.deepEqual(el.S.extra, ['b']);
+  assert.equal(el.S.points, 0);
+  assert.equal(el.D.status, 'note');
+  assert.deepEqual(el.D.noted, ['b']);
+  assert.equal(g.details.components.T.earned, 2);
   assert.equal(g.details.markup.fragments.b.status, 'wrong');
 
-  g = OLY.grade.gradeTask(task, { marks: { a: 'H', b: 'D', c: 'H', d: 'S' }, rows });
+  // Метка на фрагменте вне всех элементов — ошибка элемента, которым он помечен.
+  g = OLY.grade.gradeTask(task, { marks: { a: 'H', b: 'D', c: 'H', d: 'D' }, rows });
   el = g.details.markup.elements;
-  assert.deepEqual(el.S.extra, ['d']);
+  assert.deepEqual(el.D.extra, ['d']);
+  assert.equal(g.details.components.T.earned, 2);
+});
+
+test('text-markup: спорный фрагмент с чужой меткой — ошибка только первого элемента списка', () => {
+  const { OLY, task } = setup({
+    palette: [{ id: 'H', label: 'Гипотеза', short: 'Г' }, { id: 'D', label: 'Диспозиция', short: 'Д' }, { id: 'X', label: 'Иное', short: 'И' }],
+    markup: { key: { a: 'H', b: 'D', c: ['H', 'D'], d: 'X' }, elements: {
+      H: { explanation: 'у', wrong: 'у' }, D: { explanation: 'п', wrong: 'п' }, X: { explanation: 'и', wrong: 'и' } } }
+  });
+  const g = OLY.grade.gradeTask(task, { marks: { a: 'H', b: 'D', c: 'X', d: 'X' }, rows });
+  const el = g.details.markup.elements;
+  assert.deepEqual(el.H.missing, ['c']);
+  assert.equal(el.D.status, 'ok');
+  assert.equal(el.X.status, 'note');
   assert.equal(g.details.components.T.earned, 2);
 });
 
@@ -160,9 +190,9 @@ test('text-markup: структура ответа проверяется', () =
 
 /* ---------- Демонстрационные задания ---------- */
 
-test('Демо: разметка ч. 3 ст. 38 Конституции и ст. 125 УК — эталон 16 и 8 баллов, тексты помечены несверенными', () => {
+test('Демо: разметка ч. 3 ст. 38 Конституции и п. 2 ст. 89 СК — эталон 16 и 11 баллов, тексты помечены несверенными', () => {
   const OLY = loadBank('olympiad-demo.html');
-  for (const [id, max] of [['DEMO-LAW-NRM-002', 16], ['DEMO-LAW-NRM-004', 8]]) {
+  for (const [id, max] of [['DEMO-LAW-NRM-002', 16], ['DEMO-LAW-NRM-004', 11]]) {
     const task = OLY.getTask(id);
     assert.equal(task.type, 'text-markup');
     assert.equal(task.demo, true);
@@ -181,9 +211,9 @@ test('Демо ч. 3 ст. 38: санкцию в тексте не размеч�
   response.rows['role-c'] = { c: 5, f: [], e: [] };
   const g = OLY.grade.gradeTask(task, response);
   assert.equal(g.details.markup.elements.S.status, 'wrong');
-  assert.equal(g.details.markup.elements.D.status, 'wrong');
+  assert.equal(g.details.markup.elements.D.status, 'note');
   assert.equal(g.details.rows['role-c'].choicePoints, 0.5);
-  assert.equal(g.points, 13.5);
+  assert.equal(g.points, 14.5);
   assert.equal(g.verdict, 'partial');
 });
 
@@ -194,14 +224,14 @@ test('text-markup в попытке: «частично», баллы по ко�
   const attempt = A.createAttempt({ mode: 'practice', olympiad: 'DEMO', subject: 'social', taskIds: [task.id],
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   const response = OLY.types.get(task.type).getCorrect(task);
-  response.marks.g5 = 'A';
+  response.marks.a4 = 'S';   // «в судебном порядке» как санкция — одна ошибка, один балл
   A.setResponse(attempt, task.id, response);
   const result = A.check(attempt, task.id);
   assert.equal(result.verdict, 'partial');
-  assert.equal(result.points, 6);
+  assert.equal(result.points, 10);
   assert.equal(A.summary(attempt).partial, 1);
   const outcome = OLY.ui.session.outcome(attempt);
-  assert.deepEqual(outcome.components.T, { earned: 2, max: 4 });
+  assert.deepEqual(outcome.components.T, { earned: 3, max: 4 });
   A.finish(attempt);
   const scope = { olympiad: 'DEMO', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);

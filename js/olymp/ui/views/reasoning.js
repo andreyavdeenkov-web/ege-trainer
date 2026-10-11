@@ -55,6 +55,19 @@
     return { steps: steps, rows: N.copyRows(task.sections || [], response && response.rows) };
   }
 
+  function originHelp() {
+    var d = el('details', 'nrm-more nrm-types-help');
+    d.appendChild(el('summary', null, 'Как определить происхождение ошибки'));
+    [
+      'Самостоятельная — шаг ошибочен, даже если все предыдущие шаги верны.',
+      'Только унаследована — шаг рассуждает правильно, но опирается на ошибочный шаг; если бы тот шаг был верен, верен был бы и этот. Тип не указывается.',
+      'Унаследована + собственная — шаг опирается на ошибочный шаг и добавляет свою ошибку.',
+      'Проверка подстановкой: допустите, что предыдущий шаг верен. Если вывод шага всё равно неверен — ошибка собственная. Слова «следовательно», «значит» сами по себе не делают ошибку унаследованной.',
+      'Унаследовать можно только от шага, который сам ошибочен в этом задании.'
+    ].forEach(function (t) { d.appendChild(el('p', 'nrm-more__text', t)); });
+    return d;
+  }
+
   function typeHelp() {
     var d = el('details', 'nrm-more nrm-types-help');
     d.appendChild(el('summary', null, 'Как выбрать тип ошибки'));
@@ -67,8 +80,15 @@
       ol.appendChild(li);
     });
     d.appendChild(ol);
-    d.appendChild(el('p', 'nrm-more__text', 'Происхождение: самостоятельная — шаг ошибочен, даже если все предыдущие верны; только унаследована — шаг логичен, но опирается на ошибочный шаг (тип не указывается); унаследована + собственная — опирается на ошибочный шаг и добавляет свою ошибку.'));
     return d;
+  }
+
+  /** Подписи кнопок — короткие; полное название — для чтения с экрана и во всплывающей подсказке. */
+  function labelButtons(group, full) {
+    group.buttons.forEach(function (b, i) {
+      b.setAttribute('aria-label', full[i]);
+      b.title = full[i];
+    });
   }
 
   function stepHead(task, step, index) {
@@ -97,7 +117,10 @@
     head.appendChild(count);
     block.appendChild(head);
     block.appendChild(el('p', 'nrm-block__hint', task.markHint || 'Отметьте ошибочные шаги. Для каждого отмеченного шага укажите происхождение и содержательный тип ошибки.'));
-    block.appendChild(typeHelp());
+    var helps = el('div', 'nrm-helps');
+    helps.appendChild(originHelp());
+    helps.appendChild(typeHelp());
+    block.appendChild(helps);
 
     var list = el('ol', 'nrm-rows nrm-steps');
     task.steps.forEach(function (step, i) { list.appendChild(renderStep(step, i)); });
@@ -124,6 +147,7 @@
       flag.appendChild(el('span', null, 'Ошибка в шаге'));
       flag.addEventListener('click', function () {
         var a = response.steps[step.id];
+        parts[step.id].collapsed = false;
         if (a.flag) {
           response.steps[step.id] = { flag: false, origin: null, from: null, type: null };
           // Шаги, унаследовавшие ошибку от снятого шага, теряют ссылку на него.
@@ -135,14 +159,16 @@
 
       var more = el('div', 'nrm-follow nrm-step__more');
       more.appendChild(el('p', 'nrm-follow__label', 'Происхождение ошибки'));
-      var origin = N.chipGroup(C.ORIGINS.map(function (o) { return o.label; }), 'Шаг ' + (i + 1) + ': происхождение ошибки', function (j) {
+      var origin = N.chipGroup(C.ORIGINS.map(function (o) { return o.short; }), 'Шаг ' + (i + 1) + ': происхождение ошибки', function (j) {
         var a = response.steps[step.id];
         var id = C.ORIGINS[j].id;
         a.origin = a.origin === id ? null : id;
         if (!C.needsFrom(a.origin)) a.from = null;
         if (!C.needsType(a.origin)) a.type = null;
-        changed();
+        choose(step);
       }, false);
+      labelButtons(origin, C.ORIGINS.map(function (o) { return 'Шаг ' + (i + 1) + ': ' + o.label; }));
+      origin.node.classList.add('nrm-chips--grid3');
       more.appendChild(origin.node);
 
       var fromWrap = el('div', 'nrm-step__sub');
@@ -154,26 +180,58 @@
         var a = response.steps[step.id];
         var id = earlier[k].id;
         a.from = a.from === id ? null : id;
-        changed();
+        choose(step);
       }, false);
       fromWrap.appendChild(from.node);
       more.appendChild(fromWrap);
 
       var typeWrap = el('div', 'nrm-step__sub');
       typeWrap.appendChild(el('p', 'nrm-follow__label', 'Содержательный тип (первый подходящий по порядку)'));
-      var type = N.chipGroup(C.ERROR_TYPES.map(function (t) { return typeCode(t.id) + ' ' + t.label; }), 'Шаг ' + (i + 1) + ': тип ошибки', function (k) {
+      var type = N.chipGroup(C.ERROR_TYPES.map(function (t) { return typeCode(t.id) + ' ' + t.short; }), 'Шаг ' + (i + 1) + ': тип ошибки', function (k) {
         var a = response.steps[step.id];
         var id = C.ERROR_TYPES[k].id;
         a.type = a.type === id ? null : id;
-        changed();
+        choose(step);
       }, false);
-      type.node.classList.add('nrm-chips--column');
+      labelButtons(type, C.ERROR_TYPES.map(function (t) { return typeCode(t.id) + ' — ' + t.label; }));
+      type.node.classList.add('nrm-chips--grid2');
       typeWrap.appendChild(type.node);
       more.appendChild(typeWrap);
       card.appendChild(more);
 
-      parts[step.id] = { card: card, flag: flag, more: more, origin: origin, fromWrap: fromWrap, fromEmpty: fromEmpty, from: from, earlier: earlier, typeWrap: typeWrap, type: type };
+      // Заполненный шаг сворачивается в одну строку, чтобы на смартфоне не листать выбор заново.
+      var done = el('div', 'nrm-step__done');
+      var doneText = el('span', 'nrm-step__done-text');
+      var edit = el('button', 'btn btn--ghost btn--sm', 'Изменить');
+      edit.type = 'button';
+      edit.setAttribute('aria-label', 'Шаг ' + (i + 1) + ': изменить происхождение и тип ошибки');
+      edit.addEventListener('click', function () {
+        parts[step.id].collapsed = false;
+        paint();
+        origin.buttons[0].focus({ preventScroll: true });
+      });
+      done.appendChild(doneText);
+      done.appendChild(edit);
+      card.appendChild(done);
+
+      parts[step.id] = { card: card, flag: flag, more: more, origin: origin, fromWrap: fromWrap, fromEmpty: fromEmpty, from: from, earlier: earlier, typeWrap: typeWrap, type: type, done: done, doneText: doneText, edit: edit, collapsed: false };
       return card;
+    }
+
+    /** После выбора: если шаг заполнен — свернуть его и перевести фокус на «Изменить». */
+    function choose(step) {
+      var p = parts[step.id];
+      var complete = C.stepIsComplete(response.steps[step.id]);
+      p.collapsed = complete;
+      changed();
+      if (complete) p.edit.focus({ preventScroll: true });
+    }
+
+    function doneSummary(a) {
+      var text = originText(task, a.origin, a.from);
+      text = text.charAt(0).toUpperCase() + text.slice(1);
+      if (C.needsType(a.origin) && a.type) text += ' · ' + typeCode(a.type) + ' ' + typeInfo(a.type).short;
+      return text;
     }
 
     function changed() {
@@ -194,7 +252,10 @@
         p.card.classList.toggle('is-filled', a.flag && complete);
         p.flag.setAttribute('aria-pressed', String(a.flag));
         p.flag.classList.toggle('is-on', a.flag);
-        p.more.hidden = !a.flag;
+        if (!a.flag || !complete) p.collapsed = false;
+        p.more.hidden = !a.flag || p.collapsed;
+        p.done.hidden = !(a.flag && p.collapsed);
+        if (!p.done.hidden) p.doneText.textContent = doneSummary(a);
         p.origin.paint(C.ORIGINS.map(function (o) { return o.id; }).indexOf(a.origin));
         p.fromWrap.hidden = !C.needsFrom(a.origin);
         // Унаследовать можно только от шага, отмеченного как ошибочный.
@@ -374,7 +435,10 @@
       list.appendChild(stepReview(task, step, i, response && response.steps[step.id], reasoning && reasoning.steps[step.id]));
     });
     block.appendChild(list);
-    block.appendChild(typeHelp());
+    var helps = el('div', 'nrm-helps');
+    helps.appendChild(originHelp());
+    helps.appendChild(typeHelp());
+    block.appendChild(helps);
     box.appendChild(block);
 
     N.reviewSections(task, task.sections || [], response && response.rows, details && details.rows)

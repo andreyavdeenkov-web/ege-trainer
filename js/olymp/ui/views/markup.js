@@ -208,6 +208,11 @@
     block.appendChild(legend(task));
     var note = el('p', 'nrm-legend');
     block.appendChild(note);
+    block.appendChild(N.more('Как начисляются баллы за разметку', [
+      'По 1 баллу за каждый элемент. Балл элемента снимается, если хотя бы один его фрагмент пропущен или помечен другим элементом.',
+      'Одна неверная метка снимает не больше одного балла. Ошибка учитывается у элемента, к которому фрагмент относится по эталону. Исключение — метка элементом, которого в тексте нет («дописанная» санкция): тогда балл снимается у этого элемента.',
+      'Фрагменты со спорной границей засчитываются с любой из допустимых меток.'
+    ], false));
 
     function paintText() {
       Object.keys(legal.fragments).forEach(function (id) {
@@ -227,7 +232,7 @@
 
     var list = el('div', 'nrm-rows');
     task.palette.forEach(function (p, i) {
-      list.appendChild(elementReview(task, p, i, details && details.markup.elements[p.id]));
+      list.appendChild(elementReview(task, p, i, details && details.markup.elements[p.id], details && details.markup.fragments));
     });
     block.appendChild(list);
     box.appendChild(block);
@@ -248,7 +253,7 @@
     return item ? item.label : id;
   }
 
-  function elementReview(task, p, index, detail) {
+  function elementReview(task, p, index, detail, fragments) {
     var info = task.markup.elements[p.id];
     var card = el('div', 'nrm-row nrm-rv');
     card.id = N.anchorId(task, 'el-' + p.id);
@@ -271,18 +276,32 @@
       return N.quote(N.fragmentText(task, id)) + (others.length ? ' (спорная граница — засчитывается и ' + others.join(', ') + ')' : '');
     }).join(', ') : 'в тексте нет — не размечается';
     if (detail) {
-      card.appendChild(N.answerLine('Разметка: ', detail.status === 'ok' ? 'верно' : 'есть ошибки', detail.status === 'ok' ? 'text-right' : 'text-wrong', detail.status));
-      if (detail.status !== 'ok') {
+      var okText = { ok: 'верно', note: 'балл засчитан, есть замечание', wrong: 'есть ошибки' }[detail.status];
+      card.appendChild(N.answerLine('Разметка: ', okText, detail.status === 'wrong' ? 'text-wrong' : 'text-right', detail.status === 'wrong' ? 'wrong' : 'ok'));
+      var markOf = function (id) {
+        var f = fragments && fragments[id];
+        return f && f.mark ? ' (стоит метка «' + paletteLabel(task, f.mark) + '»)' : ' (без метки)';
+      };
+      if (detail.status === 'wrong') {
         card.appendChild(N.answerLine('Правильно: ', keyLine, 'text-right'));
         var reason = R.explanation(info.wrong);
         var specifics = [];
-        if (detail.missing.length) specifics.push('Не размечено как «' + p.label + '»: ' + fragmentsList(task, detail.missing) + '.');
+        if (detail.missing.length) {
+          specifics.push('Не размечено как «' + p.label + '»: ' + detail.missing.map(function (id) { return N.quote(N.fragmentText(task, id)) + markOf(id); }).join(', ') + '.');
+        }
         if (detail.extra.length) specifics.push('Лишняя метка «' + p.label + '»: ' + fragmentsList(task, detail.extra) + '.');
         card.appendChild(el('p', 'nrm-rv__mistake', specifics.join(' ') + ' ' + reason.short));
         var box = N.more('Подробное объяснение', [reason.full, info.explanation], false);
         if (box) card.appendChild(box);
         card.classList.add('nrm-rv--wrong');
         return card;
+      }
+      if (detail.status === 'note') {
+        var where = detail.noted.map(function (id) {
+          var f = fragments[id];
+          return N.quote(N.fragmentText(task, id)) + ' — ошибка учтена в элементе «' + paletteLabel(task, f.charged) + '»';
+        });
+        card.appendChild(el('p', 'nrm-rv__note', 'Метка «' + p.label + '» поставлена и на фрагмент другого элемента: ' + where.join('; ') + '. Одна неверная метка снимает не больше одного балла.'));
       }
       card.classList.add('nrm-rv--ok');
     } else {
@@ -298,7 +317,7 @@
     var mistakes = [];
     if (d) {
       task.palette.forEach(function (p) {
-        if (d.markup.elements[p.id].status !== 'ok') mistakes.push({ id: 'el-' + p.id, label: p.label });
+        if (d.markup.elements[p.id].status === 'wrong') mistakes.push({ id: 'el-' + p.id, label: p.label });
       });
       mistakes = mistakes.concat(N.rowMistakes(M.rowsOf(task), d.rows));
     }

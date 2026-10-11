@@ -138,6 +138,10 @@
   margin: 8px 0 0; padding: 8px 10px; border-radius: 8px;
   background: var(--wrong-bg); color: var(--text); font-size: 14px;
 }
+.nrm-rv__note {
+  margin: 8px 0 0; padding: 8px 10px; border-radius: 8px;
+  background: var(--surface-2); border: 1px dashed var(--border); color: var(--text); font-size: 14px;
+}
 .nrm-rv__ev { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
 .nrm-more { margin-top: 8px; }
 .nrm-more summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--primary); padding: 2px 0; }
@@ -325,4 +329,23 @@
 .nrm-flags .nrm-rv__line { margin: 4px 0 0; }
 @media (max-width: 480px) {
   .nrm-flag, .nrm-step__more { margin-left: 0; }
+}
+.nrm-helps { display: flex; flex-direction: column; gap: 0; }
+.nrm-chips--grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nrm-chips--grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nrm-chips--grid3 .nrm-chip, .nrm-chips--grid2 .nrm-chip {
+  border-radius: var(--radius-sm); text-align: center; padding: 7px 6px; line-height: 1.25;
+}
+.nrm-chips--grid2 .nrm-chip { text-align: left; padding: 7px 10px; }
+.nrm-step__done {
+  margin: 8px 0 0 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 6px 6px 12px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border);
+}
+.nrm-step__done-text { font-size: 14px; font-weight: 600; }
+@media (max-width: 480px) {
+  .nrm-step__done { margin-left: 0; }
+  .nrm-step__num { width: 26px; height: 26px; font-size: 13px; }
+  .nrm-step__head { gap: 8px; }
+  .nrm-flag { width: 100%; justify-content: center; }
+  .nrm-chips--grid3 .nrm-chip, .nrm-chips--grid2 .nrm-chip { font-size: 13px; min-height: 44px; }
 }

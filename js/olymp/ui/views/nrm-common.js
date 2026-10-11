@@ -19,7 +19,7 @@
   var ui = OLY.ui;
   var R = OLY.nrmRows;
 
-  var COMPONENT_TITLES = { K: 'Квалификация', T: 'Доказательство', R: 'Логика рассуждения' };
+  var COMPONENT_TITLES = { K: 'Квалификация', T: 'Работа с текстом нормы', R: 'Логика рассуждения' };
   var VERDICT = {
     correct: { text: 'Верно', cls: 'ok' },
     partial: { text: 'Частично', cls: 'half' },
