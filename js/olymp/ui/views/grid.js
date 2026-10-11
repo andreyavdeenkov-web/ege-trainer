@@ -9,7 +9,10 @@
  *     к первой незаполненной строке;
  *   • доказательство отмечается прямо в строке: кнопка «Отметить в тексте»
  *     раскрывает под строкой текст нормы и справочных норм с нажимаемыми
- *     фрагментами — без прокрутки к началу задания.
+ *     фрагментами — без прокрутки к началу задания;
+ *   • task.situation — общая ситуация, task.definitions — определения из условия,
+ *     row.context — эпизод строки прямо в её карточке; task.layout: 'split' — ситуация
+ *     и тексты норм закреплены в левой колонке (только в заданиях, где это помогает).
  *
  * Разбор и компактный результат — общие для новых типов (views/nrm-common.js).
  */
@@ -47,7 +50,12 @@
     var box = el('div', 'nrm-grid');
     var notice = N.demoNotice(task);
     if (notice) box.appendChild(notice);
-    box.appendChild(N.renderLegal(task, { refsCollapsed: true }).node);
+    var lay = N.layout(task, box);
+    var situation = N.situationBlock(task.situation);
+    if (situation) lay.aside.appendChild(situation);
+    var defs = N.definitionsBlock(task);
+    if (defs) lay.aside.appendChild(defs);
+    lay.aside.appendChild(N.renderLegal(task, { refsCollapsed: !lay.split }).node);
 
     task.sections.forEach(function (section) {
       var block = el('section', 'nrm-block');
@@ -60,17 +68,19 @@
       var list = el('div', 'nrm-rows');
       section.rows.forEach(function (row) { list.appendChild(renderRow(row)); });
       block.appendChild(list);
-      box.appendChild(block);
+      lay.main.appendChild(block);
       sectionParts.push({ section: section, count: count });
     });
 
-    var fill = N.fillBar(task);
+    var fill = N.fillBar(task, lay.split ? { aside: lay.aside } : null);
     fill.node.classList.add('nrm-fillbar--sticky');
-    box.appendChild(fill.node);
+    lay.main.appendChild(fill.node);
 
     function renderRow(row) {
       var card = el('div', 'nrm-row');
       card.id = N.anchorId(task, row.id);
+      var ctxNode = N.rowContext(row);
+      if (ctxNode) card.appendChild(ctxNode);
       var head = el('div', 'nrm-row__head');
       head.appendChild(el('span', 'nrm-row__label', row.label));
       if (row.evidence) {
@@ -233,16 +243,21 @@
     var box = el('div', 'nrm-grid is-review');
     var notice = N.demoNotice(task);
     if (notice) box.appendChild(notice);
+    var lay = N.layout(task, box);
+    var situation = N.situationBlock(task.situation);
+    if (situation) lay.aside.appendChild(situation);
+    var defs = N.definitionsBlock(task);
+    if (defs) lay.aside.appendChild(defs);
 
-    var legal = N.renderLegal(task, { refsCollapsed: true });
+    var legal = N.renderLegal(task, { refsCollapsed: !lay.split });
     rowsOf(task).forEach(function (row) {
       if (!row.evidence) return;
       row.evidence.key.forEach(function (id) {
         if (legal.fragments[id]) legal.fragments[id].classList.add('is-key');
       });
     });
-    box.appendChild(legal.node);
-    box.appendChild(el('p', 'nrm-legend', 'Подчёркнуты фрагменты, которые служат доказательством в эталоне.'));
+    lay.aside.appendChild(legal.node);
+    lay.aside.appendChild(el('p', 'nrm-legend', 'Подчёркнуты фрагменты, которые служат доказательством в эталоне.'));
 
     task.sections.forEach(function (section) {
       var block = el('section', 'nrm-block');
@@ -264,7 +279,7 @@
         list.appendChild(N.rowReview(task, row, response && response[row.id], details && details[row.id]));
       });
       block.appendChild(list);
-      box.appendChild(block);
+      lay.main.appendChild(block);
     });
 
     container.textContent = '';

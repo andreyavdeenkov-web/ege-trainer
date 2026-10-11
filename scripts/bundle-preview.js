@@ -29,7 +29,7 @@ const page = [
   '<title>Рабочий банк «Норма права»</title>',
   '<style>\n' + css + '\n</style>',
   // Классы и маршрут, которые в исходной странице задаёт <body class="olymp"> и ссылка темы.
-  "<script>document.body.classList.add('olymp'); document.documentElement.lang = 'ru'; if (!location.hash || location.hash === '#') { try { history.replaceState(null, '', '#/pr/LAW/LAW-NRM'); } catch (e) { location.hash = '#/pr/LAW/LAW-NRM'; } }</script>",
+  "<script>(function () { function mark() { document.body.classList.add('olymp'); } if (document.body) mark(); else document.addEventListener('DOMContentLoaded', mark); })(); document.documentElement.lang = 'ru'; if (!location.hash || location.hash === '#') { try { history.replaceState(null, '', '#/pr/LAW/LAW-NRM'); } catch (e) { location.hash = '#/pr/LAW/LAW-NRM'; } }</script>",
   inlined
 ].join('\n');
 fs.writeFileSync(out, page);

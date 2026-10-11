@@ -8,7 +8,10 @@
  *   • в текущей части — её вопросы; кнопка «Зафиксировать и открыть часть …» доступна,
  *     когда часть заполнена. Зафиксированную часть изменить нельзя — поэтому условие
  *     поздних частей не может подсказать ответ на ранние;
- *   • названия и вопросы закрытых частей не показываются.
+ *   • названия и вопросы закрытых частей не показываются;
+ *   • в строках с доказательством текст норм раскрывается под строкой (только тексты,
+ *     уже открытые на этом этапе); эпизод строки (row.context) — в её карточке;
+ *   • task.layout: 'split' — ситуация, определения и тексты закреплены в левой колонке.
  * Разбор: все части с баллами, ответом ученика, эталоном и объяснениями.
  */
 (function (root) {
@@ -39,16 +42,15 @@
     return { stage: C.stageOf(task, response), parts: parts };
   }
 
-  function situationBlock(task) {
-    var s = el('section', 'nrm-block nrm-context');
-    s.appendChild(el('h3', 'nrm-block__title', 'Ситуация'));
-    task.situation.forEach(function (p) { s.appendChild(el('p', 'nrm-context__p', p)); });
-    return s;
-  }
-
-  function legalBlock(task, blocks) {
+  /** Ситуация, определения и видимые тексты норм — в начало задания или в закреплённую колонку. */
+  function context(task, target, blocks) {
+    target.appendChild(N.situationBlock(task.situation));
+    var defs = N.definitionsBlock(task);
+    if (defs) target.appendChild(defs);
     if (!blocks.length) return null;
-    return N.renderLegal({ id: task.id, legal: blocks }, { blocks: blocks }).node;
+    var legal = N.renderLegal({ id: task.id, legal: blocks }, { blocks: blocks });
+    target.appendChild(legal.node);
+    return legal;
   }
 
   function stages(task, stage, reviewMode) {
@@ -76,7 +78,9 @@
     if (part.kind === 'choice') {
       part.rows.forEach(function (row) {
         var a = answers[row.id];
-        lines.push(N.shortLabel(row) + ': ' + N.chosenText(row, a));
+        var line = N.shortLabel(row) + ': ' + N.chosenText(row, a);
+        if (row.evidence && a.e.length) line += ' · доказательство: ' + a.e.map(function (id) { return N.quote(N.fragmentText(task, id)); }).join(', ');
+        lines.push(line);
       });
     } else if (part.kind === 'short') {
       part.items.forEach(function (item) { lines.push((item.short || item.id) + ': ' + (answers[item.id] || '—')); });
@@ -106,12 +110,13 @@
       var stage = state.stage;
       var part = task.parts[stage];
       var answers = state.parts[part.id];
-      var box = el('div', 'nrm-grid nrm-compound');
+      var outer = el('div', 'nrm-grid nrm-compound');
       var notice = N.demoNotice(task);
-      if (notice) box.appendChild(notice);
-      box.appendChild(situationBlock(task));
-      var legal = legalBlock(task, C.visibleLegal(task, stage));
-      if (legal) box.appendChild(legal);
+      if (notice) outer.appendChild(notice);
+      var lay = N.layout(task, outer);
+      var visible = C.visibleLegal(task, stage);
+      context(task, lay.aside, visible);
+      var box = lay.main;
       box.appendChild(stages(task, stage, false));
       for (var i = 0; i < stage; i++) box.appendChild(lockedSummary(task, task.parts[i], i, state.parts[task.parts[i].id]));
 
@@ -132,8 +137,9 @@
       }
       var list = el('div', 'nrm-rows');
       if (part.kind === 'choice') {
+        var group = { open: null };
         part.rows.forEach(function (row) {
-          var e = N.rowEditor(task, row, answers, changed);
+          var e = N.rowEditor(task, row, answers, changed, { legal: visible, group: group });
           list.appendChild(e.card);
           editors.push({ paint: e.paint });
         });
@@ -180,12 +186,12 @@
         box.appendChild(closed);
       }
 
-      fill = N.fillBar(task);
+      fill = N.fillBar(task, lay.split ? { aside: lay.aside } : null);
       fill.node.classList.add('nrm-fillbar--sticky');
       box.appendChild(fill.node);
 
       container.textContent = '';
-      container.appendChild(box);
+      container.appendChild(outer);
       paint();
       if (focusTitle) {
         block.scrollIntoView({ block: 'start' });
@@ -238,12 +244,22 @@
     var result = ctx.result && ctx.result.verdict !== 'unanswered' ? ctx.result : null;
     var state = result ? copy(task, result.response) : null;
     var details = result && result.details ? result.details.parts : null;
-    var box = el('div', 'nrm-grid nrm-compound is-review');
+    var outer = el('div', 'nrm-grid nrm-compound is-review');
     var notice = N.demoNotice(task);
-    if (notice) box.appendChild(notice);
-    box.appendChild(situationBlock(task));
-    var legal = legalBlock(task, C.allLegal(task));
-    if (legal) box.appendChild(legal);
+    if (notice) outer.appendChild(notice);
+    var lay = N.layout(task, outer);
+    var legal = context(task, lay.aside, C.allLegal(task));
+    var keyed = false;
+    task.parts.forEach(function (part) {
+      (part.rows || []).forEach(function (row) {
+        if (!row.evidence || !legal) return;
+        row.evidence.key.forEach(function (id) {
+          if (legal.fragments[id]) { legal.fragments[id].classList.add('is-key'); keyed = true; }
+        });
+      });
+    });
+    if (keyed) lay.aside.appendChild(el('p', 'nrm-legend', 'Подчёркнуты фрагменты, которые служат доказательством в эталоне.'));
+    var box = lay.main;
     box.appendChild(stages(task, task.parts.length - 1, true));
     task.parts.forEach(function (part) {
       var d = details && details[part.id];
@@ -269,7 +285,7 @@
       box.appendChild(block);
     });
     container.textContent = '';
-    container.appendChild(box);
+    container.appendChild(outer);
   }
 
   function feedbackSummary(container, task, result) {

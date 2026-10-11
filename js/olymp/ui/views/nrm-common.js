@@ -88,6 +88,104 @@
     return d;
   }
 
+  /** Все блоки нормативного текста задания (у составного — и тексты частей). */
+  function taskLegal(task) {
+    var list = (task.legal || []).slice();
+    (task.parts || []).forEach(function (p) { (p.legal || []).forEach(function (b) { list.push(b); }); });
+    return list;
+  }
+
+  /** Эпизод строки: печатается в карточке над вопросом, чтобы ситуация была рядом с ответом. */
+  function rowContext(row) {
+    if (!row.context) return null;
+    var box = el('div', 'nrm-row__context');
+    (Array.isArray(row.context) ? row.context : [row.context]).forEach(function (p) { box.appendChild(el('p', null, p)); });
+    return box;
+  }
+
+  /** Определения, заданные в условии (раскрыты по умолчанию). */
+  function definitionsBlock(task) {
+    if (!task.definitions || !task.definitions.length) return null;
+    var d = el('details', 'nrm-defs');
+    d.open = true;
+    d.appendChild(el('summary', null, task.definitionsTitle || 'Определения для этого задания'));
+    var dl = el('dl', 'nrm-defs__list');
+    task.definitions.forEach(function (x) {
+      dl.appendChild(el('dt', null, x.term));
+      dl.appendChild(el('dd', null, x.text));
+    });
+    d.appendChild(dl);
+    return d;
+  }
+
+  /** Блок «Ситуация» (список абзацев) или null. */
+  function situationBlock(paragraphs) {
+    if (!paragraphs || !paragraphs.length) return null;
+    var s = el('section', 'nrm-block nrm-context');
+    s.appendChild(el('h3', 'nrm-block__title', 'Ситуация'));
+    paragraphs.forEach(function (p) { s.appendChild(el('p', 'nrm-context__p', p)); });
+    return s;
+  }
+
+  /**
+   * Раскладка задания. task.layout === 'split' задаётся только там, где общая ситуация и тексты
+   * норм нужны при ответе на многие вопросы. На широком экране они закреплены в левой колонке
+   * (со своей прокруткой), вопросы — справа. На узком экране всё идёт по порядку, а кнопка
+   * «Ситуация и нормы» в нижней панели открывает ту же колонку в диалоге поверх вопросов.
+   * Без layout — обычный порядок сверху вниз. Возвращает { aside, main, split }.
+   */
+  function layout(task, box) {
+    if (task.layout !== 'split') return { aside: box, main: box, split: false };
+    box.classList.add('nrm-split');
+    var aside = el('div', 'nrm-split__aside');
+    // Колонка прокручивается отдельно — с клавиатуры до неё тоже можно добраться.
+    aside.tabIndex = 0;
+    aside.setAttribute('role', 'region');
+    aside.setAttribute('aria-label', 'Ситуация и тексты норм');
+    var main = el('div', 'nrm-split__main');
+    box.appendChild(aside);
+    box.appendChild(main);
+    return { aside: aside, main: main, split: true };
+  }
+
+  /** Кнопка «Ситуация и нормы»: диалог с копией левой колонки (для узкого экрана). */
+  function contextButton(aside) {
+    var btn = el('button', 'btn btn--ghost btn--sm nrm-ctxbtn', 'Ситуация и нормы');
+    btn.type = 'button';
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.addEventListener('click', function () {
+      var dlg = el('dialog', 'nrm-ctxdlg');
+      dlg.setAttribute('aria-label', 'Ситуация и нормы');
+      var bar = el('div', 'nrm-ctxdlg__bar');
+      bar.appendChild(el('strong', null, 'Ситуация и нормы'));
+      var close = el('button', 'btn btn--ghost btn--sm', 'Закрыть');
+      close.type = 'button';
+      close.addEventListener('click', function () { dlg.close(); });
+      bar.appendChild(close);
+      dlg.appendChild(bar);
+      var body = el('div', 'nrm-ctxdlg__body');
+      var copy = aside.cloneNode(true);
+      copy.className = 'nrm-ctxdlg__content';
+      copy.removeAttribute('tabindex');
+      copy.removeAttribute('role');
+      copy.removeAttribute('aria-label');
+      copy.querySelectorAll('[id]').forEach(function (n) { n.removeAttribute('id'); });
+      copy.querySelectorAll('[tabindex]').forEach(function (n) { n.removeAttribute('tabindex'); });
+      copy.querySelectorAll('[role="button"]').forEach(function (n) { n.removeAttribute('role'); n.removeAttribute('aria-pressed'); });
+      body.appendChild(copy);
+      dlg.appendChild(body);
+      dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+      dlg.addEventListener('close', function () {
+        dlg.remove();
+        btn.focus({ preventScroll: true });
+      });
+      document.body.appendChild(dlg);
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+      close.focus({ preventScroll: true });
+    });
+    return btn;
+  }
+
   function statusBadge(status) {
     var s = STATUS[status] || STATUS.empty;
     return el('span', 'nrm-st nrm-st--' + s.cls, s.text);
@@ -122,7 +220,8 @@
       var box = el('div', 'nrm-legal' + (b.role === 'reference' ? ' nrm-legal--ref' : ''));
       var head = el('div', 'nrm-legal__ref');
       head.appendChild(el('span', null, b.act + ', ' + b.ref));
-      head.appendChild(el('span', 'nrm-legal__edition' + (b.verified ? '' : ' is-unverified'),
+      if (b.fictional) head.appendChild(el('span', 'nrm-legal__edition', 'учебный документ из условия задачи'));
+      else head.appendChild(el('span', 'nrm-legal__edition' + (b.verified ? '' : ' is-unverified'),
         b.verified ? (b.edition + ' · проверено ' + b.checked) : 'текст не сверен с официальным источником'));
       box.appendChild(head);
       var text = el('p', 'nrm-legal__text');
@@ -162,7 +261,7 @@
   }
 
   function fragmentText(task, id) {
-    var item = R.fragmentIndex(task.legal)[id];
+    var item = R.fragmentIndex(taskLegal(task))[id];
     return item ? item.fragment.text : id;
   }
 
@@ -276,6 +375,8 @@
   function rowReview(task, row, answer, detail) {
     var card = el('div', 'nrm-row nrm-rv');
     card.id = anchorId(task, row.id);
+    var ctxNode = rowContext(row);
+    if (ctxNode) card.appendChild(ctxNode);
     var head = el('div', 'nrm-row__head');
     head.appendChild(el('span', 'nrm-row__label', row.label));
     var max = 1 + (row.evidence ? 1 : 0);
@@ -393,7 +494,7 @@
    * Индикатор заполнения с переходом к первому незаполненному элементу.
    * Возвращает { node, update(filled, total, firstEmptyId) }.
    */
-  function fillBar(task) {
+  function fillBar(task, opts) {
     var bar = el('div', 'nrm-fillbar');
     var text = el('span', 'nrm-fillbar__text');
     text.setAttribute('aria-live', 'polite');
@@ -411,6 +512,7 @@
       if (focusable) focusable.focus({ preventScroll: true });
     });
     bar.appendChild(text);
+    if (opts && opts.aside) bar.appendChild(contextButton(opts.aside));
     bar.appendChild(jump);
     return {
       node: bar,
@@ -424,16 +526,28 @@
   }
 
   /**
-   * Редактор строки выбора без доказательства (карта элементов, характеристика,
-   * систематизация, утверждения, слоты конструктора). answers — общий изменяемый
-   * объект ответов строк; onChanged() — после любого изменения.
+   * Редактор строки выбора (карта элементов, характеристика, систематизация, утверждения,
+   * слоты конструктора, части составного задания). answers — общий изменяемый объект ответов
+   * строк; onChanged() — после любого изменения.
+   * Доказательство (row.evidence) — если переданы opts.legal (блоки, из которых выбираются
+   * фрагменты): кнопка «Отметить в тексте» раскрывает под строкой текст норм. opts.group —
+   * общий объект редакторов одной части, чтобы панель доказательства была открыта только одна.
    * Возвращает { card, paint() }.
    */
-  function rowEditor(task, row, answers, onChanged) {
+  function rowEditor(task, row, answers, onChanged, opts) {
+    var options = opts || {};
     var card = el('div', 'nrm-row');
     card.id = anchorId(task, row.id);
+    var ctxNode = rowContext(row);
+    if (ctxNode) card.appendChild(ctxNode);
     var head = el('div', 'nrm-row__head');
     head.appendChild(el('span', 'nrm-row__label', row.label));
+    if (row.evidence) {
+      var badge = el('span', 'nrm-row__badge', '¶');
+      badge.title = 'Нужно доказательство из текста';
+      badge.setAttribute('aria-label', 'Нужно доказательство из текста');
+      head.appendChild(badge);
+    }
     card.appendChild(head);
     if (row.note) card.appendChild(el('p', 'nrm-row__note', row.note));
     var limit = null;
@@ -471,18 +585,90 @@
       follow.wrap.appendChild(follow.group.node);
       card.appendChild(follow.wrap);
     }
-    return {
-      card: card,
-      paint: function () {
-        var a = answers[row.id];
-        card.classList.toggle('is-filled', R.rowIsComplete(row, a));
-        choice.paint(row.multi ? (a.m || []) : a.c);
-        if (follow) {
-          follow.wrap.hidden = !R.needsFollowUp(row, a);
-          follow.group.paint(a.f);
+
+    var group = options.group || { open: null };
+    var blocks = options.legal || [];
+    var ev = null;
+    var api = { card: card };
+    if (row.evidence && blocks.length) {
+      ev = { wrap: el('div', 'nrm-ev'), btn: el('button', 'btn btn--ghost btn--sm nrm-ev__btn'), list: el('div', 'nrm-ev__list'), panel: null };
+      ev.btn.type = 'button';
+      ev.btn.setAttribute('aria-expanded', 'false');
+      ev.btn.addEventListener('click', toggleEvidence);
+      ev.wrap.appendChild(ev.btn);
+      ev.wrap.appendChild(ev.list);
+      card.appendChild(ev.wrap);
+    }
+    var evMax = row.evidence ? (row.evidence.max || R.DEFAULT_EVIDENCE_MAX) : 0;
+
+    function toggleEvidence() {
+      var wasOpen = group.open === api;
+      if (group.open) group.open.closeEvidence();
+      if (wasOpen) return;
+      var panel = el('div', 'nrm-ev__panel');
+      panel.appendChild(el('p', 'nrm-ev__hint', 'Нажмите фрагменты, на которых основан вывод (не больше ' + evMax + '). Повторное нажатие снимает отметку.'));
+      var legal = renderLegal({ id: task.id, legal: blocks }, { blocks: blocks, onFragment: toggleFragment });
+      panel.appendChild(legal.node);
+      var status = el('p', 'nrm-ev__status');
+      status.setAttribute('aria-live', 'polite');
+      panel.appendChild(status);
+      var done = el('button', 'btn btn--primary btn--sm', 'Готово');
+      done.type = 'button';
+      done.addEventListener('click', function () {
+        api.closeEvidence();
+        ev.btn.focus({ preventScroll: true });
+      });
+      panel.appendChild(done);
+      ev.wrap.appendChild(panel);
+      ev.panel = { node: panel, fragments: legal.fragments, status: status };
+      group.open = api;
+      api.paint();
+    }
+
+    function toggleFragment(id) {
+      var a = answers[row.id];
+      if (a.e.indexOf(id) !== -1) a.e = a.e.filter(function (x) { return x !== id; });
+      else if (a.e.length < evMax) a.e = a.e.concat(id);
+      else {
+        if (ev.panel) ev.panel.status.textContent = 'Можно отметить не больше ' + evMax + ' фрагментов. Снимите лишний.';
+        return;
+      }
+      onChanged();
+    }
+
+    api.closeEvidence = function () {
+      if (ev && ev.panel) ev.panel.node.remove();
+      if (ev) ev.panel = null;
+      if (group.open === api) group.open = null;
+      api.paint();
+    };
+
+    api.paint = function () {
+      var a = answers[row.id];
+      card.classList.toggle('is-filled', R.rowIsComplete(row, a));
+      choice.paint(row.multi ? (a.m || []) : a.c);
+      if (follow) {
+        follow.wrap.hidden = !R.needsFollowUp(row, a);
+        follow.group.paint(a.f);
+      }
+      if (ev) {
+        var open = group.open === api;
+        card.classList.toggle('is-active', open);
+        ev.btn.textContent = open ? 'Свернуть текст' : (a.e.length ? 'Изменить доказательство (' + a.e.length + ' из ' + evMax + ')' : 'Отметить в тексте');
+        ev.btn.setAttribute('aria-expanded', String(open));
+        ev.list.textContent = '';
+        a.e.forEach(function (id) { ev.list.appendChild(el('span', 'nrm-ev__tag', quote(fragmentText(task, id)))); });
+        if (ev.panel) {
+          Object.keys(ev.panel.fragments).forEach(function (id) {
+            var on = a.e.indexOf(id) !== -1;
+            ev.panel.fragments[id].classList.toggle('is-ev', on);
+            ev.panel.fragments[id].setAttribute('aria-pressed', String(on));
+          });
+          ev.panel.status.textContent = 'Отмечено: ' + a.e.length + ' из ' + evMax + '.';
         }
       }
     };
+    return api;
   }
 
   /**
@@ -573,6 +759,12 @@
     answerLine: answerLine,
     renderLegal: renderLegal,
     fragmentText: fragmentText,
+    taskLegal: taskLegal,
+    rowContext: rowContext,
+    definitionsBlock: definitionsBlock,
+    situationBlock: situationBlock,
+    layout: layout,
+    contextButton: contextButton,
     chipGroup: chipGroup,
     displayOrder: displayOrder,
     keyText: keyText,

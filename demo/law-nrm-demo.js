@@ -94,7 +94,7 @@ OLY.addTasks([
     discipline: 'LAW',
     section: 'theory',
     topic: 'LAW-NRM',
-    block: 'regulators',
+    block: 'concept',
     order: 7,
     level: 1,
     demo: true,

@@ -3,7 +3,8 @@
  * Чистые функции без DOM. Подключается после nrm-rows.js, short-answer.js и argument-check.js.
  *
  * Одна ситуация — несколько взаимосвязанных частей разных видов:
- *   • choice — строки выбора (как в классификационной карте, без доказательства);
+ *   • choice — строки выбора (как в классификационной карте; доказательство — фрагмент
+ *     из текстов, видимых к моменту открытия части);
  *   • short — краткие ответы (статья, число, термин);
  *   • arguments — оценка доводов (правильность и связь с выводом).
  *
@@ -56,13 +57,15 @@
 
   var PART = {
     choice: {
+      // fragments — только фрагменты, видимые к моменту открытия этой части: доказательство
+      // нельзя искать в текстах, которые появятся позже.
       validate: function (part, fragments, ids) {
         var errors = [];
         if (!Array.isArray(part.rows) || !part.rows.length) return ['часть ' + part.id + ': нет rows'];
         part.rows.forEach(function (row) {
           if (row && ids[row.id]) errors.push('повторяющийся id ' + row.id);
           if (row) ids[row.id] = true;
-          errors = errors.concat(R.validateRow(row, fragments, { allowEvidence: false }));
+          errors = errors.concat(R.validateRow(row, fragments, { allowEvidence: true }));
         });
         return errors;
       },
@@ -195,11 +198,13 @@
       if (p.intro !== undefined && !R.isText(p.intro)) errors.push('часть ' + p.id + ': intro — строка');
     });
     if (errors.length) return errors;
+    errors = errors.concat(R.validateContext(task));
     var legal = allLegal(task);
     if (legal.length) errors = errors.concat(R.validateLegal(legal, { required: false, requireMain: false }));
-    var fragments = R.fragmentIndex(legal);
     var ids = {};
-    task.parts.forEach(function (p) { errors = errors.concat(handler(p).validate(p, fragments, ids)); });
+    task.parts.forEach(function (p, i) {
+      errors = errors.concat(handler(p).validate(p, R.fragmentIndex(visibleLegal(task, i)), ids));
+    });
     if (errors.length === 0) errors = errors.concat(R.validateScoringTotal(task, maxPoints(task)));
     return errors;
   }

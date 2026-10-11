@@ -75,10 +75,10 @@ OLY.defineSubject({
           // заданий трека PR, ученик её не видит; демонстрационные задания —
           // только на странице olympiad-demo.html.
           id: 'LAW-NRM',
-          title: 'Социальные нормы и норма права',
+          title: 'Норма права: понятие, признаки, классификация и структура',
           section: 'theory',
           blocks: [
-            { id: 'regulators', title: 'Социальные регуляторы' },
+            { id: 'concept', title: 'Понятие нормы права' },
             { id: 'features', title: 'Признаки нормы права' },
             { id: 'classification', title: 'Классификация норм' },
             { id: 'structure', title: 'Структура нормы' },

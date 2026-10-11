@@ -446,3 +446,56 @@
   .nrm-dock .nrm-fillbar { padding: 0 4px; font-size: 13px; min-height: 0; }
   .nrm-dock .nrm-fillbar .btn { padding: 4px 10px; min-height: 32px; }
 }
+
+/* ----- Ситуация рядом с вопросами ----- */
+/* Эпизод строки — в её карточке, над вопросом. */
+.nrm-row__context {
+  margin: 0 0 8px; padding: 8px 10px;
+  border-left: 3px solid var(--text-muted); border-radius: var(--radius-sm);
+  background: var(--surface-2); font-size: 15px; line-height: 1.55;
+}
+.nrm-row__context p { margin: 0; }
+.nrm-row__context p + p { margin-top: 6px; }
+
+/* Определения, в рамках которых отвечает ученик. */
+.nrm-defs { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.nrm-defs summary { cursor: pointer; font-weight: 700; color: var(--primary); }
+.nrm-defs__list { margin: 8px 0 0; display: grid; gap: 6px; }
+.nrm-defs__list dt { font-weight: 700; }
+.nrm-defs__list dd { margin: 0 0 4px; line-height: 1.5; }
+
+/* Две колонки (task.layout: 'split') — только на широком экране. */
+.nrm-split__aside, .nrm-split__main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.nrm-ctxbtn { display: none; }
+.nrm-split .nrm-ctxbtn { display: inline-flex; }
+@media (min-width: 1100px) {
+  .container:has(.nrm-split) { max-width: 1240px; }
+  .nrm-grid.nrm-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; gap: 20px; }
+  .nrm-split > .nrm-demo-note { grid-column: 1 / -1; }
+  .nrm-split__aside {
+    /* Ниже закреплённой шапки сайта (.topbar, ≈66 px). */
+    position: sticky; top: 80px; max-height: calc(100vh - 92px); overflow-y: auto;
+    padding-right: 6px; overscroll-behavior: contain;
+  }
+  .nrm-split .nrm-ctxbtn { display: none; }
+}
+
+/* Диалог «Ситуация и нормы» (узкий экран). */
+.nrm-ctxdlg {
+  width: min(680px, calc(100vw - 16px)); max-height: 80vh; padding: 0;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg, var(--surface)); color: var(--text);
+}
+.nrm-ctxdlg::backdrop { background: rgba(10, 12, 30, 0.45); }
+.nrm-ctxdlg__bar {
+  position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.nrm-ctxdlg__body { padding: 12px; }
+.nrm-ctxdlg__content { display: flex; flex-direction: column; gap: 12px; }
+.nrm-split__aside:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* В нижней панели три элемента: на узком экране кнопки переносятся на вторую строку. */
+.nrm-split .nrm-fillbar { flex-wrap: wrap; }
+@media (max-width: 480px) {
+  .nrm-split .nrm-fillbar__text { flex: 1 0 100%; }
+  .nrm-split .nrm-fillbar .btn { flex: 1 1 auto; }
+}

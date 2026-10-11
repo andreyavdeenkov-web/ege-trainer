@@ -139,6 +139,34 @@
     return errors;
   }
 
+  /* ---------- Ситуация, определения, раскладка ---------- */
+
+  /**
+   * Необязательные поля условия: situation — абзацы общей ситуации; definitions — определения,
+   * в рамках которых отвечает ученик ([{ term, text }]); layout — 'split' (ситуация и тексты норм
+   * в закреплённой колонке); row.context — эпизод строки (строка или список абзацев).
+   */
+  function validateContext(task) {
+    var errors = [];
+    if (task.situation !== undefined && (!Array.isArray(task.situation) || !task.situation.length || !task.situation.every(isText))) {
+      errors.push('situation — непустой список абзацев');
+    }
+    if (task.definitions !== undefined) {
+      if (!Array.isArray(task.definitions) || !task.definitions.length ||
+        !task.definitions.every(function (d) { return d && isText(d.term) && isText(d.text); })) {
+        errors.push('definitions — список { term, text }');
+      }
+    }
+    if (task.layout !== undefined && task.layout !== 'split') errors.push("layout — только 'split'");
+    return errors;
+  }
+
+  function validateRowContext(row) {
+    if (row.context === undefined) return [];
+    var ok = isText(row.context) || (Array.isArray(row.context) && row.context.length && row.context.every(isText));
+    return ok ? [] : ['строка ' + row.id + ': context — строка или список абзацев'];
+  }
+
   /* ---------- Строки выбора ---------- */
 
   /** Все строки по порядку разделов. */
@@ -187,6 +215,7 @@
       errors.push(name + ': component должно быть K или R');
     }
     if (!isText(row.explanation)) errors.push(name + ': нет explanation');
+    errors = errors.concat(validateRowContext(row));
     errors = errors.concat(validateWrong(name, row.options, row.key, row.wrong, true));
 
     if (row.multi !== undefined) {
@@ -448,6 +477,7 @@
   OLY.nrmRows = {
     COMPONENTS: COMPONENTS,
     DEFAULT_EVIDENCE_MAX: DEFAULT_EVIDENCE_MAX,
+    validateContext: validateContext,
     isText: isText,
     isIndex: isIndex,
     own: own,

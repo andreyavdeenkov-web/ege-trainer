@@ -29,6 +29,7 @@ function collect() {
   for (const t of OLY.tasks.filter((x) => x.topic === 'LAW-NRM' && x.olympiad === 'PR')) {
     const blocks = t.type === 'compound' ? OLY.compound.allLegal(t) : (t.legal || []);
     for (const b of blocks) {
+      if (b.fictional) continue;   // учебный документ из условия (например, условный указ) — не сверяется
       const k = keyOf(b);
       if (!map.has(k)) map.set(k, { act: b.act, ref: b.ref, text: textOf(b), tasks: [] });
       map.get(k).tasks.push(t.id);
@@ -50,6 +51,10 @@ if (require.main === module) {
       journal.entries[k] = { status: 'pending', edition: '', source: '', checked: '', officialText: '', comment: '' };
     }
     journal.entries[k].tasks = it.tasks;
+  }
+  // Положения, которых больше нет в банке: несверенные записи удаляются, сверенные сохраняются.
+  for (const k of Object.keys(journal.entries)) {
+    if (!items.has(k) && journal.entries[k].status === 'pending') delete journal.entries[k];
   }
   fs.writeFileSync(JOURNAL, JSON.stringify(journal, null, 2) + '\n');
   const lines = [

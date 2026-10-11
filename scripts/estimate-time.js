@@ -10,7 +10,8 @@
  *   решения: выбор в строке — 20 с; уточнение «спорно» — +15 с; доказательство — +35 с;
  *   метка фрагмента — 6 с; шаг рассуждения — 15 с, ошибочный шаг — ещё 40 с
  *   (происхождение и тип); довод — 2 решения по 20 с; краткий ответ — 45 с; слот — 20 с;
- *   фиксация части составного задания — 15 с.
+ *   фиксация части составного задания — 15 с. Эпизод в карточке строки и определения
+ *   из условия читаются со скоростью чтения условия.
  * Итог округляется до 0,5 мин.
  */
 const { loadBank } = require('../tests/helpers/olymp.js');
@@ -22,8 +23,13 @@ const legalWords = (legal) => (legal || []).reduce((n, b) => n + b.fragments.red
 
 function rowsCost(rows) {
   let s = 0;
+  const seen = new Set();   // одинаковый список вариантов (общая шкала раздела) читается один раз
   for (const r of rows) {
-    s += (words(r.label) + r.options.reduce((n, o) => n + words(o), 0)) / SCAN * 60 + 20;
+    const list = r.options.join('|');
+    const optionWords = seen.has(list) ? 0 : r.options.reduce((n, o) => n + words(o), 0);
+    seen.add(list);
+    s += (words(r.label) + optionWords) / SCAN * 60 + 20;
+    if (r.context) s += words([].concat(r.context).join(' ')) / READ * 60;   // эпизод в карточке строки
     if (r.followUp) s += 15;
     if (r.evidence) s += 35;
   }
@@ -33,7 +39,8 @@ const argsCost = (list) => list.reduce((s, a) => s + words(a.text) / READ * 60 +
 const shortCost = (items) => items.reduce((s, it) => s + words(it.label) / SCAN * 60 + 45, 0);
 
 function estimate(task) {
-  let read = words(task.question) + legalWords(task.legal) + words((task.situation || []).join(' '));
+  let read = words(task.question) + legalWords(task.legal) + words((task.situation || []).join(' '))
+    + (task.definitions || []).reduce((n, d) => n + words(d.term) + words(d.text), 0);
   let sec = 0;
   const rowsOfSections = (sections) => (sections || []).flatMap((x) => x.rows);
   switch (task.type) {

@@ -69,6 +69,7 @@
 
   function validateTask(task) {
     var errors = R.validateLegal(task.legal, { required: true, requireMain: true });
+    errors = errors.concat(R.validateContext(task));
     errors = errors.concat(R.validateSections(task.sections, fragmentIndex(task), { allowEvidence: true }));
     if (errors.length === 0) errors = errors.concat(R.validateScoringTotal(task, maxPoints(task)));
     return errors;

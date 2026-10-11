@@ -12,28 +12,6 @@
         "PR-LAW-NRM-002"
       ]
     },
-    "ТК РФ | ст. 189, ч. 4": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-002"
-      ]
-    },
-    "Федеральный закон «Об образовании в Российской Федерации» | ст. 30, чч. 1–2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-002"
-      ]
-    },
     "ГК РФ | ст. 210": {
       "status": "pending",
       "edition": "",
@@ -186,6 +164,94 @@
       "comment": "",
       "tasks": [
         "PR-LAW-NRM-011"
+      ]
+    },
+    "Федеральный закон «О защите населения и территорий от чрезвычайных ситуаций природного и техногенного характера» | ст. 11, п. 1, пп. «у»": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-001"
+      ]
+    },
+    "КоАП РФ | ст. 20.6.1, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-001"
+      ]
+    },
+    "Конституция РФ | ст. 15, ч. 3": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-001"
+      ]
+    },
+    "ТК РФ | ст. 21, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "ТК РФ | ст. 12, ч. 4": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "ТК РФ | ст. 12, ч. 5": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "ТК РФ | ст. 108, чч. 1–2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "ТК РФ | ст. 60": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
       ]
     }
   }

@@ -131,18 +131,74 @@ test('IV-1 и IV-2: размечаются только выраженные ф�
   assert.equal(g.details.components.T.earned, 4);
 });
 
-test('I-3: системный анализ ст. 8 и ст. 189 ТК; I-1: решающие признаки — множественный выбор', () => {
+test('Тема классификации социальных норм исключена из обязательной части', () => {
   const OLY = work();
-  const i3 = OLY.getTask('PR-LAW-NRM-002');
-  assert.ok(i3.sections.some((s) => s.id === 'system'));
-  const i1 = OLY.getTask('PR-LAW-NRM-001');
-  const r = OLY.types.get('compound').getCorrect(i1);
-  r.parts.A.f3 = { c: null, f: [], e: [], m: [0, 1] };   // противоречащий признак «кем установлена» для обычая
-  r.parts.A.f1 = { c: null, f: [], e: [], m: [2] };       // один решающий признак — засчитывается
-  const g = OLY.grade.gradeTask(i1, r);
-  assert.equal(g.details.parts.A.rows.f3.choice, 'wrong');
-  assert.equal(g.details.parts.A.rows.f1.choice, 'ok');
-  assert.equal(g.points, 14);
+  const re = /морал|корпоратив|этикет|религиоз|обыча|традици/i;
+  for (const task of nrm(OLY)) assert.doesNotMatch(JSON.stringify(task), re, task.id);
+  const social = fs.readFileSync(path.join(root, 'data/olympiads/subjects/social.js'), 'utf8');
+  assert.match(social, /title: 'Норма права: понятие, признаки, классификация и структура'/);
+  assert.doesNotMatch(social, /id: 'regulators'/);
+});
+
+test('I-3: природа ЛНА, теоретический компонент, пределы действия; без ч. 4 ст. 8 ТК (она — в VI-1)', () => {
+  const OLY = work();
+  const t = OLY.getTask('PR-LAW-NRM-002');
+  assert.deepEqual(t.sections.map((s) => s.id), ['nature', 'limits']);
+  assert.ok(!t.legal.some((b) => /ст\. 8, ч\. 4/.test(b.ref)));
+  assert.doesNotMatch(JSON.stringify(t), /ч\. 4 ст\. 8|ст\. 8 ч\. 4/);
+  const row = (id) => OLY.nrmRows.rowsOf(t.sections).find((r) => r.id === id);
+  // Каждый эпизод — в карточке своей строки.
+  ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].forEach((id) => assert.ok(row(id).context, id));
+  assert.match(JSON.stringify(row('p5').context), /Гипотетическое условие/);
+  assert.match(JSON.stringify(row('p3').context), /трудовую функцию/);
+  assert.match(JSON.stringify(row('p6').context), /другое время перерыва не установлено/);
+  // П3 и П4 доказываются одним предложением ст. 12 ч. 4 — в разные стороны.
+  assert.deepEqual(row('p3').evidence.key, ['e9']);
+  assert.deepEqual(row('p4').evidence.key, ['e9']);
+  const type = OLY.types.get(t.type);
+  const r = type.getCorrect(t);
+  r.p4 = { c: 0, f: [], e: ['e8'], m: undefined };
+  delete r.p4.m;
+  const g = OLY.grade.gradeTask(t, r);
+  assert.equal(g.details.rows.p4.choice, 'wrong');
+  assert.equal(g.details.rows.p4.evidence, 'wrong');
+  assert.equal(g.points, t.scoring.maxPoints - 2);
+  assert.equal(t.layout, 'split');
+});
+
+test('I-1: составное задание; доказательство — только из текстов, открытых к этой части', () => {
+  const OLY = work();
+  const t = OLY.getTask('PR-LAW-NRM-001');
+  const type = OLY.types.get('compound');
+  assert.deepEqual(type.validateTask(t), []);
+  // Конституция появляется только в части Б — в части А на неё ссылаться нельзя.
+  const bad = JSON.parse(JSON.stringify(t));
+  bad.parts[0].rows[0].evidence.key = ['c2'];
+  assert.ok(type.validateTask(bad).some((e) => /неизвестный фрагмент c2/.test(e)));
+  // Учебный указ условия — не нормативный текст для сверки.
+  assert.equal(t.legal.find((b) => b.id === 'ukaz-3').fictional, true);
+  // Б2: правило о законах (первые предложения ч. 3 ст. 15) не доказывает вывод об указе.
+  const r = type.getCorrect(t);
+  r.parts.B.b2.e = ['c1'];
+  const g = OLY.grade.gradeTask(t, r);
+  assert.equal(g.details.parts.B.rows.b2.evidence, 'wrong');
+  assert.equal(g.points, t.scoring.maxPoints - 1);
+  // Части Б не видно, пока часть А не зафиксирована.
+  assert.deepEqual(OLY.compound.visibleLegal(t, 0).map((b) => b.id), ['ukaz-3', 'fz68-11', 'koap-20-6-1']);
+  assert.match(JSON.stringify(t.parts[1].rows.find((x) => x.id === 'b4').context), /Гипотетическое условие/);
+});
+
+test('Множественный выбор строки: засчитывается только выбор из решающих вариантов', () => {
+  const OLY = work();
+  const R = OLY.nrmRows;
+  const row = { id: 'm', label: 'Признак', options: ['а', 'б', 'в', 'г', 'д'], key: [0, 2], multi: { max: 2, contra: [1] }, explanation: 'x',
+    wrong: { 1: 'x', 3: 'x', 4: 'x' } };
+  assert.deepEqual(R.validateRow(row, {}, {}), []);
+  const st = (m) => R.scoreChoice(row, { c: null, f: [], e: [], m }).status;
+  assert.equal(st([0]), 'ok');
+  assert.equal(st([0, 2]), 'ok');
+  assert.equal(st([0, 4]), 'wrong');
+  assert.equal(st([0, 1]), 'wrong');
 });
 
 test('Журнал сверки: есть запись по каждому положению; verified: true — только при подтверждённой записи и совпадении текста', () => {
@@ -157,6 +213,7 @@ test('Журнал сверки: есть запись по каждому по�
   for (const task of nrm(OLY)) {
     const blocks = task.type === 'compound' ? OLY.compound.allLegal(task) : (task.legal || []);
     for (const b of blocks) {
+      if (b.fictional) { assert.equal(b.verified, false, b.id); continue; }
       const e = journal.entries[keyOf(b)];
       if (e.status === 'confirmed') {
         assert.ok(e.edition && e.source && e.checked && e.officialText, keyOf(b) + ': подтверждённая запись без редакции, источника, даты или текста');
@@ -169,24 +226,5 @@ test('Журнал сверки: есть запись по каждому по�
     if (task.verification.status === 'confirmed') {
       assert.ok(blocks.every((b) => b.verified === true), task.id + ': статус «подтверждено», но не все положения сверены');
     }
-  }
-});
-
-test('I-1: решающие признаки — засчитывается только выбор из решающих; лишний признак «на всякий случай» — ошибка', () => {
-  const OLY = work();
-  const t = OLY.getTask('PR-LAW-NRM-001');
-  const base = OLY.types.get('compound').getCorrect(t);
-  const grade = (m) => {
-    const r = JSON.parse(JSON.stringify(base));
-    r.parts.A.f1 = { c: null, f: [], e: [], m };
-    return OLY.grade.gradeTask(t, r).details.parts.A.rows.f1.choice;
-  };
-  assert.equal(grade([0]), 'ok');
-  assert.equal(grade([0, 2]), 'ok');
-  assert.equal(grade([0, 4]), 'wrong', 'решающий + нейтральный');
-  assert.equal(grade([0, 1]), 'wrong', 'решающий + противоречащий');
-  // Вероятность угадать наугад одной отметкой — не выше 3 из 5, двумя — не выше 3 из 10.
-  for (const row of t.parts[0].rows.filter((r) => r.multi)) {
-    assert.ok(row.key.length <= 3, row.id);
   }
 });
