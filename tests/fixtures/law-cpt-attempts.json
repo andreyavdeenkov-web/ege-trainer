@@ -1,0 +1,796 @@
+{
+  "inProgress": {
+    "schemaVersion": 1,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "kind": "olympiad",
+    "mode": "practice",
+    "olympiad": "PR",
+    "subject": "social",
+    "settings": {
+      "discipline": "LAW",
+      "topic": "LAW-CPT",
+      "filters": {}
+    },
+    "startedAt": "2026-10-11T10:00:00.000Z",
+    "finishedAt": null,
+    "taskIds": [
+      "PR-LAW-CPT-001",
+      "PR-LAW-CPT-002",
+      "PR-LAW-CPT-003",
+      "PR-LAW-CPT-004",
+      "PR-LAW-CPT-005",
+      "PR-LAW-CPT-006",
+      "PR-LAW-CPT-007",
+      "PR-LAW-CPT-008",
+      "PR-LAW-CPT-009",
+      "PR-LAW-CPT-010",
+      "PR-LAW-CPT-011",
+      "PR-LAW-CPT-012",
+      "PR-LAW-CPT-013",
+      "PR-LAW-CPT-014",
+      "PR-LAW-CPT-015",
+      "PR-LAW-CPT-016",
+      "PR-LAW-CPT-017",
+      "PR-LAW-CPT-018",
+      "PR-LAW-CPT-019",
+      "PR-LAW-CPT-020",
+      "PR-LAW-CPT-021",
+      "PR-LAW-CPT-022",
+      "PR-LAW-CPT-023",
+      "PR-LAW-CPT-024"
+    ],
+    "responses": {
+      "PR-LAW-CPT-001": {
+        "value": 2,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-002": {
+        "value": 2,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-003": {
+        "value": 3,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-004": {
+        "value": [
+          2,
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-005": {
+        "value": 4,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-006": {
+        "value": 3,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      }
+    },
+    "results": {
+      "PR-LAW-CPT-001": {
+        "taskId": "PR-LAW-CPT-001",
+        "taskVersion": 1,
+        "response": 2,
+        "verdict": "correct",
+        "details": {
+          "selected": 2
+        },
+        "correct": 2,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-002": {
+        "taskId": "PR-LAW-CPT-002",
+        "taskVersion": 1,
+        "response": 2,
+        "verdict": "incorrect",
+        "details": {
+          "selected": 2
+        },
+        "correct": 1,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-003": {
+        "taskId": "PR-LAW-CPT-003",
+        "taskVersion": 1,
+        "response": 3,
+        "verdict": "correct",
+        "details": {
+          "selected": 3
+        },
+        "correct": 3,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-004": {
+        "taskId": "PR-LAW-CPT-004",
+        "taskVersion": 1,
+        "response": [
+          2,
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "verdict": "incorrect",
+        "details": {
+          "mistakes": 1,
+          "perItem": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "correct": [
+          1,
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-005": {
+        "taskId": "PR-LAW-CPT-005",
+        "taskVersion": 1,
+        "response": 4,
+        "verdict": "correct",
+        "details": {
+          "selected": 4
+        },
+        "correct": 4,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      }
+    }
+  },
+  "finished": {
+    "schemaVersion": 1,
+    "id": "00000000-0000-4000-8000-000000000002",
+    "kind": "olympiad",
+    "mode": "practice",
+    "olympiad": "PR",
+    "subject": "social",
+    "settings": {
+      "discipline": "LAW",
+      "topic": "LAW-CPT",
+      "filters": {}
+    },
+    "startedAt": "2026-10-11T10:00:00.000Z",
+    "finishedAt": "2026-10-11T10:00:00.000Z",
+    "taskIds": [
+      "PR-LAW-CPT-001",
+      "PR-LAW-CPT-002",
+      "PR-LAW-CPT-003",
+      "PR-LAW-CPT-004",
+      "PR-LAW-CPT-005",
+      "PR-LAW-CPT-006",
+      "PR-LAW-CPT-007",
+      "PR-LAW-CPT-008",
+      "PR-LAW-CPT-009",
+      "PR-LAW-CPT-010",
+      "PR-LAW-CPT-011",
+      "PR-LAW-CPT-012",
+      "PR-LAW-CPT-013",
+      "PR-LAW-CPT-014",
+      "PR-LAW-CPT-015",
+      "PR-LAW-CPT-016",
+      "PR-LAW-CPT-017",
+      "PR-LAW-CPT-018",
+      "PR-LAW-CPT-019",
+      "PR-LAW-CPT-020",
+      "PR-LAW-CPT-021",
+      "PR-LAW-CPT-022",
+      "PR-LAW-CPT-023",
+      "PR-LAW-CPT-024"
+    ],
+    "responses": {
+      "PR-LAW-CPT-001": {
+        "value": 1,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-002": {
+        "value": 1,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-003": {
+        "value": 3,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-004": {
+        "value": [
+          2,
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-005": {
+        "value": 4,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-006": {
+        "value": 3,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-007": {
+        "value": [
+          2,
+          2,
+          2,
+          1,
+          1,
+          2
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-008": {
+        "value": [
+          2,
+          3,
+          5
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-009": {
+        "value": 1,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-010": {
+        "value": 1,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-011": {
+        "value": 2,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-012": {
+        "value": [
+          1,
+          2,
+          1,
+          3,
+          2,
+          3
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-013": {
+        "value": [
+          2
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-014": {
+        "value": [
+          2,
+          1,
+          1,
+          2,
+          2,
+          1
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-015": {
+        "value": [
+          2,
+          5,
+          6
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-016": {
+        "value": 1,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-017": {
+        "value": [
+          2,
+          1,
+          1,
+          2,
+          1,
+          2,
+          1,
+          1
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-018": {
+        "value": [
+          1,
+          2,
+          4
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-019": {
+        "value": [
+          1
+        ],
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-020": {
+        "value": 2,
+        "updatedAt": "2026-10-11T10:00:00.000Z"
+      }
+    },
+    "results": {
+      "PR-LAW-CPT-001": {
+        "taskId": "PR-LAW-CPT-001",
+        "taskVersion": 1,
+        "response": 1,
+        "verdict": "incorrect",
+        "details": {
+          "selected": 1
+        },
+        "correct": 2,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-002": {
+        "taskId": "PR-LAW-CPT-002",
+        "taskVersion": 1,
+        "response": 1,
+        "verdict": "correct",
+        "details": {
+          "selected": 1
+        },
+        "correct": 1,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-003": {
+        "taskId": "PR-LAW-CPT-003",
+        "taskVersion": 1,
+        "response": 3,
+        "verdict": "correct",
+        "details": {
+          "selected": 3
+        },
+        "correct": 3,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-004": {
+        "taskId": "PR-LAW-CPT-004",
+        "taskVersion": 1,
+        "response": [
+          2,
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "verdict": "incorrect",
+        "details": {
+          "mistakes": 1,
+          "perItem": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "correct": [
+          1,
+          2,
+          2,
+          1,
+          2,
+          1
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-005": {
+        "taskId": "PR-LAW-CPT-005",
+        "taskVersion": 1,
+        "response": 4,
+        "verdict": "correct",
+        "details": {
+          "selected": 4
+        },
+        "correct": 4,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-006": {
+        "taskId": "PR-LAW-CPT-006",
+        "taskVersion": 1,
+        "response": 3,
+        "verdict": "correct",
+        "details": {
+          "selected": 3
+        },
+        "correct": 3,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-007": {
+        "taskId": "PR-LAW-CPT-007",
+        "taskVersion": 1,
+        "response": [
+          2,
+          2,
+          2,
+          1,
+          1,
+          2
+        ],
+        "verdict": "incorrect",
+        "details": {
+          "mistakes": 1,
+          "perItem": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "correct": [
+          1,
+          2,
+          2,
+          1,
+          1,
+          2
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-008": {
+        "taskId": "PR-LAW-CPT-008",
+        "taskVersion": 1,
+        "response": [
+          2,
+          3,
+          5
+        ],
+        "verdict": "correct",
+        "details": {
+          "mistakes": 0,
+          "missed": [],
+          "extra": []
+        },
+        "correct": [
+          2,
+          3,
+          5
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-009": {
+        "taskId": "PR-LAW-CPT-009",
+        "taskVersion": 1,
+        "response": 1,
+        "verdict": "correct",
+        "details": {
+          "selected": 1
+        },
+        "correct": 1,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-010": {
+        "taskId": "PR-LAW-CPT-010",
+        "taskVersion": 1,
+        "response": 1,
+        "verdict": "incorrect",
+        "details": {
+          "selected": 1
+        },
+        "correct": 4,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-011": {
+        "taskId": "PR-LAW-CPT-011",
+        "taskVersion": 1,
+        "response": 2,
+        "verdict": "correct",
+        "details": {
+          "selected": 2
+        },
+        "correct": 2,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-012": {
+        "taskId": "PR-LAW-CPT-012",
+        "taskVersion": 1,
+        "response": [
+          1,
+          2,
+          1,
+          3,
+          2,
+          3
+        ],
+        "verdict": "correct",
+        "details": {
+          "mistakes": 0,
+          "perItem": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "correct": [
+          1,
+          2,
+          1,
+          3,
+          2,
+          3
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-013": {
+        "taskId": "PR-LAW-CPT-013",
+        "taskVersion": 1,
+        "response": [
+          2
+        ],
+        "verdict": "incorrect",
+        "details": {
+          "mistakes": 2,
+          "missed": [
+            4,
+            5
+          ],
+          "extra": []
+        },
+        "correct": [
+          2,
+          4,
+          5
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-014": {
+        "taskId": "PR-LAW-CPT-014",
+        "taskVersion": 1,
+        "response": [
+          2,
+          1,
+          1,
+          2,
+          2,
+          1
+        ],
+        "verdict": "correct",
+        "details": {
+          "mistakes": 0,
+          "perItem": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "correct": [
+          2,
+          1,
+          1,
+          2,
+          2,
+          1
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-015": {
+        "taskId": "PR-LAW-CPT-015",
+        "taskVersion": 1,
+        "response": [
+          2,
+          5,
+          6
+        ],
+        "verdict": "correct",
+        "details": {
+          "mistakes": 0,
+          "missed": [],
+          "extra": []
+        },
+        "correct": [
+          2,
+          5,
+          6
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-016": {
+        "taskId": "PR-LAW-CPT-016",
+        "taskVersion": 1,
+        "response": 1,
+        "verdict": "incorrect",
+        "details": {
+          "selected": 1
+        },
+        "correct": 3,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-017": {
+        "taskId": "PR-LAW-CPT-017",
+        "taskVersion": 1,
+        "response": [
+          2,
+          1,
+          1,
+          2,
+          1,
+          2,
+          1,
+          1
+        ],
+        "verdict": "correct",
+        "details": {
+          "mistakes": 0,
+          "perItem": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        },
+        "correct": [
+          2,
+          1,
+          1,
+          2,
+          1,
+          2,
+          1,
+          1
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-018": {
+        "taskId": "PR-LAW-CPT-018",
+        "taskVersion": 1,
+        "response": [
+          1,
+          2,
+          4
+        ],
+        "verdict": "correct",
+        "details": {
+          "mistakes": 0,
+          "missed": [],
+          "extra": []
+        },
+        "correct": [
+          1,
+          2,
+          4
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-019": {
+        "taskId": "PR-LAW-CPT-019",
+        "taskVersion": 1,
+        "response": [
+          1
+        ],
+        "verdict": "incorrect",
+        "details": {
+          "mistakes": 2,
+          "missed": [
+            3,
+            4
+          ],
+          "extra": []
+        },
+        "correct": [
+          1,
+          3,
+          4
+        ],
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      },
+      "PR-LAW-CPT-020": {
+        "taskId": "PR-LAW-CPT-020",
+        "taskVersion": 1,
+        "response": 2,
+        "verdict": "correct",
+        "details": {
+          "selected": 2
+        },
+        "correct": 2,
+        "points": null,
+        "maxPoints": null,
+        "scored": false,
+        "checkedAt": "2026-10-11T10:00:00.000Z"
+      }
+    }
+  }
+}
