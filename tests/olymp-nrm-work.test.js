@@ -133,24 +133,47 @@ test('IV-1 и IV-2: размечаются только выраженные ф�
   assert.equal(g.details.components.T.earned, 4);
 });
 
-test('Блок А (LAW-NRA): 5 заданий по реестру, черновики, эталон даёт полный балл; отдельная тема — отдельная попытка', () => {
+const BLOCKS = [
+  { topic: 'LAW-NRA', file: 'work/law-nrm/block-a.js', count: 5 },
+  { topic: 'LAW-NRB', file: 'work/law-nrm/block-b.js', count: 5 },
+  { topic: 'LAW-NRC', file: 'work/law-nrm/block-c.js', count: 7 },
+  { topic: 'LAW-NRD', file: 'work/law-nrm/block-d.js', count: 3 }
+];
+
+test('Блоки А–Г: подключённые блоки полные по реестру, черновики, эталон даёт полный балл; у каждого блока своя тема', () => {
   const OLY = work();
-  const tasks = OLY.tasks.filter((t) => t.topic === 'LAW-NRA');
-  assert.equal(tasks.length, 5);
-  assert.deepEqual(tasks.map((t) => t.order), [1, 2, 3, 4, 5]);
-  for (const task of tasks) {
-    assert.equal(task.draft, true, task.id);
-    assert.equal(task.olympiad, 'PR', task.id);
-    const type = OLY.types.get(task.type);
-    assert.deepEqual(type.validateTask(task), [], task.id);
-    const g = OLY.grade.gradeTask(task, type.getCorrect(task));
-    assert.equal(g.verdict, 'correct', task.id);
-    assert.equal(g.points, task.scoring.maxPoints, task.id);
+  const scripts = pageScripts('olympiad-work.html');
+  const attached = BLOCKS.filter((bl) => scripts.includes(bl.file));
+  assert.ok(attached.length >= 2, 'подключены блоки А и Б');
+  for (const bl of attached) {
+    const tasks = OLY.tasks.filter((t) => t.topic === bl.topic);
+    assert.equal(tasks.length, bl.count, bl.topic);
+    assert.deepEqual(tasks.map((t) => t.order), Array.from({ length: bl.count }, (_, i) => i + 1), bl.topic);
+    for (const task of tasks) {
+      assert.equal(task.draft, true, task.id);
+      assert.equal(task.olympiad, 'PR', task.id);
+      const type = OLY.types.get(task.type);
+      assert.deepEqual(type.validateTask(task), [], task.id);
+      const g = OLY.grade.gradeTask(task, type.getCorrect(task));
+      assert.equal(g.verdict, 'correct', task.id);
+      assert.equal(g.points, task.scoring.maxPoints, task.id);
+    }
+    const topic = OLY.getTopic('social', bl.topic);
+    assert.ok(topic && topic.discipline === 'LAW' && topic.section === 'theory', bl.topic);
   }
-  const topic = OLY.getTopic('social', 'LAW-NRA');
-  assert.ok(topic && topic.discipline === 'LAW' && topic.section === 'theory');
   // Темы блоков не видны на основной странице: там нет их заданий.
   assert.equal(loadBank().tasks.filter((t) => /^LAW-NR/.test(t.topic)).length, 0);
+});
+
+test('Блок Б: «специальная» в двух основаниях; исключительная — только если норма сама устанавливает противоположное последствие', () => {
+  const OLY = work();
+  const row = (t, id) => (t.sections ? OLY.nrmRows.rowsOf(t.sections) : t.parts.flatMap((p) => p.rows || [])).find((r) => r.id === id);
+  const koap = OLY.getTask('PR-LAW-NRB-004');
+  assert.equal(row(koap, 'a2').options[row(koap, 'a2').key[0]], 'Специальная');   // по кругу лиц
+  assert.equal(row(koap, 'a3').options[row(koap, 'a3').key[0]], 'Специальная');   // по объёму: «может быть освобождено» — усмотрение
+  const gk = OLY.getTask('PR-LAW-NRB-005');
+  assert.equal(row(gk, 'a3').options[row(gk, 'a3').key[0]], 'Исключительная');    // «не подлежит возмещению» — сама норма
+  assert.match(koap.definitions.find((d) => /объёму/.test(d.term)).text, /сама устанавливает последствие, противоположное/);
 });
 
 test('Тема классификации социальных норм исключена из обязательной части', () => {

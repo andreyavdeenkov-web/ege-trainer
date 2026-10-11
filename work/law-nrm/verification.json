@@ -308,6 +308,72 @@
       "tasks": [
         "PR-LAW-NRA-004"
       ]
+    },
+    "СК РФ | ст. 80, п. 1 (первые два предложения)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-001"
+      ]
+    },
+    "ТК РФ | ст. 92, ч. 1 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-002"
+      ]
+    },
+    "Конституция РФ | ст. 57": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-003"
+      ]
+    },
+    "КоАП РФ | ст. 2.3, чч. 1–2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-004"
+      ]
+    },
+    "ГК РФ | ст. 1066": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-005"
+      ]
+    },
+    "ГК РФ | ст. 1064, п. 1, абз. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-005"
+      ]
     }
   }
 }
