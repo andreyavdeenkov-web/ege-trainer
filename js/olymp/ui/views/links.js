@@ -58,8 +58,9 @@
     var d = el('details', 'nrm-more nrm-rel-help');
     d.open = true;
     d.appendChild(el('summary', null, 'Виды связи (определения для этого задания)'));
+    if (task.relationsNote) d.appendChild(el('p', 'nrm-more__text nrm-rel-note', task.relationsNote));
     if (task.ordered) {
-      d.appendChild(el('p', 'nrm-more__text', 'Проверяйте виды связи по порядку и выбирайте первый подходящий — так ответ однозначен, даже если пара формально подходит под два вида.'));
+      d.appendChild(el('p', 'nrm-more__text', 'В этом упражнении проверяйте виды связи по порядку и выбирайте первый подходящий — так ответ однозначен, даже если пара формально подходит под два вида.'));
     }
     var dl = el('dl', 'nrm-rel-list');
     task.relations.forEach(function (r, i) {

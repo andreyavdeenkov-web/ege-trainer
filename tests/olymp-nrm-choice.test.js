@@ -168,7 +168,7 @@ test('link-map: пары (K) и утверждения (R); определени
 
 test('Демо: конструктор, систематизация, карта связей — эталон даёт полный балл, тексты несверенные', () => {
   const OLY = loadBank('olympiad-demo.html');
-  for (const [id, type, max] of [['DEMO-LAW-NRM-005', 'formula-builder', 3], ['DEMO-LAW-NRM-007', 'systematize', 7], ['DEMO-LAW-NRM-008', 'link-map', 8]]) {
+  for (const [id, type, max] of [['DEMO-LAW-NRM-005', 'formula-builder', 3], ['DEMO-LAW-NRM-007', 'systematize', 7], ['DEMO-LAW-NRM-008', 'link-map', 7]]) {
     const task = OLY.getTask(id);
     assert.equal(task.type, type);
     assert.equal(task.demo, true);
@@ -179,22 +179,27 @@ test('Демо: конструктор, систематизация, карта
   }
 });
 
-test('Демо карты связей: упорядоченное правило, «исключение» для ст. 1067 и ст. 39 УК — ошибки с объяснением границ интерпретации', () => {
+test('Демо карты связей: авторская типология и порядок объяснены; пара ст. 1064 — ст. 1067 убрана из автоматической проверки', () => {
   const OLY = loadBank('olympiad-demo.html');
   const task = OLY.getTask('DEMO-LAW-NRM-008');
   assert.equal(task.ordered, true);
+  assert.match(task.relationsNote, /авторская учебная типология/);
+  assert.match(task.relationsNote, /условие упражнения/);
   assert.equal(task.none, task.relations.length - 1);
+  assert.ok(!task.pairs.some((p) => [p.a, p.b].includes('gk-1064') && [p.a, p.b].includes('gk-1067')), 'пара ст. 1064 — ст. 1067 не проверяется автоматически');
   assert.ok(task.pairs.every((p) => p.partial === undefined), 'при взаимоисключающих определениях частичных ответов нет');
   const EXC = task.relations.findIndex((r) => r.label === 'Исключение из правила');
   const r = OLY.types.get(task.type).getCorrect(task);
-  r.p1 = { c: EXC, f: [], e: [] };
   r.p5 = { c: EXC, f: [], e: [] };
   const g = OLY.grade.gradeTask(task, r);
-  assert.equal(g.details.rows.p1.choice, 'wrong');
   assert.equal(g.details.rows.p5.choice, 'wrong');
   assert.equal(g.points, 6);
-  assert.match(task.pairs[0].wrong[EXC].full, /Границы интерпретации/);
-  assert.ok(task.pairs[4].wrong[EXC].full);
+  assert.ok(task.pairs.find((p) => p.id === 'p5').wrong[EXC].full);
+});
+
+test('link-map: упорядоченное правило требует пояснения relationsNote', () => {
+  const OLY = loadChoiceCore();
+  assert.throws(() => OLY.addTasks([linkTask({ ordered: true })]), /нужно relationsNote/);
 });
 
 test('link-map: при упорядоченном правиле «связи нет» должен быть последним', () => {
@@ -220,7 +225,7 @@ test('Новые типы в попытке: «частично», компон�
   }
   assert.equal(A.summary(attempt).partial, 3);
   const o = OLY.ui.session.outcome(attempt);
-  assert.equal(o.components.possible, 18);
+  assert.equal(o.components.possible, 17);
   A.finish(attempt);
   const scope = { olympiad: 'DEMO', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);
