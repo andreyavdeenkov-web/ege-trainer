@@ -9,6 +9,11 @@
  *     текстовое доказательство, частичные баллы, объяснение каждой ошибки;
  *   • сводка баллов по компонентам K / T / R и вердикт.
  *
+ * Строка с множественным выбором (row.multi = { max: 2, contra: [номера] }): ученик выбирает
+ * от 1 до max вариантов (ответ — answer.m); строка засчитывается, если выбран хотя бы один
+ * вариант из key и ни одного из contra («противоречащих»). Остальные варианты нейтральны.
+ * Используется, например, для «решающего признака» разграничения социальных норм.
+ *
  * Объяснение ошибки (row.wrong[i]) — строка (краткая причина) или объект
  * { short: 'краткая причина', full: 'подробное юридическое объяснение' }.
  * Краткая причина видна сразу в разборе, подробное объяснение раскрывается отдельно.
@@ -182,6 +187,20 @@
     if (!isText(row.explanation)) errors.push(name + ': нет explanation');
     errors = errors.concat(validateWrong(name, row.options, row.key, row.wrong, true));
 
+    if (row.multi !== undefined) {
+      var mu = row.multi;
+      if (!mu || typeof mu !== 'object') errors.push(name + ': multi должно быть объектом');
+      else {
+        if (!Number.isInteger(mu.max) || mu.max < 1 || mu.max >= n) errors.push(name + ': multi.max — от 1 до числа вариантов минус один');
+        if (mu.contra !== undefined) {
+          if (!Array.isArray(mu.contra) || !mu.contra.every(function (i) { return isIndex(i, n) && row.key.indexOf(i) === -1; })) {
+            errors.push(name + ': multi.contra — номера вариантов вне key');
+          }
+        }
+        if (row.partial !== undefined || row.followUp !== undefined) errors.push(name + ': при multi не бывает partial и followUp');
+      }
+    }
+
     if (row.followUp !== undefined) {
       var fu = row.followUp;
       var fname = name + ', уточнение';
@@ -265,10 +284,11 @@
   }
 
   function rowIsEmpty(answer) {
-    return (answer.c === null || answer.c === undefined) && (!answer.e || answer.e.length === 0);
+    return (answer.c === null || answer.c === undefined) && (!answer.e || answer.e.length === 0) && (!answer.m || answer.m.length === 0);
   }
 
   function rowIsComplete(row, answer) {
+    if (row.multi) return !!answer.m && answer.m.length > 0 && (!row.evidence || (answer.e && answer.e.length > 0));
     if (answer.c === null || answer.c === undefined) return false;
     if (needsFollowUp(row, answer) && (!answer.f || answer.f.length === 0)) return false;
     if (row.evidence && (!answer.e || answer.e.length === 0)) return false;
@@ -295,6 +315,16 @@
     });
     var max = row.evidence ? (row.evidence.max || DEFAULT_EVIDENCE_MAX) : 0;
     if (new Set(e).size > max) throw new Error('Строка ' + row.id + ': можно отметить не больше ' + max + ' фрагментов');
+    if (row.multi) {
+      if (c !== null) throw new Error('Строка ' + row.id + ': при множественном выборе ответ — список m');
+      var m = a.m === undefined ? [] : a.m;
+      if (!Array.isArray(m)) throw new Error('Строка ' + row.id + ': m должно быть списком');
+      m.forEach(function (i) { if (!isIndex(i, row.options.length)) throw new Error('Строка ' + row.id + ': некорректный вариант ' + i); });
+      var uniq = Array.from(new Set(m)).sort(function (x, y) { return x - y; });
+      if (uniq.length > row.multi.max) throw new Error('Строка ' + row.id + ': можно выбрать не больше ' + row.multi.max);
+      return { c: null, f: [], e: Array.from(new Set(e)), m: uniq };
+    }
+    if (a.m !== undefined && a.m.length) throw new Error('Строка ' + row.id + ': множественный выбор не предусмотрен');
     return {
       c: c,
       // Уточнение имеет смысл только при выборе, к которому оно относится.
@@ -325,6 +355,15 @@
 
   /** Оценка выбора в строке: { status, points, follow }. */
   function scoreChoice(row, answer) {
+    if (row.multi) {
+      var picked = answer.m || [];
+      if (!picked.length) return { status: 'empty', points: 0, follow: null };
+      var contra = row.multi.contra || [];
+      var good = picked.some(function (i) { return row.key.indexOf(i) !== -1; });
+      var bad = picked.some(function (i) { return contra.indexOf(i) !== -1; });
+      var ok = good && !bad && picked.length <= row.multi.max;
+      return { status: ok ? 'ok' : 'wrong', points: ok ? 1 : 0, follow: null };
+    }
     if (answer.c === null || answer.c === undefined) return { status: 'empty', points: 0, follow: null };
     if (row.key.indexOf(answer.c) !== -1) {
       if (!needsFollowUp(row, answer)) return { status: 'ok', points: 1, follow: null };
@@ -367,6 +406,7 @@
   }
 
   function correctRow(row) {
+    if (row.multi) return { c: null, f: [], e: [], m: row.key.slice(0, row.multi.max) };
     return {
       c: row.key[0],
       f: row.followUp && row.key[0] === row.followUp.when ? row.followUp.key.slice() : [],

@@ -76,7 +76,7 @@
     if (part.kind === 'choice') {
       part.rows.forEach(function (row) {
         var a = answers[row.id];
-        lines.push(N.shortLabel(row) + ': ' + (a.c === null ? '—' : row.options[a.c]));
+        lines.push(N.shortLabel(row) + ': ' + N.chosenText(row, a));
       });
     } else if (part.kind === 'short') {
       part.items.forEach(function (item) { lines.push((item.short || item.id) + ': ' + (answers[item.id] || '—')); });

@@ -186,6 +186,10 @@
   /* ---------- Разбор строки выбора ---------- */
 
   function keyText(row) {
+    if (row.multi) {
+      var base = row.key.map(function (i) { return row.options[i]; }).join(' / ');
+      return base + (row.multi.max > 1 ? ' (засчитывается любой из них или два вместе)' : '');
+    }
     return row.key.map(function (i) {
       if (row.followUp && i === row.followUp.when) {
         return row.options[i] + ': ' + row.followUp.key.map(function (j) { return row.followUp.options[j]; }).join(' / ');
@@ -195,6 +199,7 @@
   }
 
   function chosenText(row, answer) {
+    if (row.multi) return answer.m && answer.m.length ? answer.m.map(function (i) { return row.options[i]; }).join(', ') : '—';
     if (answer.c === null || answer.c === undefined) return '—';
     var text = row.options[answer.c];
     if (R.needsFollowUp(row, answer)) {
@@ -205,6 +210,15 @@
 
   /** Краткая причина и подробное объяснение ошибки выбора: { short, full }. */
   function choiceReason(row, answer, detail) {
+    if (row.multi) {
+      if (detail.choice === 'ok' || !answer.m || !answer.m.length) return null;
+      var contra = row.multi.contra || [];
+      var wrongPicked = answer.m.filter(function (i) { return contra.indexOf(i) !== -1; });
+      var shown = (wrongPicked.length ? wrongPicked : answer.m.filter(function (i) { return row.key.indexOf(i) === -1; }))
+        .map(function (i) { return R.explanation(row.wrong && row.wrong[i]); }).filter(Boolean);
+      var lead = wrongPicked.length ? 'Выбран признак, который противоречит этому случаю.' : 'Не выбран ни один решающий признак.';
+      return { short: lead + (shown.length ? ' ' + shown.map(function (r) { return r.short; }).join(' ') : ''), full: shown.map(function (r) { return r.full; }).filter(Boolean).join(' ') || null };
+    }
     if (detail.choice === 'ok' || answer.c === null || answer.c === undefined) return null;
     if (row.followUp && answer.c === row.followUp.when) {
       if (detail.follow === 'partial') return { short: 'Спор признан верно, но указаны не все спорящие виды.', full: null };
@@ -386,13 +400,29 @@
     head.appendChild(el('span', 'nrm-row__label', row.label));
     card.appendChild(head);
     if (row.note) card.appendChild(el('p', 'nrm-row__note', row.note));
+    var limit = null;
     var choice = chipGroup(row.options, row.label, function (i) {
       var a = answers[row.id];
+      if (row.multi) {
+        var m = a.m || [];
+        if (m.indexOf(i) !== -1) a.m = m.filter(function (x) { return x !== i; });
+        else if (m.length < row.multi.max) a.m = m.concat(i).sort(function (x, y) { return x - y; });
+        else { limit.textContent = 'Можно выбрать не больше ' + row.multi.max + '. Снимите лишний.'; return; }
+        limit.textContent = '';
+        onChanged();
+        return;
+      }
       a.c = a.c === i ? null : i;
       if (!R.needsFollowUp(row, a)) a.f = [];
       onChanged();
-    }, false);
+    }, !!row.multi);
     card.appendChild(choice.node);
+    if (row.multi) {
+      card.insertBefore(el('p', 'nrm-row__note', 'Выберите от 1 до ' + row.multi.max + '.'), choice.node);
+      limit = el('p', 'nrm-ev__status');
+      limit.setAttribute('aria-live', 'polite');
+      card.appendChild(limit);
+    }
     var follow = null;
     if (row.followUp) {
       follow = { wrap: el('div', 'nrm-follow') };
@@ -410,7 +440,7 @@
       paint: function () {
         var a = answers[row.id];
         card.classList.toggle('is-filled', R.rowIsComplete(row, a));
-        choice.paint(a.c);
+        choice.paint(row.multi ? (a.m || []) : a.c);
         if (follow) {
           follow.wrap.hidden = !R.needsFollowUp(row, a);
           follow.group.paint(a.f);
@@ -489,6 +519,7 @@
     R.rowsOf(sections).forEach(function (row) {
       var a = answers && answers[row.id];
       base[row.id] = a ? { c: a.c === undefined ? null : a.c, f: (a.f || []).slice(), e: (a.e || []).slice() } : R.emptyRow();
+      if (row.multi) base[row.id].m = a && a.m ? a.m.slice() : [];
     });
     return base;
   }
