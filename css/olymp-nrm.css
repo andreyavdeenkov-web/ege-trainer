@@ -287,3 +287,42 @@
   .nrm-tool--erase { flex-basis: 44px; }
   .nrm-tool--erase .nrm-tool__label { display: none; }
 }
+
+/* ----- Поиск ошибок в рассуждении ----- */
+.nrm-steps { list-style: none; margin: 0; padding: 0; }
+.nrm-step__head { display: flex; gap: 10px; align-items: flex-start; }
+.nrm-step__num {
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface-2); border: 1px solid var(--border); font-weight: 800; font-size: 14px;
+}
+.nrm-step__text { margin: 3px 0 0; flex: 1 1 auto; line-height: 1.5; }
+.nrm-step__head .nrm-rv__pts { flex: none; margin-top: 4px; }
+.nrm-step.is-flagged { border-color: var(--wrong-border); }
+.nrm-step.is-flagged .nrm-step__num { background: var(--wrong-bg); border-color: var(--wrong-border); color: var(--wrong); }
+.nrm-flag {
+  margin: 8px 0 0 40px; min-height: 40px; padding: 6px 12px;
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--text);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.nrm-flag__box {
+  width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1;
+}
+.nrm-flag.is-on { border-color: var(--wrong-border); background: var(--wrong-bg); color: var(--wrong); }
+.nrm-flag.is-on .nrm-flag__box { border-color: var(--wrong); background: var(--wrong); color: var(--surface); }
+.nrm-flag.is-on .nrm-flag__box::before { content: "✓"; }
+.nrm-flag:hover { border-color: var(--primary); }
+.nrm-flag:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.nrm-step__more { margin-left: 40px; }
+.nrm-step__sub { margin-top: 10px; }
+.nrm-step__empty { margin: 4px 0 0; font-size: 14px; color: var(--text-muted); font-style: italic; }
+.nrm-chips--column { flex-direction: column; align-items: stretch; }
+.nrm-chips--column .nrm-chip { border-radius: var(--radius-sm); }
+.nrm-types-help__list { margin: 6px 0; padding-left: 20px; font-size: 14px; line-height: 1.5; }
+.nrm-types-help__list li { margin-bottom: 4px; }
+.nrm-flags .nrm-rv__line { margin: 4px 0 0; }
+@media (max-width: 480px) {
+  .nrm-flag, .nrm-step__more { margin-left: 0; }
+}
