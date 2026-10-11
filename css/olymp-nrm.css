@@ -199,3 +199,91 @@
 @media (prefers-reduced-motion: reduce) {
   .nrm-row { transition: none; }
 }
+
+/* ===== Разметка структуры нормы (text-markup) ===== */
+.nrm-grid {
+  --m0-bg: #dbeafe; --m0-fg: #1d4ed8;
+  --m1-bg: #dcfce7; --m1-fg: #15803d;
+  --m2-bg: #fef3c7; --m2-fg: #a16207;
+  --m3-bg: #f3e8ff; --m3-fg: #7e22ce;
+  --m4-bg: #fce7f3; --m4-fg: #be185d;
+  --m5-bg: #cffafe; --m5-fg: #0e7490;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nrm-grid {
+    --m0-bg: #1e3a5f; --m0-fg: #93c5fd;
+    --m1-bg: #14532d; --m1-fg: #86efac;
+    --m2-bg: #4a3712; --m2-fg: #fcd34d;
+    --m3-bg: #3b1d5a; --m3-fg: #d8b4fe;
+    --m4-bg: #501c3a; --m4-fg: #f9a8d4;
+    --m5-bg: #134e5a; --m5-fg: #67e8f9;
+  }
+}
+:root[data-theme="dark"] .nrm-grid {
+  --m0-bg: #1e3a5f; --m0-fg: #93c5fd;
+  --m1-bg: #14532d; --m1-fg: #86efac;
+  --m2-bg: #4a3712; --m2-fg: #fcd34d;
+  --m3-bg: #3b1d5a; --m3-fg: #d8b4fe;
+  --m4-bg: #501c3a; --m4-fg: #f9a8d4;
+  --m5-bg: #134e5a; --m5-fg: #67e8f9;
+}
+.nrm-mark--0 { --mk-bg: var(--m0-bg); --mk-fg: var(--m0-fg); }
+.nrm-mark--1 { --mk-bg: var(--m1-bg); --mk-fg: var(--m1-fg); }
+.nrm-mark--2 { --mk-bg: var(--m2-bg); --mk-fg: var(--m2-fg); }
+.nrm-mark--3 { --mk-bg: var(--m3-bg); --mk-fg: var(--m3-fg); }
+.nrm-mark--4 { --mk-bg: var(--m4-bg); --mk-fg: var(--m4-fg); }
+.nrm-mark--5 { --mk-bg: var(--m5-bg); --mk-fg: var(--m5-fg); }
+
+/* Размеченный фрагмент: цвет + буква (не только цвет). */
+.nrm-frag[data-mark] {
+  background: var(--mk-bg); color: var(--text);
+  border-bottom: 3px solid var(--mk-fg);
+}
+.nrm-frag[data-mark]::after {
+  content: attr(data-mark);
+  margin-left: 3px; padding: 0 4px; border-radius: 4px;
+  font-size: 11px; font-weight: 800; vertical-align: super; line-height: 1;
+  background: var(--mk-fg); color: var(--surface);
+}
+.nrm-frag.is-wrong { outline: 2px solid var(--wrong); outline-offset: 1px; }
+.nrm-frag.is-alt { outline: 2px dashed var(--text-muted); outline-offset: 1px; }
+
+.nrm-legend-marks { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--text-muted); }
+.nrm-legend-marks__item { display: inline-flex; align-items: center; gap: 6px; }
+.nrm-swatch {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px;
+  padding: 0 4px; border-radius: 5px; font-size: 12px; font-weight: 800;
+  background: var(--mk-bg); color: var(--mk-fg); border: 1px solid var(--mk-fg);
+}
+.nrm-switch { margin-top: 0; }
+
+/* Закреплённая внизу панель: инструменты + индикатор заполнения. */
+.nrm-dock {
+  position: sticky; bottom: 8px; z-index: 6;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  box-shadow: 0 -4px 16px rgba(20, 24, 60, 0.14);
+}
+.nrm-dock .nrm-fillbar { border: 0; padding: 2px 4px; }
+.nrm-tools { display: flex; gap: 6px; }
+.nrm-tool {
+  flex: 1 1 0; min-width: 0; min-height: 46px; padding: 4px 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  border-radius: 10px; border: 2px solid var(--mk-fg, var(--border));
+  background: var(--surface); color: var(--mk-fg, var(--text)); font: inherit; cursor: pointer;
+}
+.nrm-tool__short { font-size: 16px; font-weight: 800; line-height: 1.1; }
+.nrm-tool__label { font-size: 11px; font-weight: 600; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.nrm-tool.is-on { background: var(--mk-bg, var(--surface-2)); color: var(--text); box-shadow: inset 0 0 0 2px var(--mk-fg, var(--text)); }
+.nrm-tool--erase { --mk-fg: var(--text-muted); }
+.nrm-tool:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* Кнопка «Стереть» — узкая, чтобы подписям инструментов хватало места на смартфоне. */
+.nrm-tool--erase { flex: 0 0 52px; }
+@media (max-width: 480px) {
+  .nrm-tools { gap: 4px; }
+  .nrm-tool { padding: 4px 2px; }
+  .nrm-tool__label { font-size: 10.5px; }
+  .nrm-tool--erase { flex-basis: 44px; }
+  .nrm-tool--erase .nrm-tool__label { display: none; }
+}

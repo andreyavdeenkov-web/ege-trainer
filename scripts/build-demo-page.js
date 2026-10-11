@@ -22,10 +22,10 @@ const root = path.join(__dirname, '..');
 
 /** Скрипты, которые добавляются после указанного скрипта olympiad.html. */
 const INSERT_AFTER = [
-  ['js/olymp/types.js', ['js/olymp/types/nrm-rows.js', 'js/olymp/types/analysis-grid.js']],
+  ['js/olymp/types.js', ['js/olymp/types/nrm-rows.js', 'js/olymp/types/analysis-grid.js', 'js/olymp/types/text-markup.js']],
   ['js/olymp/scoring-rules.js', ['js/olymp/rules/components.js']],
   ['data/olympiads/practicum/social/law/concept.js', ['demo/law-nrm-demo.js']],
-  ['js/olymp/ui/views/matching.js', ['js/olymp/ui/views/nrm-common.js', 'js/olymp/ui/views/grid.js']]
+  ['js/olymp/ui/views/matching.js', ['js/olymp/ui/views/nrm-common.js', 'js/olymp/ui/views/grid.js', 'js/olymp/ui/views/markup.js']]
 ];
 
 const BANNER = [

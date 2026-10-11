@@ -15,7 +15,7 @@
   var OLY = root.OLY || (root.OLY = {});
 
   OLY.scoringRules.register('components', {
-    supports: ['analysis-grid'],
+    supports: ['analysis-grid', 'text-markup', 'reasoning-check'],
     score: function (result) {
       return result && result.details && typeof result.details.earned === 'number' ? result.details.earned : 0;
     }

@@ -373,6 +373,126 @@
     };
   }
 
+  /**
+   * Редактор строки выбора без доказательства (карта элементов, характеристика,
+   * систематизация, утверждения, слоты конструктора). answers — общий изменяемый
+   * объект ответов строк; onChanged() — после любого изменения.
+   * Возвращает { card, paint() }.
+   */
+  function rowEditor(task, row, answers, onChanged) {
+    var card = el('div', 'nrm-row');
+    card.id = anchorId(task, row.id);
+    var head = el('div', 'nrm-row__head');
+    head.appendChild(el('span', 'nrm-row__label', row.label));
+    card.appendChild(head);
+    if (row.note) card.appendChild(el('p', 'nrm-row__note', row.note));
+    var choice = chipGroup(row.options, row.label, function (i) {
+      var a = answers[row.id];
+      a.c = a.c === i ? null : i;
+      if (!R.needsFollowUp(row, a)) a.f = [];
+      onChanged();
+    }, false);
+    card.appendChild(choice.node);
+    var follow = null;
+    if (row.followUp) {
+      follow = { wrap: el('div', 'nrm-follow') };
+      follow.wrap.appendChild(el('p', 'nrm-follow__label', row.followUp.label));
+      follow.group = chipGroup(row.followUp.options, row.followUp.label, function (j) {
+        var a = answers[row.id];
+        a.f = a.f.indexOf(j) === -1 ? a.f.concat(j).sort(function (x, y) { return x - y; }) : a.f.filter(function (x) { return x !== j; });
+        onChanged();
+      }, true);
+      follow.wrap.appendChild(follow.group.node);
+      card.appendChild(follow.wrap);
+    }
+    return {
+      card: card,
+      paint: function () {
+        var a = answers[row.id];
+        card.classList.toggle('is-filled', R.rowIsComplete(row, a));
+        choice.paint(a.c);
+        if (follow) {
+          follow.wrap.hidden = !R.needsFollowUp(row, a);
+          follow.group.paint(a.f);
+        }
+      }
+    };
+  }
+
+  /**
+   * Разделы строк: смысловые блоки со счётчиком заполнения.
+   * Возвращает { nodes: [section…], paint() }.
+   */
+  function rowSections(task, sections, answers, onChanged) {
+    var editors = {};
+    var blocks = sections.map(function (section) {
+      var block = el('section', 'nrm-block');
+      var head = el('div', 'nrm-block__head');
+      head.appendChild(el('h3', 'nrm-block__title', section.title));
+      var count = el('span', 'nrm-block__count');
+      head.appendChild(count);
+      block.appendChild(head);
+      if (section.hint) block.appendChild(el('p', 'nrm-block__hint', section.hint));
+      var list = el('div', 'nrm-rows');
+      section.rows.forEach(function (row) {
+        editors[row.id] = rowEditor(task, row, answers, onChanged);
+        list.appendChild(editors[row.id].card);
+      });
+      block.appendChild(list);
+      return { node: block, section: section, count: count };
+    });
+    return {
+      nodes: blocks.map(function (b) { return b.node; }),
+      paint: function () {
+        blocks.forEach(function (b) {
+          var done = 0;
+          b.section.rows.forEach(function (row) {
+            editors[row.id].paint();
+            if (R.rowIsComplete(row, answers[row.id])) done++;
+          });
+          b.count.textContent = done + ' из ' + b.section.rows.length;
+          b.count.classList.toggle('is-done', done === b.section.rows.length);
+        });
+      }
+    };
+  }
+
+  /** Разделы строк в разборе: блоки с баллами и карточками строк. */
+  function reviewSections(task, sections, answers, details) {
+    return sections.map(function (section) {
+      var block = el('section', 'nrm-block');
+      var head = el('div', 'nrm-block__head');
+      head.appendChild(el('h3', 'nrm-block__title', section.title));
+      if (details) {
+        var earned = 0;
+        var max = 0;
+        section.rows.forEach(function (row) {
+          var d = details[row.id];
+          earned += d.choicePoints + (d.evidencePoints || 0);
+          max += 1 + (row.evidence ? 1 : 0);
+        });
+        head.appendChild(el('span', 'nrm-block__count' + (earned >= max ? ' is-done' : ''), fmt(earned) + ' из ' + max));
+      }
+      block.appendChild(head);
+      var list = el('div', 'nrm-rows');
+      section.rows.forEach(function (row) {
+        list.appendChild(rowReview(task, row, answers && answers[row.id], details && details[row.id]));
+      });
+      block.appendChild(list);
+      return block;
+    });
+  }
+
+  /** Копия ответов строк с пустыми значениями для отсутствующих. */
+  function copyRows(sections, answers) {
+    var base = {};
+    R.rowsOf(sections).forEach(function (row) {
+      var a = answers && answers[row.id];
+      base[row.id] = a ? { c: a.c === undefined ? null : a.c, f: (a.f || []).slice(), e: (a.e || []).slice() } : R.emptyRow();
+    });
+    return base;
+  }
+
   ui.nrm = {
     COMPONENT_TITLES: COMPONENT_TITLES,
     el: el,
@@ -393,6 +513,10 @@
     rowReview: rowReview,
     summary: summary,
     rowMistakes: rowMistakes,
-    fillBar: fillBar
+    fillBar: fillBar,
+    rowEditor: rowEditor,
+    rowSections: rowSections,
+    reviewSections: reviewSections,
+    copyRows: copyRows
   };
 })(typeof window !== 'undefined' ? window : globalThis);
