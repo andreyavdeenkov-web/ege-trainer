@@ -848,8 +848,8 @@
       });
     }
     dom.feedback.hidden = !result;
-    // Типичная ошибка — только после неверного ответа.
-    var showMistake = !!(result && result.verdict === 'incorrect' && task.typicalMistake);
+    // Типичная ошибка — только после неверного (или частично верного) ответа.
+    var showMistake = !!(result && (result.verdict === 'incorrect' || result.verdict === 'partial') && task.typicalMistake);
     dom.typicalMistake.hidden = !showMistake;
     dom.typicalMistakeText.textContent = showMistake ? task.typicalMistake : '';
     dom.explanation.hidden = !(result && task.explanation);
@@ -869,12 +869,20 @@
     renderNav();
   }
 
+  var FEEDBACK_VERDICT = {
+    correct: { text: 'Верно', cls: 'full' },
+    partial: { text: 'Частично', cls: 'partial' },
+    incorrect: { text: 'Неверно', cls: 'none' }
+  };
+
   function renderFeedback(task, result) {
     var type = OLY.types.get(task.type);
+    var view = views.get(task.type);
     var correct = result.verdict === 'correct';
+    var shown = FEEDBACK_VERDICT[result.verdict] || FEEDBACK_VERDICT.incorrect;
     dom.verdict.textContent = '';
-    dom.verdict.className = 'points points--' + (correct ? 'full' : 'none');
-    dom.verdict.appendChild(el('span', 'points__value', correct ? 'Верно' : 'Неверно'));
+    dom.verdict.className = 'points points--' + shown.cls;
+    dom.verdict.appendChild(el('span', 'points__value', shown.text));
     var caption = '';
     if (!correct && result.details && Array.isArray(result.details.missed)) {
       var parts = [];
@@ -886,6 +894,20 @@
       caption = 'Ошибок в позициях: ' + result.details.mistakes + ' из ' + result.details.perItem.length;
     }
     if (caption) dom.verdict.appendChild(el('span', 'points__caption', caption));
+
+    // Новые типы практикума «Норма права» показывают свою сводку (баллы по компонентам)
+    // вместо строк «Правильный ответ / Ваш ответ».
+    var answers = dom.feedbackCorrect.closest('.feedback__answers');
+    var extra = dom.feedback.querySelector('.feedback__extra');
+    if (extra) extra.remove();
+    if (typeof view.feedbackSummary === 'function') {
+      answers.hidden = true;
+      extra = el('div', 'feedback__extra');
+      view.feedbackSummary(extra, task, result);
+      dom.feedback.appendChild(extra);
+      return;
+    }
+    answers.hidden = false;
     dom.feedbackCorrect.textContent = type.formatResponse(task, result.correct);
     dom.feedbackUser.textContent = type.formatResponse(task, result.response);
     dom.feedbackPointsRow.hidden = !result.scored;
@@ -921,6 +943,7 @@
   var NAV_LABELS = {
     correct: 'проверено, верно',
     incorrect: 'проверено, неверно',
+    partial: 'проверено, частично',
     draft: 'ответ не проверен',
     empty: 'без ответа'
   };
@@ -934,6 +957,7 @@
       btn.type = 'button';
       if (item.state === 'correct') btn.classList.add('is-done', 'points--full');
       else if (item.state === 'incorrect') btn.classList.add('is-done', 'points--none');
+      else if (item.state === 'partial') btn.classList.add('is-done', 'points--partial');
       else if (item.state === 'draft') btn.classList.add('is-draft');
       if (item.index === state.viewIndex) {
         btn.classList.add('is-viewed');
@@ -1078,13 +1102,21 @@
     dom.resultScope.textContent = scopeDescription(route, attempt.settings.filters);
     dom.resultStats.textContent = '';
     dom.resultStats.appendChild(stat('stat--right', 'Верно', o.correct + ' из ' + o.total));
+    if (o.partial) dom.resultStats.appendChild(stat('stat--partial', 'Частично', String(o.partial)));
     dom.resultStats.appendChild(stat('stat--wrong', 'Неверно', String(o.incorrect)));
     dom.resultStats.appendChild(stat('stat--skip', 'Пропущено', String(o.skipped)));
 
     // Баллы — только по заданиям с официальными критериями, отдельно от счёта заданий.
     dom.resultPoints.textContent = '';
-    dom.resultPoints.hidden = !o.showPoints;
-    if (o.showPoints) {
+    dom.resultPoints.hidden = !o.showPoints && !o.components;
+    if (o.components) {
+      // Авторские баллы практикума «Норма права»: сумма и разбивка по компонентам.
+      var sum = el('p');
+      sum.appendChild(document.createTextNode('Баллы: '));
+      sum.appendChild(el('strong', null, fmtPoints(o.points) + ' из ' + fmtPoints(o.components.possible)));
+      dom.resultPoints.appendChild(sum);
+      dom.resultPoints.appendChild(el('p', null, componentLine(o.components)));
+    } else if (o.showPoints) {
       var line = el('p');
       line.appendChild(document.createTextNode('Баллы по критериям оценивания: '));
       line.appendChild(el('strong', null, o.points + ' из ' + o.maxPoints));
@@ -1107,7 +1139,7 @@
       : 'Повторное прохождение темы пока недоступно. Ниже — все задания с вашими ответами, правильными ответами и разбором.';
 
     dom.reviewAllLabel.textContent = 'Все (' + o.total + ')';
-    dom.reviewMistakesLabel.textContent = 'С ошибками (' + o.incorrect + ')';
+    dom.reviewMistakesLabel.textContent = 'С ошибками (' + (o.incorrect + (o.partial || 0)) + ')';
     dom.reviewSkippedLabel.textContent = 'Пропущенные (' + o.skipped + ')';
     dom.reviewFilter.querySelectorAll('input').forEach(function (input) {
       input.checked = input.value === state.reviewFilter;
@@ -1115,7 +1147,23 @@
     renderReview();
   }
 
-  var VERDICT_TEXT = { correct: 'Верно', incorrect: 'Неверно' };
+  var VERDICT_TEXT = { correct: 'Верно', incorrect: 'Неверно', partial: 'Частично' };
+  var VERDICT_CLASS = { correct: 'full', incorrect: 'none', partial: 'partial' };
+
+  /** 1.5 → «1,5». */
+  function fmtPoints(n) {
+    return String(Math.round(n * 10) / 10).replace('.', ',');
+  }
+
+  var COMPONENT_TITLES = { K: 'квалификация', T: 'доказательство', R: 'логика рассуждения' };
+
+  /** «квалификация 8 / 9 · доказательство 3 / 3 · логика рассуждения 4 / 6» (только непустые компоненты). */
+  function componentLine(components) {
+    return ['K', 'T', 'R'].filter(function (key) { return components[key] && components[key].max > 0; })
+      .map(function (key) {
+        return COMPONENT_TITLES[key] + ' ' + fmtPoints(components[key].earned) + ' / ' + fmtPoints(components[key].max);
+      }).join(' · ');
+  }
 
   function renderReview() {
     var attempt = state.attempt;
@@ -1134,7 +1182,7 @@
       var type = OLY.types.get(task.type);
       var result = A.getResult(attempt, id);
       var taskState = S.taskState(attempt, id);
-      var solved = taskState === 'correct' || taskState === 'incorrect';
+      var solved = taskState === 'correct' || taskState === 'incorrect' || taskState === 'partial';
 
       var li = el('li', 'review-item');
       var details = el('details', 'review-item__details');
@@ -1150,15 +1198,19 @@
         head.appendChild(level);
       }
       var mark = solved
-        ? el('span', 'mistake__points points--' + (taskState === 'correct' ? 'full' : 'none'), VERDICT_TEXT[taskState])
+        ? el('span', 'mistake__points points--' + VERDICT_CLASS[taskState], VERDICT_TEXT[taskState])
         : el('span', 'mistake__points is-skipped', 'Не решено');
-      if (solved && result.scored) mark.textContent += ' · ' + result.points + ' из ' + result.maxPoints;
+      if (solved && result.scored) mark.textContent += ' · ' + fmtPoints(result.points) + ' из ' + fmtPoints(result.maxPoints);
       head.appendChild(mark);
       summary.appendChild(head);
       summary.appendChild(el('p', 'mistake__question', task.question));
 
       var answers = el('p', 'mistake__answers');
-      if (solved) {
+      if (typeof views.get(task.type).feedbackSummary === 'function') {
+        // Новые типы: вместо строки ответа — баллы по компонентам.
+        var comp = solved && result.details && result.details.components;
+        answers.textContent = comp ? componentLine(comp) : 'Задание не решено — эталон в разборе.';
+      } else if (solved) {
         answers.appendChild(el('span', null, 'Ваш ответ: '));
         answers.appendChild(el('strong', taskState === 'correct' ? 'text-right' : 'text-wrong',
           type.formatResponse(task, result.response)));

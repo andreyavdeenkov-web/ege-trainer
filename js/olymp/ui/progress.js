@@ -29,7 +29,8 @@
     return !!value && typeof value === 'object' && !Array.isArray(value);
   }
 
-  var VERDICTS = ['correct', 'incorrect', 'unanswered'];
+  // 'partial' — частичный результат новых типов практикума «Норма права».
+  var VERDICTS = ['correct', 'incorrect', 'partial', 'unanswered'];
 
   /** Ответ подходит заданию по структуре (как при вводе ученика). */
   function validResponse(task, value) {

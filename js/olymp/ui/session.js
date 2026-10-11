@@ -16,7 +16,8 @@
 
   /**
    * Состояние каждого задания для полосы номеров:
-   * 'correct' | 'incorrect' — проверено; 'draft' — ответ введён, но не проверен;
+   * 'correct' | 'incorrect' | 'partial' — проверено ('partial' — частичный результат
+   * новых типов практикума «Норма права»); 'draft' — ответ введён, но не проверен;
    * 'empty' — ответа нет.
    */
   function taskState(attempt, taskId) {
@@ -61,8 +62,9 @@
   function subsetIds(attempt, kind) {
     return attempt.taskIds.filter(function (id) {
       var state = taskState(attempt, id);
-      if (kind === 'mistakes') return state === 'incorrect';
-      if (kind === 'skipped') return state !== 'correct' && state !== 'incorrect';
+      if (kind === 'mistakes') return state === 'incorrect' || state === 'partial';
+      if (kind === 'partial') return state === 'partial';
+      if (kind === 'skipped') return state !== 'correct' && state !== 'incorrect' && state !== 'partial';
       return true;
     });
   }
@@ -73,7 +75,7 @@
    */
   function outcome(attempt) {
     var s = A.summary(attempt);
-    return {
+    var o = {
       total: s.total,
       correct: s.correct,
       incorrect: s.incorrect,
@@ -83,6 +85,37 @@
       maxPoints: s.maxPoints,
       scoredCount: s.scoredCount
     };
+    // Поля новых типов практикума «Норма права» — только если такие задания есть
+    // в попытке; итоги попыток со старыми типами остаются прежними.
+    if (s.partial) o.partial = s.partial;
+    var components = componentTotals(attempt);
+    if (components) o.components = components;
+    return o;
+  }
+
+  /**
+   * Баллы по компонентам (K — квалификация, T — текстовое доказательство,
+   * R — логика рассуждения) по проверенным заданиям и максимум по всем заданиям
+   * попытки с критериями components. null — таких заданий в попытке нет.
+   */
+  function componentTotals(attempt) {
+    var found = false;
+    var totals = { K: { earned: 0, max: 0 }, T: { earned: 0, max: 0 }, R: { earned: 0, max: 0 }, possible: 0 };
+    attempt.taskIds.forEach(function (id) {
+      var task = OLY.getTask(id);
+      if (!task || !task.scoring || task.scoring.rule !== 'components') return;
+      found = true;
+      totals.possible += task.scoring.maxPoints;
+      var result = attempt.results[id];
+      var comp = result && result.details && result.details.components;
+      if (!comp) return;
+      Object.keys(comp).forEach(function (key) {
+        if (!totals[key]) return;
+        totals[key].earned += comp[key].earned;
+        totals[key].max += comp[key].max;
+      });
+    });
+    return found ? totals : null;
   }
 
   /** Перемешивание (Фишер — Йетс); random — для тестов. */
@@ -118,6 +151,7 @@
     hasProgress: hasProgress,
     subsetIds: subsetIds,
     outcome: outcome,
+    componentTotals: componentTotals,
     shuffle: shuffle,
     arrange: arrange,
     arrangeIds: arrangeIds
