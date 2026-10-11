@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Макеты · Норма права</title>
+<!-- Статичный макет для согласования. Использует стили платформы; код платформы не меняет. -->
+<link rel="stylesheet" href="../../../css/styles.css">
+<link rel="stylesheet" href="../../../css/olymp.css">
+<style>
+  :root { --h: #2563eb; --h-bg: #dbeafe; --d: #15803d; --d-bg: #dcfce7; --s: #b45309; --s-bg: #fef3c7; --e: #c62828; --e-bg: #fee2e2; }
+  body { padding-bottom: 40px; }
+  .mock { margin: 0 auto 32px; min-width: 0; }
+  .res__box { min-width: 0; }
+  .mock__cap { font: 600 13px var(--font); color: var(--text-muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .legal { border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: var(--radius-sm); background: var(--surface-2); padding: 12px 14px; margin: 14px 0; }
+  .legal__ref { font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .legal__ref .muted { font-weight: 500; }
+  .legal__text { font-size: 16px; line-height: 1.7; }
+  .legal--ref { border-left-color: var(--text-muted); }
+  .legal--ref .legal__ref { color: var(--text-muted); }
+  .frag { border-radius: 4px; padding: 1px 2px; cursor: pointer; border-bottom: 2px dashed color-mix(in srgb, var(--text-muted) 50%, transparent); }
+  .frag.is-ev { background: var(--primary-soft); border-bottom: 2px solid var(--primary); }
+  .frag.m-H { background: var(--h-bg); border-bottom: 3px solid var(--h); }
+  .frag.m-D { background: var(--d-bg); border-bottom: 3px solid var(--d); }
+  .frag.m-S { background: var(--s-bg); border-bottom: 3px solid var(--s); }
+  .frag sup { font-size: 10px; font-weight: 800; margin-left: 2px; }
+  .m-H sup { color: var(--h); } .m-D sup { color: var(--d); }
+  details.refs { margin: 4px 0 12px; }
+  details.refs summary { cursor: pointer; font-weight: 600; color: var(--primary); font-size: 15px; }
+  .grid { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .grow { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface); }
+  .grow.is-active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus); }
+  .grow__head { display: flex; gap: 8px; align-items: baseline; font-weight: 700; }
+  .grow__num { color: var(--text-muted); font-weight: 700; min-width: 18px; }
+  .grow__badge { font-size: 11px; font-weight: 700; color: var(--primary); border: 1px solid var(--primary); border-radius: 999px; padding: 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ch { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 6px 12px; font-size: 14px; min-height: 36px; display: inline-flex; align-items: center; }
+  .ch.is-on { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 600; }
+  .ch.ok { background: var(--right-bg); border-color: var(--right-border); color: var(--right); font-weight: 600; }
+  .ch.bad { background: var(--wrong-bg); border-color: var(--wrong-border); color: var(--wrong); text-decoration: line-through; }
+  .ev { margin-top: 8px; font-size: 14px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .ev__tag { background: var(--primary-soft); color: var(--text); border-radius: 6px; padding: 2px 8px; font-size: 13px; }
+  .sec-title { margin: 18px 0 4px; font-size: 15px; font-weight: 800; }
+  .sec-hint { font-size: 14px; color: var(--text-muted); margin-bottom: 6px; }
+  textarea.ta { width: 100%; min-height: 84px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; font: 15px/1.5 var(--font); background: var(--surface); color: var(--text); resize: vertical; }
+  .comp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .comp__item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--surface); }
+  .comp__label { font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  .comp__val { font-size: 22px; font-weight: 800; }
+  .comp__src { font-size: 12px; font-weight: 600; }
+  .src-auto { color: var(--right); } .src-self { color: var(--warn); }
+  .comp__item--self { border-style: dashed; border-color: var(--warn-border); background: var(--warn-bg); }
+  .rv { display: grid; grid-template-columns: 1.3fr 1fr 1fr 0.6fr; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-top: 12px; font-size: 14px; }
+  .rv > div { padding: 8px 10px; border-top: 1px solid var(--border); }
+  .rv > .rv__h { background: var(--surface-2); font-weight: 700; border-top: 0; }
+  .alt { margin-top: 10px; border: 1px solid var(--warn-border); background: var(--warn-bg); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 14px; }
+  .check { margin-top: 14px; border: 1px dashed var(--warn-border); border-radius: var(--radius-sm); padding: 12px; }
+  .check__title { font-weight: 800; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .check__title .src-self { font-size: 13px; }
+  .check label { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; font-size: 15px; }
+  .check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--primary); flex: none; }
+  .req { font-size: 11px; font-weight: 700; color: var(--wrong); border: 1px solid var(--wrong-border); border-radius: 999px; padding: 0 6px; margin-left: 6px; white-space: nowrap; }
+  .yours { margin-top: 10px; font-size: 14px; background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .palette { position: sticky; bottom: 0; display: flex; gap: 6px; padding: 10px; margin: 14px -16px -16px; background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -6px 16px rgba(20,24,60,.06); }
+  .pal { flex: 1; min-height: 46px; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); font-weight: 800; font-size: 15px; }
+  .pal--H { border-color: var(--h); color: var(--h); } .pal--D { border-color: var(--d); color: var(--d); } .pal--S { border-color: var(--s); color: var(--s); }
+  .pal.is-on.pal--H { background: var(--h); color: #fff; }
+  .map { margin-top: 6px; display: flex; flex-direction: column; gap: 8px; }
+  .steps { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .step { display: flex; gap: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; align-items: flex-start; }
+  .step__n { font-weight: 800; color: var(--text-muted); }
+  .step__t { flex: 1; font-size: 15px; }
+  .step__flag { flex: none; border: 2px solid var(--border); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 700; color: var(--text-muted); background: var(--surface); }
+  .step.is-err { border-color: var(--e); background: var(--e-bg); }
+  .step.is-err .step__flag { border-color: var(--e); background: var(--e); color: #fff; }
+  .sa { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .sa__row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .sa__q { font-weight: 600; font-size: 15px; }
+  .sa__line { font-size: 14px; margin-top: 4px; }
+  .equiv { margin-top: 6px; display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--warn); }
+  .res { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .res__box { border: 1px solid var(--right-border); background: var(--right-bg); border-radius: var(--radius); padding: 14px 16px; }
+  .res__box--self { border: 1px dashed var(--warn-border); background: var(--warn-bg); }
+  .res__label { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+  .res__big { font-size: 30px; font-weight: 800; margin-top: 4px; }
+  .res__small { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--text-muted); margin-top: 10px; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -1px; margin-right: 4px; border: 1px solid; }
+  @media (max-width: 560px) { .rv { grid-template-columns: 1fr 1fr; } .rv .rv__wide { grid-column: span 2; } .res { grid-template-columns: 1fr; } .comp__val { font-size: 18px; } }
+</style>
+</head>
+<body class="olymp">
+<main class="container">
+
+<!-- ============ 1. III-3: классификационная карта, решение ============ -->
+<section class="mock" id="m-grid">
+  <p class="mock__cap">III-3 · классификационная карта · во время решения</p>
+  <article class="panel task">
+    <div class="task__meta"><span class="chip" style="--topic-color:#ef4444">Право · Теория права · Норма права</span><span class="level-badge" data-level="3">Олимпиадный уровень</span></div>
+    <p class="task__block">Лаборатория классификации</p>
+    <h2 class="task__question">Классифицируйте положение ч. 1 ст. 39 ГПК РФ</h2>
+    <p class="task__hint">Для оснований со значком ¶ отметьте в тексте от одного до трёх подтверждающих фрагментов.</p>
+    <div class="legal">
+      <div class="legal__ref">ГПК РФ, ст. 39, ч. 1 <span class="muted">ред. — после сверки</span></div>
+      <div class="legal__text"><span class="frag is-ev">Истец</span> <span class="frag is-ev">вправе</span> <span class="frag">изменить основание или предмет иска,</span> <span class="frag">увеличить или уменьшить размер исковых требований</span> <span class="frag">либо отказаться от иска,</span> <span class="frag">ответчик</span> <span class="frag">вправе признать иск,</span> <span class="frag">стороны</span> <span class="frag">могут</span> <span class="frag">окончить дело мировым соглашением.</span></div>
+    </div>
+    <details class="refs" open><summary>Справочные нормы (3)</summary>
+      <div class="legal legal--ref"><div class="legal__ref">ГПК РФ, ст. 39, ч. 2</div><div class="legal__text"><span class="frag is-ev">Суд не принимает отказ истца от иска, признание иска ответчиком и не утверждает мировое соглашение сторон,</span> <span class="frag">если это противоречит закону или нарушает права и законные интересы других лиц.</span></div></div>
+      <div class="legal legal--ref"><div class="legal__ref">ГПК РФ, ст. 32</div><div class="legal__text"><span class="frag is-ev">Стороны могут по соглашению между собой изменить территориальную подсудность</span> <span class="frag">для данного дела до принятия его судом к своему производству.</span> […]</div></div>
+    </details>
+    <p class="sec-title">А. Опорные основания</p>
+    <div class="grid">
+      <div class="grow"><div class="grow__head"><span class="grow__num">3</span>По средствам регулирования <span class="grow__badge">¶</span></div>
+        <div class="chips"><span class="ch">Запрещающая</span><span class="ch">Обязывающая</span><span class="ch is-on">Управомочивающая</span></div>
+        <div class="ev">Доказательство: <span class="ev__tag">«вправе»</span></div></div>
+      <div class="grow is-active"><div class="grow__head"><span class="grow__num">4</span>По способу установления правил поведения <span class="grow__badge">¶</span></div>
+        <div class="chips"><span class="ch is-on">Императивная</span><span class="ch">Диспозитивная</span><span class="ch">Поощрительная</span><span class="ch">Рекомендательная*</span></div>
+        <div class="ev">Доказательство (до 3): <span class="ev__tag">«Суд не принимает…» · ч. 2 ст. 39</span><span class="ev__tag">«Стороны могут по соглашению…» · ст. 32</span></div></div>
+    </div>
+    <p class="sec-title">Б. Проверка применимости</p>
+    <p class="sec-hint">Даёт ли основание содержательную характеристику именно этого положения?</p>
+    <div class="grid">
+      <div class="grow"><div class="grow__head"><span class="grow__num">6</span>По кругу лиц</div>
+        <div class="chips"><span class="ch">Содержательно</span><span class="ch">Тривиально</span><span class="ch">Неприменимо</span><span class="ch is-on">Спорно</span></div>
+        <textarea class="ta" style="min-height:56px;margin-top:8px">Истец и ответчик — процессуальные роли, а не особый статус лица: стороной может стать любой.</textarea></div>
+      <div class="grow"><div class="grow__head"><span class="grow__num">7</span>По времени действия</div>
+        <div class="chips"><span class="ch">Содержательно</span><span class="ch is-on">Тривиально</span><span class="ch">Неприменимо</span><span class="ch">Спорно</span></div></div>
+    </div>
+    <p class="sec-title">В. Обоснование по основанию 4</p>
+    <textarea class="ta">«Вправе» означает, что истец сам решает, пользоваться ли правом, — это управомочивающая норма. Но договориться заранее, что истец не может отказаться от иска, стороны не могут: даже распорядительные действия контролирует суд (ч. 2 ст. 39), а там, где ГПК разрешает соглашение, он говорит об этом прямо (ст. 32)…</textarea>
+    <div class="task__actions"><button class="btn btn--ghost btn--lg">← Назад</button><span class="task__actions-spacer"></span><button class="btn btn--primary btn--lg">Проверить</button></div>
+  </article>
+</section>
+
+<!-- ============ 2. III-3: после проверки ============ -->
+<section class="mock" id="m-grid-review">
+  <p class="mock__cap">III-3 · после проверки · компоненты оценки и самопроверка</p>
+  <article class="panel task is-review">
+    <div class="task__meta"><span class="chip" style="--topic-color:#ef4444">Право · Теория права · Норма права</span><span class="level-badge" data-level="3">Олимпиадный уровень</span></div>
+    <h2 class="task__question">Классифицируйте положение ч. 1 ст. 39 ГПК РФ</h2>
+    <p class="task__hint">Ответ проверен — изменить его нельзя.</p>
+    <div class="feedback feedback--static" style="margin-top:14px">
+      <div class="points points--partial"><span class="points__value">Частично</span><span class="points__caption">Автоматически подтверждено 10 из 11</span></div>
+      <div class="comp">
+        <div class="comp__item"><div class="comp__label">Квалификация</div><div class="comp__val">7 / 8</div><div class="comp__src src-auto">подтверждено</div></div>
+        <div class="comp__item"><div class="comp__label">Доказательство</div><div class="comp__val">3 / 3</div><div class="comp__src src-auto">подтверждено</div></div>
+        <div class="comp__item comp__item--self"><div class="comp__label">Аргументация</div><div class="comp__val">— / 4</div><div class="comp__src src-self">ждёт самопроверки</div></div>
+      </div>
+    </div>
+    <div class="rv">
+      <div class="rv__h">Основание</div><div class="rv__h">Ваш ответ</div><div class="rv__h">Эталон</div><div class="rv__h">Т</div>
+      <div>3. По средствам</div><div class="text-right"><strong>Управомочивающая</strong></div><div>Управомочивающая</div><div class="text-right">✓</div>
+      <div>4. По способу установления</div><div class="text-right"><strong>Императивная</strong></div><div>Императивная</div><div class="text-right">✓</div>
+      <div>6. По кругу лиц</div><div class="text-right"><strong>Спорно</strong></div><div>Спорно / специальная</div><div class="muted">—</div>
+      <div>8. По роли в правовой системе</div><div class="text-wrong"><strong>Учредительная</strong></div><div>Неприменимо</div><div class="muted">—</div>
+    </div>
+    <div class="explanation explanation--mistake"><h3 class="explanation__title">Строка 8</h3><p>Статья реализует принцип диспозитивности процесса, но сама его не формулирует: это обычная регулятивная норма. Учредительные нормы по лекции — нормы-принципы.</p></div>
+    <div class="check">
+      <div class="check__title">Самопроверка аргументации <span class="src-self">не входит в подтверждённые баллы</span></div>
+      <div class="yours"><span class="muted">Ваш ответ:</span> «Вправе» означает, что истец сам решает, пользоваться ли правом… даже распорядительные действия контролирует суд (ч. 2 ст. 39)…</div>
+      <label><input type="checkbox" checked> Различил свободу выбора поведения управомоченного и возможность изменить правило соглашением <span class="req">обязательный</span></label>
+      <label><input type="checkbox" checked> Привёл системный довод (ч. 2 ст. 39 и/или ст. 32), не ограничившись отсутствием оговорки</label>
+      <label><input type="checkbox"> Объяснил, что норма реализует принцип диспозитивности, но сама не диспозитивна</label>
+      <label><input type="checkbox"> Указал, что деление «императивная / диспозитивная» к процессуальным управомочивающим нормам применяется с оговорками</label>
+      <div class="task__actions" style="margin-top:12px"><button class="btn btn--primary">Зафиксировать самопроверку</button></div>
+    </div>
+    <div class="explanation"><h3 class="explanation__title">Разбор</h3><p>Императивность нельзя вывести только из отсутствия оговорки «если иное не предусмотрено соглашением». Довод строится на системе процессуального закона: контроль суда за распорядительными действиями (ч. 2 ст. 39) и прямое разрешение соглашения там, где закон его допускает (ст. 32)…</p></div>
+  </article>
+</section>
+
+<!-- ============ 3. IV-3: разметка ============ -->
+<section class="mock" id="m-markup">
+  <p class="mock__cap">IV-3 · разметка нормы · смартфон</p>
+  <article class="panel task">
+    <div class="task__meta"><span class="chip" style="--topic-color:#ef4444">Право · Теория права · Норма права</span><span class="level-badge" data-level="2">Применение</span></div>
+    <p class="task__block">Анатомия нормы · шаг 1 из 4</p>
+    <h2 class="task__question">Отметьте гипотезу, диспозицию и санкцию</h2>
+    <p class="task__hint">Выберите инструмент внизу и нажимайте на фрагменты. Если элемента в тексте нет — не отмечайте его.</p>
+    <div class="legal">
+      <div class="legal__ref">Конституция РФ, ст. 38, ч. 3</div>
+      <div class="legal__text" style="font-size:18px"><span class="frag m-H">Трудоспособные дети, достигшие 18 лет,<sup>Г</sup></span> <span class="frag m-D">должны заботиться<sup>Д</sup></span> <span class="frag">о нетрудоспособных родителях.</span></div>
+    </div>
+    <div class="legend"><span><i class="dot" style="background:var(--h-bg);border-color:var(--h)"></i>Гипотеза</span><span><i class="dot" style="background:var(--d-bg);border-color:var(--d)"></i>Диспозиция</span><span><i class="dot" style="background:var(--s-bg);border-color:var(--s)"></i>Санкция</span></div>
+    <p class="sec-title">Шаг 2. Где находится санкция?</p>
+    <div class="map">
+      <div class="grow"><div class="grow__head">(а) для обязанности материального содержания</div>
+        <div class="chips"><span class="ch">В этом тексте</span><span class="ch">В другой статье Конституции</span><span class="ch is-on">В другом акте</span><span class="ch">Не установлена</span></div></div>
+      <div class="grow"><div class="grow__head">(б) для неимущественной заботы</div>
+        <div class="chips"><span class="ch">В этом тексте</span><span class="ch">В другой статье Конституции</span><span class="ch">В другом акте</span><span class="ch">Не установлена</span></div></div>
+    </div>
+    <div class="palette"><button class="pal pal--H is-on">Г</button><button class="pal pal--D">Д</button><button class="pal pal--S">С</button><button class="pal">Стереть</button></div>
+  </article>
+</section>
+
+<!-- ============ 4. V-2: ошибка юриста ============ -->
+<section class="mock" id="m-error">
+  <p class="mock__cap">V-2 · найдите ошибку юриста · смартфон</p>
+  <article class="panel task">
+    <div class="task__meta"><span class="chip" style="--topic-color:#ef4444">Право · Теория права · Норма права</span><span class="level-badge" data-level="3">Олимпиадный уровень</span></div>
+    <p class="task__block">Найдите ошибку юриста</p>
+    <h2 class="task__question">Где рассуждение студента впервые становится неверным?</h2>
+    <p class="task__hint">Отметьте первый ошибочный шаг и остальные ошибочные. Верные шаги не отмечайте.</p>
+    <details class="refs"><summary>УК РФ, ст. 125 — текст</summary></details>
+    <div class="steps">
+      <div class="step"><span class="step__n">1</span><span class="step__t">В уголовном праве часть статьи до слова «наказывается» называют диспозицией статьи.</span><span class="step__flag">ошибка?</span></div>
+      <div class="step is-err"><span class="step__n">2</span><span class="step__t">Значит, в терминах теории права эта часть — диспозиция нормы, то есть правило поведения.</span><span class="step__flag">ошибка</span></div>
+      <div class="step is-err"><span class="step__n">3</span><span class="step__t">Тогда норма двухэлементная — диспозиция и санкция; гипотезы нет.</span><span class="step__flag">ошибка</span></div>
+      <div class="step"><span class="step__n">4</span><span class="step__t">«Был обязан иметь о нём заботу» отсылает к другим актам — бланкетный способ.</span><span class="step__flag">ошибка?</span></div>
+      <div class="step"><span class="step__n">5</span><span class="step__t">Правило «окажи помощь…» прямо не выражено, значит, такой регулятивной нормы нет.</span><span class="step__flag">ошибка?</span></div>
+    </div>
+    <p class="sec-title">(а) В чём ошибка первого неверного шага?</p>
+    <textarea class="ta" placeholder="Своими словами"></textarea>
+    <p class="sec-title">(б) Реконструкция: «если — то — иначе»</p>
+    <textarea class="ta" placeholder="Если … , то … , иначе …"></textarea>
+  </article>
+</section>
+
+<!-- ============ 5. III-7: краткие ответы после проверки ============ -->
+<section class="mock" id="m-short">
+  <p class="mock__cap">III-7 · краткие ответы без вариантов · после проверки</p>
+  <article class="panel task is-review">
+    <div class="task__meta"><span class="chip" style="--topic-color:#ef4444">Право · Теория права · Норма права</span><span class="level-badge" data-level="3">Олимпиадный уровень</span></div>
+    <h2 class="task__question">ГК РФ, ст. 1066 — часть Б. Краткие ответы</h2>
+    <div class="sa">
+      <div class="sa__row"><div class="sa__q">1. По отношению к какой статье ГК ст. 1066 — исключительная норма?</div>
+        <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong class="text-right">ст. 1064 ГК</strong> <span class="statement__tag">Принят</span></div></div>
+      <div class="sa__row"><div class="sa__q">2. Выпишите условие, ограничивающее исключение</div>
+        <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong>если оборона была соразмерной</strong></div>
+        <div class="sa__line"><span class="muted">Эталон:</span> <strong class="text-right">«если при этом не были превышены ее пределы»</strong></div>
+        <label class="equiv"><input type="checkbox" checked> Мой ответ равнозначен эталону — засчитать как самопроверку</label></div>
+      <div class="sa__row"><div class="sa__q">4. Сколько условий в гипотезе ст. 1066?</div>
+        <div class="sa__line"><span class="muted">Ваш ответ:</span> <strong class="text-wrong">1</strong> · <span class="muted">Эталон:</span> <strong class="text-right">2</strong></div>
+        <div class="explanation explanation--mistake" style="margin-top:8px"><h3 class="explanation__title">Типичная ошибка</h3><p>Не замечено второе условие — непревышение пределов обороны. Гипотеза сложная: оба условия должны быть одновременно.</p></div></div>
+    </div>
+  </article>
+</section>
+
+<!-- ============ 6. Итоги ============ -->
+<section class="mock" id="m-result">
+  <p class="mock__cap">Итоги темы · режим просмотра после завершения</p>
+  <div class="panel result">
+    <p class="author-badge"><span class="author-badge__mark" aria-hidden="true">АА</span>Авторский практикум · Андрей Авдеенков</p>
+    <h2 class="result__title">Тема завершена</h2>
+    <p class="result__scope">Социальные нормы и норма права · обязательная часть · 11 заданий</p>
+    <div class="res">
+      <div class="res__box"><div class="res__label src-auto">Подтверждено автоматически</div><div class="res__big">47 из 58</div><div class="res__small">квалификация 33 / 40 · доказательство 14 / 18<br>верно 6 · частично 4 · неверно 1</div></div>
+      <div class="res__box res__box--self"><div class="res__label src-self">Самопроверка</div><div class="res__big">19 из 26</div><div class="res__small">оценено вами по критериям, не подтверждено автоматически<br>не выполнена: 1 задание</div></div>
+    </div>
+    <nav class="task-nav" style="margin-top:16px"><ol class="task-nav__list">
+      <li><button class="task-nav__item is-done points--full">1</button></li><li><button class="task-nav__item is-done points--full">2</button></li><li><button class="task-nav__item is-done points--partial">3</button></li><li><button class="task-nav__item is-done points--full">4</button></li><li><button class="task-nav__item is-done points--partial">5</button></li><li><button class="task-nav__item is-done points--partial">6</button></li><li><button class="task-nav__item is-done points--full">7</button></li><li><button class="task-nav__item is-done points--none">8</button></li><li><button class="task-nav__item is-done points--full">9</button></li><li><button class="task-nav__item is-done points--partial">10</button></li><li><button class="task-nav__item is-done points--full">11</button></li>
+    </ol></nav>
+    <div class="chips" style="margin-top:14px"><span class="ch is-on">Все</span><span class="ch">С ошибками</span><span class="ch">Частично</span><span class="ch">Самопроверка не выполнена</span></div>
+    <p class="result__note muted" style="margin-top:12px">Повторное прохождение не предусмотрено. Вы можете открыть любое задание и изучить свой ответ, эталон и разбор — результат не изменится.</p>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
