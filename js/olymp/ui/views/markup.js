@@ -311,11 +311,17 @@
         return card;
       }
       if (detail.status === 'note') {
-        var where = detail.noted.map(function (id) {
+        // Два разных случая: (а) фрагмент этого элемента помечен другим элементом;
+        // (б) метка этого элемента поставлена на фрагмент другого элемента.
+        detail.noted.forEach(function (id) {
           var f = fragments[id];
-          return N.quote(N.fragmentText(task, id)) + ' — ошибка учтена в элементе «' + paletteLabel(task, f.charged) + '»';
+          var text = N.quote(N.fragmentText(task, id));
+          var charged = paletteLabel(task, f.charged);
+          var line = f.accepted.indexOf(p.id) !== -1
+            ? 'Фрагмент ' + text + ' — это «' + p.label + '», но он размечен как «' + paletteLabel(task, f.mark) + '». Ошибка учтена в элементе «' + charged + '»: одна неверная метка снимает не больше одного балла.'
+            : 'Метка «' + p.label + '» поставлена на фрагмент другого элемента: ' + text + '. Ошибка учтена в элементе «' + charged + '»: одна неверная метка снимает не больше одного балла.';
+          card.appendChild(el('p', 'nrm-rv__note', line));
         });
-        card.appendChild(el('p', 'nrm-rv__note', 'Метка «' + p.label + '» поставлена и на фрагмент другого элемента: ' + where.join('; ') + '. Одна неверная метка снимает не больше одного балла.'));
       }
       card.classList.add('nrm-rv--ok');
     } else {

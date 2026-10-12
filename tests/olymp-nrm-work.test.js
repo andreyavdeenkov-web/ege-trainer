@@ -122,7 +122,7 @@ test('IV-1 и IV-2: размечаются только выраженные ф�
     const task = OLY.getTask(id);
     assert.equal(task.type, 'text-markup');
     assert.match(task.markupHint, /только то, что прямо/);
-    assert.ok(task.sections.some((s) => /Реконструкция/.test(s.title)), id);
+    assert.ok(task.sections.some((s) => /Реконструкция|Невыраженн/.test(s.title)), id);
   }
   // В IV-2 санкции в тексте нет: её «дописывание» снимает балл санкции.
   const t = OLY.getTask('PR-LAW-NRM-008');
@@ -163,6 +163,19 @@ test('Блоки А–Г: подключённые блоки полные по 
   }
   // Темы блоков не видны на основной странице: там нет их заданий.
   assert.equal(loadBank().tasks.filter((t) => /^LAW-NR/.test(t.topic)).length, 0);
+});
+
+test('Образец задания на структуру (IV-1): классическая трёхэлементная модель, без четвёртого элемента; санкции в тексте нет — её не размечают', () => {
+  const OLY = work();
+  const t = OLY.getTask('PR-LAW-NRM-007');
+  assert.deepEqual(t.palette.map((p) => p.id), ['H', 'D', 'S']);
+  assert.ok(!Object.values(t.markup.key).flat().includes('S'), 'санкции нет в тексте');
+  assert.ok(Object.values(t.markup.key).every((k) => !Array.isArray(k)), 'без спорных границ');
+  assert.doesNotMatch(JSON.stringify(t), /лекци|Условие применения санкции/);
+  const r = OLY.types.get(t.type).getCorrect(t);
+  r.marks.f1 = 'S';   // «не допускать к работе» как санкция — ошибка
+  const g = OLY.grade.gradeTask(t, r);
+  assert.ok(g.points < t.scoring.maxPoints);
 });
 
 test('Задания на классификацию: одно предписание, простые вопросы без доказательств, отрасль — из общего набора 11 отраслей', () => {

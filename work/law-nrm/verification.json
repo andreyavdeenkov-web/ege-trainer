@@ -23,17 +23,6 @@
         "PR-LAW-NRM-005"
       ]
     },
-    "СК РФ | ст. 80, пп. 1 и 3": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-007"
-      ]
-    },
     "ТК РФ | ст. 122, ч. 2": {
       "status": "pending",
       "edition": "",
@@ -573,7 +562,18 @@
         "PR-LAW-NRB-003"
       ]
     },
-    "УК РФ | ст. 158, ч. 1 (санкция — с сокращениями)": {
+    "Земельный кодекс РФ | ст. 42, абз. 1–2 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-005"
+      ]
+    },
+    "УК РФ | ст. 158, ч. 1": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -584,7 +584,7 @@
         "PR-LAW-NRB-004"
       ]
     },
-    "Земельный кодекс РФ | ст. 42, абз. 1–2 (фрагмент)": {
+    "ТК РФ | ст. 76, ч. 1, абз. 1–2": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -592,7 +592,7 @@
       "officialText": "",
       "comment": "",
       "tasks": [
-        "PR-LAW-NRB-005"
+        "PR-LAW-NRM-007"
       ]
     }
   }
