@@ -42,7 +42,10 @@ test('Обязательная часть: 11 заданий по реестру
   const OLY = work();
   const tasks = nrm(OLY);
   assert.equal(tasks.length, 11);
-  assert.deepEqual(tasks.map((t) => t.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  assert.deepEqual(tasks.map((t) => t.order).sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  // Порядок показа: II-1 → I-1 → II-2 → I-3 → III-2 → … → V-2; идентификаторы постоянные.
+  assert.deepEqual(OLY.sortByOrder(tasks).map((t) => t.id.slice(-3)),
+    ['003', '001', '004', '002', '005', '006', '007', '008', '009', '010', '011']);
   for (const task of tasks) {
     assert.equal(task.draft, true, task.id);
     const type = OLY.types.get(task.type);
@@ -160,6 +163,13 @@ test('Задания на структуру нормы: трёхэлемент�
   assert.match(OLY.getTask('PR-LAW-NRM-010').markup.elements.S.explanation, /отсылочной санкцией/);
   const sanctions = ids.filter((id) => Object.values(OLY.getTask(id).markup.key).includes('S'));
   assert.ok(sanctions.length >= 3, 'есть задания на распознавание санкции: ' + sanctions);
+  // Учебная модель разметки названа в условии; альтернативный подход не объявлен ошибочным.
+  for (const id of ids) assert.match(OLY.getTask(id).markupHint, /Это учебная модель разметки; в юридической науке существуют и другие подходы/, id);
+  for (const id of ['PR-LAW-NRM-009', 'PR-LAW-NRM-010']) {
+    assert.match(OLY.getTask(id).markup.elements.D.wrong.full, /нормы-запрета.*ошибочным не является/, id);
+  }
+  assert.match(OLY.getTask('PR-LAW-NRM-011').explanation, /учебное соглашение/);
+  assert.doesNotMatch(JSON.stringify(OLY.getTask('PR-LAW-NRC-001')), /гипотезой не является/);
   // Среди заданий есть такие, где ученик должен распознать отсутствие каждого из трёх элементов.
   assert.ok(missingSeen.H >= 1 && missingSeen.D >= 1 && missingSeen.S >= 1, JSON.stringify(missingSeen));
 });
