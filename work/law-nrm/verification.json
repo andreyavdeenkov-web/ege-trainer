@@ -309,17 +309,6 @@
         "PR-LAW-NRA-004"
       ]
     },
-    "СК РФ | ст. 80, п. 1 (первые два предложения)": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRB-001"
-      ]
-    },
     "ТК РФ | ст. 92, ч. 1 (фрагмент)": {
       "status": "pending",
       "edition": "",
@@ -627,6 +616,17 @@
       "comment": "",
       "tasks": [
         "PR-LAW-NRD-003"
+      ]
+    },
+    "СК РФ | ст. 80, п. 1, первое предложение": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-001"
       ]
     }
   }

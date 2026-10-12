@@ -257,7 +257,9 @@
       });
     });
     lay.aside.appendChild(legal.node);
-    lay.aside.appendChild(el('p', 'nrm-legend', 'Подчёркнуты фрагменты, которые служат доказательством в эталоне.'));
+    if (rowsOf(task).some(function (row) { return !!row.evidence; })) {
+      lay.aside.appendChild(el('p', 'nrm-legend', 'Подчёркнуты фрагменты, которые служат доказательством в эталоне.'));
+    }
 
     task.sections.forEach(function (section) {
       var block = el('section', 'nrm-block');
@@ -293,8 +295,11 @@
   }
 
   ui.views.register('analysis-grid', {
-    hint: function () {
-      return 'Выберите значение в каждой строке. В строках со значком ¶ нажмите «Отметить в тексте» и выберите фрагменты нормы.';
+    hint: function (task) {
+      var evidence = task && rowsOf(task).some(function (row) { return !!row.evidence; });
+      return evidence
+        ? 'Выберите значение в каждой строке. В строках со значком ¶ нажмите «Отметить в тексте» и выберите фрагменты нормы.'
+        : 'Выберите ответ в каждой строке, затем нажмите «Проверить».';
     },
     render: render,
     renderReview: renderReview,
