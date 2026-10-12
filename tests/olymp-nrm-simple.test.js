@@ -2,7 +2,7 @@
 
 /**
  * Упрощённый тренажёр «Классификация правовых норм» (тема LAW-NKL, страница olympiad-nrm-simple.html):
- * страница собрана генератором, серия 1 — пять норм с согласованными ключами, 36 вопросов и 36 баллов,
+ * страница собрана генератором, серия 1 — пять норм с согласованными ключами, 35 вопросов и 35 баллов,
  * один вопрос — один балл, у каждого варианта есть объяснение, тренажёр не попадает в публикуемый банк
  * и в рабочий банк углублённого практикума LAW-NRM.
  */
@@ -22,7 +22,7 @@ const series = (OLY) => OLY.sortByOrder(OLY.tasks.filter((t) => t.topic === 'LAW
 const KEYS = {
   'PR-LAW-NKL-001': { branch: 'Конституционное право', nature: 'Материальная', method: 'Императивная', means: 'Обязывающая', function: 'Регулятивная', time: 'Постоянная', persons: 'Общая', sphere: 'Федеральная' },
   'PR-LAW-NKL-002': { branch: 'Гражданское право', nature: 'Материальная', method: 'Диспозитивная', means: 'Обязывающая', function: 'Регулятивная', time: 'Постоянная', sphere: 'Федеральная' },
-  'PR-LAW-NKL-003': { branch: 'Семейное право', nature: 'Материальная', method: 'Императивная', means: 'Обязывающая', function: 'Регулятивная', time: 'Постоянная', persons: 'Специальная', sphere: 'Федеральная' },
+  'PR-LAW-NKL-003': { branch: 'Семейное право', nature: 'Материальная', method: 'Императивная', means: 'Обязывающая', function: 'Регулятивная', time: 'Постоянная', sphere: 'Федеральная' },
   'PR-LAW-NKL-004': { branch: 'Трудовое право', nature: 'Материальная', method: 'Императивная', means: 'Запрещающая', function: 'Регулятивная', time: 'Постоянная', sphere: 'Федеральная' },
   'PR-LAW-NKL-005': { branch: 'Гражданское процессуальное право', nature: 'Процессуальная', means: 'Управомочивающая', function: 'Регулятивная', time: 'Постоянная', sphere: 'Федеральная' }
 };
@@ -51,7 +51,7 @@ test('Тренажёр не подключён к основной, демо- и
   assert.equal(simple().tasks.filter((t) => /^LAW-NR[MA-D]$/.test(t.topic)).length, 0);
 });
 
-test('Серия 1: пять норм по порядку, согласованные ключи, 36 вопросов — 36 баллов', () => {
+test('Серия 1: пять норм по порядку, согласованные ключи, 35 вопросов — 35 баллов', () => {
   const OLY = simple();
   const tasks = series(OLY);
   assert.deepEqual(tasks.map((t) => t.id), Object.keys(KEYS));
@@ -73,7 +73,7 @@ test('Серия 1: пять норм по порядку, согласован�
     assert.equal(task.scoring.maxPoints, rows.length, task.id);
     total += task.scoring.maxPoints;
   }
-  assert.equal(total, 36);
+  assert.equal(total, 35);
 });
 
 test('Проверка: эталон — полный балл, каждая ошибка стоит ровно один балл', () => {
@@ -106,4 +106,40 @@ test('Объяснения: у правильного ответа и у каж�
       });
     }
   }
+});
+
+test('Основание «По способу установления правил поведения»: три варианта, включая «Поощрительная»', () => {
+  for (const task of series(simple())) {
+    const method = rowsOf(task).find((r) => r.id === 'method');
+    if (method) assert.deepEqual([...method.options].sort(), ['Диспозитивная', 'Императивная', 'Поощрительная'], task.id);
+  }
+});
+
+test('Ст. 80 СК: вопрос «По кругу лиц» вне автоматической проверки, строка сохранена в резерве', () => {
+  const OLY = simple();
+  const task = OLY.getTask('PR-LAW-NKL-003');
+  assert.ok(!rowsOf(task).some((r) => r.id === 'persons'));
+  const deferred = OLY.nrmSimpleDeferred['PR-LAW-NKL-003'];
+  assert.equal(deferred.length, 1);
+  assert.equal(deferred[0].options[deferred[0].key[0]], 'Специальная');
+});
+
+test('Перемешивание: правильный ответ не стоит систематически на одной позиции', () => {
+  const OLY = simple();
+  const positions = [];
+  const positions2 = [];
+  for (const task of series(OLY)) {
+    const own = rowsOf(task).map((r) => OLY.ui.nrm.displayOrder(task, r).indexOf(r.key[0]));
+    // Двухвариантные строки: правильный ответ встречается и первым, и вторым.
+    positions2.push(...rowsOf(task).filter((r) => r.options.length === 2).map((r) => r.key[0]));
+    // В задании правильные ответы не все на одной и той же позиции.
+    assert.ok(new Set(own).size > 1, task.id + ': ' + own.join(','));
+    positions.push(...own);
+  }
+  // По серии ни одна позиция не занимает больше половины правильных ответов.
+  const counts = {};
+  positions.forEach((p) => { counts[p] = (counts[p] || 0) + 1; });
+  assert.ok(Math.max(...Object.values(counts)) <= positions.length / 2, JSON.stringify(counts));
+  const first = positions2.filter((p) => p === 0).length;
+  assert.ok(first >= positions2.length / 3 && first <= positions2.length * 2 / 3, 'двухвариантные: первым ' + first + ' из ' + positions2.length);
 });
