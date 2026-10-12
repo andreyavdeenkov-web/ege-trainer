@@ -199,17 +199,6 @@
         "PR-LAW-NRC-001"
       ]
     },
-    "ГК РФ | ст. 1, п. 3": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRC-004"
-      ]
-    },
     "ГК РФ | ст. 309 (первое предложение)": {
       "status": "pending",
       "edition": "",
@@ -474,7 +463,18 @@
         "PR-LAW-NRM-008"
       ]
     },
-    "СК РФ | ст. 115 «Ответственность за несвоевременную уплату алиментов», п. 2, первое предложение": {
+    "ТК РФ | ст. 142, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-003"
+      ]
+    },
+    "Федеральный закон «Об образовании в Российской Федерации» | ст. 43, ч. 4": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -485,7 +485,7 @@
         "PR-LAW-NRM-009"
       ]
     },
-    "СК РФ | ст. 69, абз. 1–2": {
+    "ТК РФ | ст. 419, ч. 1": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -496,7 +496,7 @@
         "PR-LAW-NRM-010"
       ]
     },
-    "ГК РФ | ст. 1064, п. 2, первое предложение": {
+    "УПК РФ | ст. 117": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -507,7 +507,7 @@
         "PR-LAW-NRC-002"
       ]
     },
-    "ТК РФ | ст. 142, ч. 2": {
+    "Конституция РФ | ст. 59, ч. 3": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -515,7 +515,7 @@
       "officialText": "",
       "comment": "",
       "tasks": [
-        "PR-LAW-NRC-003"
+        "PR-LAW-NRC-004"
       ]
     }
   }

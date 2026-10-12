@@ -203,7 +203,7 @@ test('Рабочий банк: задания на структуру — эта
   }
 });
 
-test('Независимая оценка (СК ст. 115 п. 2): санкция, размеченная как диспозиция, — 0 за санкцию и 0 за диспозицию', () => {
+test('Независимая оценка (ч. 4 ст. 43 Закона об образовании): санкция, размеченная как диспозиция, — 0 за санкцию и 0 за диспозицию', () => {
   const OLY = loadBank('olympiad-work.html');
   const task = OLY.getTask('PR-LAW-NRM-009');
   const response = OLY.types.get(task.type).getCorrect(task);
@@ -223,7 +223,7 @@ test('text-markup в попытке: «частично», баллы по ко�
   const attempt = A.createAttempt({ mode: 'practice', olympiad: 'PR', subject: 'social', taskIds: [task.id],
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   const response = OLY.types.get(task.type).getCorrect(task);
-  response.marks.f2 = null;   // гипотеза пропущена — 0 только за гипотезу
+  response.marks.f2 = null;   // санкция пропущена — 0 только за санкцию
   A.setResponse(attempt, task.id, response);
   const result = A.check(attempt, task.id);
   assert.equal(result.verdict, 'partial');

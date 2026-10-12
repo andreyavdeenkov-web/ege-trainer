@@ -145,6 +145,21 @@ test('Задания на структуру нормы: трёхэлемент�
       });
     }
   }
+  // Неполные фрагменты помечены знаком […]; спорные слова оставлены вне разметки.
+  for (const id of ['PR-LAW-NRM-008', 'PR-LAW-NRC-003']) {
+    const frs = OLY.getTask(id).legal[0].fragments;
+    assert.match(frs[frs.length - 1].text, /\[…\]$/, id);
+  }
+  const plain = (id) => OLY.getTask(id).legal[0].fragments.filter((f) => !f.id).map((f) => f.text).join('');
+  assert.match(plain('PR-LAW-NRC-003'), /известив работодателя в письменной форме/);
+  assert.match(plain('PR-LAW-NRM-009'), /могут быть применены/);
+  assert.match(plain('PR-LAW-NRC-002'), /может быть наложено/);
+  assert.match(plain('PR-LAW-NRC-004'), /Гражданин Российской Федерации/);
+  // Санкции: денежное взыскание — мера процессуального принуждения; ст. 419 ТК — отсылочная санкция.
+  assert.match(OLY.getTask('PR-LAW-NRC-002').explanation, /мера процессуального принуждения/);
+  assert.match(OLY.getTask('PR-LAW-NRM-010').markup.elements.S.explanation, /отсылочной санкцией/);
+  const sanctions = ids.filter((id) => Object.values(OLY.getTask(id).markup.key).includes('S'));
+  assert.ok(sanctions.length >= 3, 'есть задания на распознавание санкции: ' + sanctions);
   // Среди заданий есть такие, где ученик должен распознать отсутствие каждого из трёх элементов.
   assert.ok(missingSeen.H >= 1 && missingSeen.D >= 1 && missingSeen.S >= 1, JSON.stringify(missingSeen));
 });
