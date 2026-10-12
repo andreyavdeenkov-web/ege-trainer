@@ -52,8 +52,8 @@ const PAGES = {
   simple: {
     file: 'olympiad-nrm-simple.html',
     title: 'Классификация норм',
-    data: ['work/law-nrm/classify.js', 'work/law-nrm-simple/series-1.js'],
-    banner: '<strong>Тренажёр «Классификация правовых норм» — не опубликован.</strong> Первая серия из пяти норм на методической проверке; нормативные тексты не сверены с официальными источниками.',
+    data: ['work/law-nrm/classify.js', 'work/law-nrm-simple/common.js', 'work/law-nrm-simple/series-1.js', 'work/law-nrm-simple/series-2.js'],
+    banner: '<strong>Тренажёр «Классификация правовых норм» — не опубликован.</strong> Задания на методической проверке; нормативные тексты не сверены с официальными источниками.',
     reset: 'Сбросить попытку тренажёра',
     scope: 'PR/LAW/LAW-NKL'
   }

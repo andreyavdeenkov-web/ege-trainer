@@ -8,11 +8,9 @@
  * Тип analysis-grid, строки без доказательств: один правильный ответ — один балл (правило components).
  * Отраслевая принадлежность — общий набор отраслей OLY.nrmClassify (work/law-nrm/classify.js).
  *
- * Основания (в порядке учебника) и варианты ответа — константы ниже; в задании показываются только
- * основания, по которым согласован однозначный ответ. Ключи согласованы преподавателем 12.10.2026.
- * Варианты перемешиваются здесь, в данных (mixOptions): порядок стабилен и свой для каждого задания
- * и основания, поэтому правильный ответ не стоит систематически на одной позиции. Общий механизм
- * row.shuffle не используется: при двух вариантах он всегда меняет их местами (см. nrm-common.js).
+ * Основания, варианты ответа, сборка заданий и перемешивание вариантов — общие для всех серий
+ * (work/law-nrm-simple/common.js). В задании показываются только основания, по которым согласован
+ * однозначный ответ. Ключи согласованы преподавателем 12.10.2026.
  *
  * Статус: черновик на методической проверке. Нормативные тексты не сверены с официальной
  * публикацией — окружение разработки не имеет доступа к pravo.gov.ru, consultant.ru, garant.ru
@@ -22,97 +20,10 @@
   'use strict';
 
   var OLY = root.OLY;
-  var branchRow = OLY.nrmClassify.branchRow;
-
-  var CHECKED = '2026-10-12';
-  var UNVERIFIED = 'Официальные источники недоступны из окружения разработки. Текст приведён по памяти редакций, действующих на дату проверки; требуется сверка с официальным опубликованием (pravo.gov.ru).';
-
-  /* Основания классификации: подпись строки, краткое имя для навигации, варианты. */
-  var NATURE = { label: 'По характеру регулируемых отношений', short: 'Отношения', options: ['Материальная', 'Процессуальная'] };
-  var METHOD = { label: 'По способу установления правил поведения', short: 'Способ', options: ['Императивная', 'Диспозитивная', 'Поощрительная'] };
-  var MEANS = { label: 'По средствам регулирования', short: 'Средства', options: ['Обязывающая', 'Запрещающая', 'Управомочивающая'] };
-  var FUNCTION = { label: 'По выполняемым функциям', short: 'Функция', options: ['Регулятивная', 'Охранительная'] };
-  var TIME = { label: 'По времени действия', short: 'Время', options: ['Постоянная', 'Временная'] };
-  var PERSONS = { label: 'По кругу лиц', short: 'Круг лиц', options: ['Общая', 'Специальная'] };
-  var SPHERE = { label: 'По сфере действия', short: 'Сфера', options: ['Федеральная', 'Региональная', 'Местная', 'Локальная'] };
-  var SUBJECT_LABEL = 'По предмету регулирования';
-
-  /** Строка основания: id, номер в задании, ключ (текст варианта), объяснения. */
-  function row(id, n, basis, key, wrong, explanation) {
-    return {
-      id: id, short: basis.short, label: n + '. ' + basis.label,
-      options: basis.options.slice(), key: [basis.options.indexOf(key)],
-      wrong: wrong, explanation: explanation
-    };
-  }
-
-  function subject(n, opts) {
-    opts.id = 'branch';
-    opts.label = n + '. ' + SUBJECT_LABEL;
-    var r = branchRow(opts);
-    r.short = 'Предмет';
-    return r;
-  }
-
-  /** Стабильное псевдослучайное число из строки (FNV-1a). */
-  function hash(text) {
-    var h = 2166136261;
-    for (var i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-    return h;
-  }
-
-  /**
-   * Перемешивает варианты строки (Фишер — Йетс с генератором, засеянным id задания и строки)
-   * и пересчитывает номера в key и wrong. Содержание вариантов и объяснений не меняется.
-   */
-  function mixOptions(taskId, r) {
-    var order = r.options.map(function (o, i) { return i; });
-    var seed = hash(taskId + '/' + r.id);
-    for (var i = order.length - 1; i > 0; i--) {
-      seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
-      var j = (seed >>> 16) % (i + 1);
-      var t = order[i]; order[i] = order[j]; order[j] = t;
-    }
-    var wrong = {};
-    order.forEach(function (from, to) { if (r.wrong[from] !== undefined) wrong[to] = r.wrong[from]; });
-    r.options = order.map(function (from) { return r.options[from]; });
-    r.key = r.key.map(function (k) { return order.indexOf(k); });
-    r.wrong = wrong;
-    return r;
-  }
-
-  function task(fields) {
-    var base = {
-      olympiad: 'PR', subject: 'social', discipline: 'LAW', section: 'theory', topic: 'LAW-NKL',
-      draft: true,
-      verification: { status: 'unconfirmed', checked: CHECKED, note: UNVERIFIED },
-      type: 'analysis-grid'
-    };
-    Object.keys(fields).forEach(function (k) { base[k] = fields[k]; });
-    var rows = base.sections[0].rows;
-    rows.forEach(function (r) { mixOptions(base.id, r); });
-    base.scoring = { maxPoints: rows.length, rule: 'components', basis: 'author' };
-    return base;
-  }
-
-  function sections(rows) {
-    return [{
-      id: 'classify', title: 'Классификация',
-      hint: 'Классифицируйте приведённое предписание по каждому основанию. Один верный ответ — один балл.',
-      rows: rows
-    }];
-  }
-
-  /* Повторяющиеся объяснения ошибок по сфере действия. */
-  function sphereWrong(act, extra) {
-    var w = {
-      1: 'Региональные нормы содержатся в конституциях (уставах), законах и иных актах субъектов РФ и действуют только на их территории. ' + act + ' принят на федеральном уровне.',
-      2: 'Местные нормы устанавливают органы местного самоуправления, и действуют они в пределах муниципального образования. ' + act + ' — акт Российской Федерации, а не муниципалитета.',
-      3: 'Локальные нормы принимают организации — например, правила внутреннего трудового распорядка работодателя — и действуют они только внутри организации. ' + act + ' обращён ко всем, кто находится на территории России.'
-    };
-    Object.keys(extra || {}).forEach(function (k) { w[k] = extra[k]; });
-    return w;
-  }
+  var K = OLY.nkl;
+  var NATURE = K.NATURE, METHOD = K.METHOD, MEANS = K.MEANS, FUNCTION = K.FUNCTION;
+  var TIME = K.TIME, PERSONS = K.PERSONS, SPHERE = K.SPHERE;
+  var row = K.row, subject = K.subject, task = K.task, sections = K.sections, sphereWrong = K.sphereWrong;
 
   /**
    * Вне автоматической проверки (решение преподавателя от 12.10.2026): вопрос «По кругу лиц» к п. 1 ст. 80 СК
