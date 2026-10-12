@@ -94,7 +94,9 @@ OLY.defineSubject({
         { id: 'LAW-NRA', title: 'Норма права. Блок А: признаки нормы права и её обеспечение', section: 'theory' },
         { id: 'LAW-NRB', title: 'Норма права. Блок Б: лаборатория классификации', section: 'theory' },
         { id: 'LAW-NRC', title: 'Норма права. Блок В: анатомия нормы и ошибки юриста', section: 'theory' },
-        { id: 'LAW-NRD', title: 'Норма права. Блок Г: олимпиадный вызов', section: 'theory' }
+        { id: 'LAW-NRD', title: 'Норма права. Блок Г: олимпиадный вызов', section: 'theory' },
+        // Упрощённый тренажёр «Классификация правовых норм» (в разработке, страница olympiad-nrm-simple.html).
+        { id: 'LAW-NKL', title: 'Классификация правовых норм', section: 'theory' }
       ]
     }
   ]
