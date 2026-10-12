@@ -374,6 +374,127 @@
       "tasks": [
         "PR-LAW-NRB-005"
       ]
+    },
+    "Конституция РФ | ст. 20, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-001"
+      ]
+    },
+    "ГК РФ | ст. 1064, п. 1 абз. 1 и п. 2 (первое предложение)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-002"
+      ]
+    },
+    "УК РФ | ст. 264, ч. 1 (санкция — с сокращениями)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-003"
+      ]
+    },
+    "УК РФ | ст. 26, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-003"
+      ]
+    },
+    "ГК РФ | ст. 1079, п. 1 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-003"
+      ]
+    },
+    "ГК РФ | ст. 1, п. 3": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-004"
+      ]
+    },
+    "ГК РФ | ст. 10, п. 2 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-004"
+      ]
+    },
+    "ГК РФ | ст. 309 (первое предложение)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-005"
+      ]
+    },
+    "ГК РФ | ст. 393, п. 1 (первое предложение)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-005"
+      ]
+    },
+    "ТК РФ | ст. 80, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-006"
+      ]
+    },
+    "ГК РФ | ст. 1, пп. 3–4": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-007"
+      ]
     }
   }
 }

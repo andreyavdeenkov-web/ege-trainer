@@ -91,7 +91,11 @@
     var legal = N.renderLegal(task, { blocks: mains, onFragment: applyTool });
     // Фрагмент, получивший фокус с клавиатуры, не должен оставаться под закреплённой панелью инструментов.
     Object.keys(legal.fragments).forEach(function (id) {
+      // Только при переходе с клавиатуры: при нажатии пальцем или мышью прокрутка между
+      // нажатием и отпусканием сдвигала бы фрагмент, и метка не ставилась бы.
       legal.fragments[id].addEventListener('focus', function () {
+        var node = legal.fragments[id];
+        if (node.matches && !node.matches(':focus-visible')) return;
         var dockNode = box.querySelector('.nrm-dock');
         if (!dockNode) return;
         var r = legal.fragments[id].getBoundingClientRect();

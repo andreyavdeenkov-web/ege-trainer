@@ -42,7 +42,7 @@ const PAGES = {
   work: {
     file: 'olympiad-work.html',
     title: 'Рабочий банк',
-    data: ['work/law-nrm/mandatory.js', 'work/law-nrm/block-a.js', 'work/law-nrm/block-b.js'],
+    data: ['work/law-nrm/mandatory.js', 'work/law-nrm/block-a.js', 'work/law-nrm/block-b.js', 'work/law-nrm/block-c.js'],
     banner: '<strong>Рабочий банк — не опубликован.</strong> Обязательная часть и дополнительные блоки на методической проверке; нормативные тексты не сверены с официальными источниками (задания помечены как неподтверждённые).',
     reset: 'Сбросить попытку рабочего банка',
     scope: 'PR/LAW/LAW-NR'
