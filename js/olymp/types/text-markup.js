@@ -17,7 +17,8 @@
  *     key: { fragmentId: 'H' | ['H', 'D'] | null },  // каждый размечаемый фрагмент;
  *                                   // список — спорная граница: принимается любая метка из списка;
  *                                   // null — фрагмент не относится ни к одному элементу
- *     elements: { H: { explanation: '…', wrong: '…' | { short, full } }, … }  // для каждого элемента палитры
+ *     elements: { H: { explanation: '…', wrong: '…' | { short, full } }, … },  // для каждого элемента палитры
+ *     scoring?: 'independent'      // элементы оцениваются независимо (см. independent())
  *   },
  *   sections?: [...]                // строки выбора (как в analysis-grid, без доказательства)
  * }
@@ -109,6 +110,7 @@
     Object.keys(key).forEach(function (id) {
       if (fragments.indexOf(id) === -1) errors.push('markup.key: фрагмент ' + id + ' не размечается (нет в основных блоках)');
     });
+    if (task.markup.scoring !== undefined && task.markup.scoring !== 'independent') errors.push("markup.scoring — только 'independent'");
     var elements = task.markup.elements;
     if (!elements || typeof elements !== 'object') errors.push('нет markup.elements');
     else {
@@ -186,6 +188,16 @@
    * не относится ни к одному элементу (null) или если этого элемента в тексте нет вовсе
    * («дописанная» санкция): тогда у элемента фрагмента по эталону — замечание.
    */
+  /**
+   * markup.scoring: 'independent' — каждый элемент оценивается самостоятельно: элемент засчитывается,
+   * если все его фрагменты размечены им и его метка не стоит на чужих фрагментах. Неверная метка на
+   * фрагменте элемента X меткой Y снимает балл у X (не распознан) и у Y (поставлен ошибочно) — и только
+   * у них. Без этого поля — прежнее правило: одна неверная метка снимает не больше одного балла.
+   */
+  function independent(task) {
+    return !!task.markup && task.markup.scoring === 'independent';
+  }
+
   function scoreMarkup(task, marks) {
     var elements = {};
     task.palette.forEach(function (p) { elements[p.id] = { status: 'ok', points: 1, missing: [], extra: [], noted: [], present: false }; });
@@ -198,7 +210,11 @@
       var m = marks[id] || null;
       var ok = acc.length === 0 ? m === null : (m !== null && acc.indexOf(m) !== -1);
       var charged = null;
-      if (!ok) {
+      if (!ok && independent(task)) {
+        if (acc.length) elements[acc[0]].missing.push(id);
+        if (m !== null) elements[m].extra.push(id);
+        charged = acc.length ? acc[0] : m;
+      } else if (!ok) {
         if (m !== null && !elements[m].present) {
           // «Дописан» элемент, которого в тексте нет: это и есть ошибка, балл снимается у него;
           // у элемента фрагмента по эталону — замечание.
@@ -274,6 +290,7 @@
     rowsOf: rowsOf,
     maxByComponent: maxByComponent,
     maxPoints: maxPoints,
-    scoreMarkup: scoreMarkup
+    scoreMarkup: scoreMarkup,
+    independent: independent
   };
 })(typeof window !== 'undefined' ? window : globalThis);

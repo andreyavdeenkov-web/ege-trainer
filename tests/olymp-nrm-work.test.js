@@ -172,10 +172,28 @@ test('Образец задания на структуру (IV-1): класси
   assert.ok(!Object.values(t.markup.key).flat().includes('S'), 'санкции нет в тексте');
   assert.ok(Object.values(t.markup.key).every((k) => !Array.isArray(k)), 'без спорных границ');
   assert.doesNotMatch(JSON.stringify(t), /лекци|Условие применения санкции/);
+  // Элементы оцениваются независимо: диспозиция, размеченная как санкция, — 0 за Д и 0 за С, 1 за Г.
+  assert.equal(t.markup.scoring, 'independent');
   const r = OLY.types.get(t.type).getCorrect(t);
-  r.marks.f1 = 'S';   // «не допускать к работе» как санкция — ошибка
-  const g = OLY.grade.gradeTask(t, r);
-  assert.ok(g.points < t.scoring.maxPoints);
+  r.marks.f1 = 'S';
+  let g = OLY.grade.gradeTask(t, r);
+  assert.equal(g.details.markup.elements.H.points, 1);
+  assert.equal(g.details.markup.elements.D.points, 0);
+  assert.equal(g.details.markup.elements.S.points, 0);
+  assert.equal(g.details.components.T.earned, 1);
+  assert.equal(g.points, t.scoring.maxPoints - 2);
+  // Одно ошибочное действие не штрафует других элементов: пропуск диспозиции — только 0 за Д.
+  const r2 = OLY.types.get(t.type).getCorrect(t);
+  r2.marks.f1 = null;
+  g = OLY.grade.gradeTask(t, r2);
+  assert.deepEqual(['H', 'D', 'S'].map((k) => g.details.markup.elements[k].points), [1, 0, 1]);
+  // Перепутаны гипотеза и диспозиция — по 0 за каждую, санкция засчитана.
+  const r3 = OLY.types.get(t.type).getCorrect(t);
+  r3.marks.f1 = 'H'; r3.marks.f2 = 'D';
+  g = OLY.grade.gradeTask(t, r3);
+  assert.deepEqual(['H', 'D', 'S'].map((k) => g.details.markup.elements[k].points), [0, 0, 1]);
+  // Вопроса о мере ответственности по другим актам в задании нет.
+  assert.doesNotMatch(JSON.stringify(t), /КоАП/);
 });
 
 test('Задания на классификацию: одно предписание, простые вопросы без доказательств, отрасль — из общего набора 11 отраслей', () => {
