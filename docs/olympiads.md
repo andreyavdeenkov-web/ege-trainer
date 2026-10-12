@@ -16,7 +16,7 @@
 
 ```
 js/olymp/normalize.js       нормализация текстового и числового ответа
-js/olymp/types.js           реестр типов заданий и пять типов
+js/olymp/types.js           реестр типов заданий и семь типов
 js/olymp/scoring-rules.js   реестр правил оценивания (пуст) и проверка критериев
 js/olymp/registry.js        предметы, олимпиады, задания, источники, индекс, запросы
 js/olymp/grade.js           gradeTask — одна оценка для обоих режимов
@@ -32,6 +32,7 @@ js/olymp/ui/router.js       адреса экранов (#/hp/SOC/SOC-CAR)
 js/olymp/ui/views.js        реестр отрисовки типов заданий
 js/olymp/ui/views/choice.js single-select и multiple-select
 js/olymp/ui/views/matching.js matching: соответствие и классификация
+js/olymp/ui/views/norm.js   criteria и norm-structure: задания по тексту нормы права
 js/olymp/ui/filters.js      реестр фильтров, выборка заданий
 js/olymp/ui/session.js      логика тренировки: состояния заданий, итоги
 js/olymp/ui/progress.js     сохранение попыток и правила повторного прохождения (attemptPolicy)
@@ -100,6 +101,8 @@ OLY.addTasks([{
 | `short-text` | `acceptedAnswers: [...]`, `normalize?: { yo: true }` | `'Эсхатология'` |
 | `numeric` | `answer`, `tolerance?` (по умолчанию 0), `unit?` | `'12,5'` |
 | `matching` | `items: [{ text, match, explanation? }]`, `options: [...]`, `oneToOne?`, `columns?` | `[2, 1, 3]` (А, Б, В…) |
+| `criteria` | `norm: { act, ref, text, verified }`, `criteria: [{ title, options: [...], match, explanation? }]` | `[2, 1, 1]` — по основаниям |
+| `norm-structure` | `norm: { act, ref, verified }`, `segments: [{ text, role, alsoAccept?, explanation? }]`, `elements: { hypothesis, disposition, sanction }` | `[null, 'hypothesis', 'disposition']` |
 
 **short-text.** Всегда нормализуются только технические различия: регистр, пробелы по краям, повторные пробелы. ё = е — только если в задании указано `normalize: { yo: true }`. Засчитываются лишь ответы из `acceptedAnswers` — их задаёт преподаватель.
 
@@ -322,6 +325,14 @@ OLY.getAttemptPolicy('HP');   // значения по умолчанию: вс�
 ### Соответствие и классификация
 
 Отрисовка `matching` (`js/olymp/ui/views/matching.js`) повторяет разметку соответствия тренажёра ЕГЭ. Классификация — то же соответствие без `oneToOne`: позиции распределяются по 2–4 категориям, варианты повторяются. `columns: ['Позиция', 'Категория']` — необязательные заголовки столбцов. После проверки у каждой позиции видно «верно / ошибка», правильный вариант и её объяснение.
+
+### Модуль «Норма права: классификация и структура» (LAW-NRM) — черновик
+
+План из 14 заданий и вопросы на утверждение — `docs/drafts/law-nrm-plan.md`. В банке пока два образца: `PR-LAW-NRM-001` (`criteria`) и `PR-LAW-NRM-008` (`norm-structure`), `data/olympiads/practicum/social/law/norm.js`; тесты — `tests/olymp-norm.test.js`.
+
+- `criteria` — одна норма классифицируется по нескольким основаниям; у каждого основания свой список вариантов. Ошибка — каждое неверное основание.
+- `norm-structure` — текст нормы разбит на фрагменты; ученик отмечает их маркерами «Гипотеза», «Диспозиция», «Санкция». Неотмеченный фрагмент означает «не элемент структуры», а элемент без отметок — «в тексте не выражен». `role: 'none'` — фрагмент не относится ни к одному элементу; `alsoAccept` — ещё одна допустимая роль для спорного фрагмента (только с объяснением).
+- `norm.verified: false` — текст не сверен с официальной публикацией; карточка нормы показывает пометку «текст требует сверки».
 
 ## Тесты
 

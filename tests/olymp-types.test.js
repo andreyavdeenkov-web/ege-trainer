@@ -49,8 +49,8 @@ test('parseNumber: запятая, точка, минус, разряды', () =
 
 /* ---------- Реестр типов ---------- */
 
-test('реестр: пять типов, новый тип регистрируется без изменения ядра', () => {
-  assert.deepEqual(T.list(), ['single-select', 'multiple-select', 'short-text', 'numeric', 'matching']);
+test('реестр: семь типов, новый тип регистрируется без изменения ядра', () => {
+  assert.deepEqual(T.list(), ['single-select', 'multiple-select', 'short-text', 'numeric', 'matching', 'criteria', 'norm-structure']);
   const local = loadCore();
   assert.throws(() => local.types.register('ordering', { check() {} }), /нет функции validateTask/);
   const fns = ['validateTask', 'emptyResponse', 'isEmpty', 'isComplete', 'cleanResponse', 'check', 'getCorrect', 'formatResponse'];

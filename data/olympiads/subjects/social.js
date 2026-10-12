@@ -69,6 +69,16 @@ OLY.defineSubject({
             { id: 'methods', title: 'Императивный и диспозитивный методы' },
             { id: 'synthesis', title: 'Синтез' }
           ]
+        },
+        {
+          id: 'LAW-NRM',
+          title: 'Норма права: классификация и структура',
+          section: 'theory',
+          blocks: [
+            { id: 'classification', title: 'Классификация норм' },
+            { id: 'structure', title: 'Структура нормы' },
+            { id: 'synthesis', title: 'Норма и статья закона' }
+          ]
         }
       ]
     }

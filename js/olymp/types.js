@@ -17,6 +17,8 @@
  *   formatResponse(task, resp)  → ответ строкой для разбора.
  *
  * Новый тип добавляется вызовом OLY.types.register(name, definition).
+ * Дополнительные поля определения (например, roles у norm-structure) доступны
+ * через OLY.types.get(name) — их используют модули отрисовки.
  */
 (function (root) {
   'use strict';
@@ -341,6 +343,216 @@
         return letter(i + 1) + ' — ' + (n === null || n === undefined ? '?' : n);
       }).join(', ');
     }
+  });
+
+  /* ---------- Норма права: общие поля ---------- */
+
+  /**
+   * norm — откуда взят текст нормы: { act, ref, text?, verified }.
+   * verified: true ставится только после сверки текста с официальной
+   * публикацией (pravo.gov.ru) в действующей редакции; до этого текст —
+   * рабочий и в интерфейсе помечается как требующий сверки.
+   */
+  function validateNorm(task, needText) {
+    var norm = task.norm;
+    if (!norm || typeof norm !== 'object') return ['нет поля norm (акт, статья, текст нормы)'];
+    var errors = [];
+    if (!isText(norm.act)) errors.push('norm.act: нет названия акта');
+    if (!isText(norm.ref)) errors.push('norm.ref: нет ссылки на статью');
+    if (needText && !isText(norm.text)) errors.push('norm.text: нет текста нормы');
+    if (!needText && norm.text !== undefined) errors.push('norm.text не указывается: текст складывается из segments');
+    if (typeof norm.verified !== 'boolean') errors.push('norm.verified должно быть true или false');
+    return errors;
+  }
+
+  /* ---------- criteria: классификация одного объекта по нескольким основаниям ---------- */
+
+  register('criteria', {
+    /**
+     * criteria — основания классификации: [{ title, options: [...], match, explanation? }],
+     * match — номер верного варианта (с 1) в options этого основания.
+     * У каждого основания свой список вариантов; ответ — номер на каждое основание.
+     */
+    validateTask: function (task) {
+      var errors = validateNorm(task, true);
+      if (!Array.isArray(task.criteria) || task.criteria.length < 2) {
+        return errors.concat('нужно не меньше двух оснований в criteria');
+      }
+      task.criteria.forEach(function (c, i) {
+        var name = 'основание ' + (i + 1);
+        if (!c || !isText(c.title)) { errors.push(name + ': нет названия'); return; }
+        if (!Array.isArray(c.options) || c.options.length < 2 || !c.options.every(isText)) {
+          errors.push(name + ': нужно не меньше двух вариантов');
+        } else if (new Set(c.options).size !== c.options.length) {
+          errors.push(name + ': варианты повторяются');
+        } else if (!Number.isInteger(c.match) || c.match < 1 || c.match > c.options.length) {
+          errors.push(name + ': match должен быть номером варианта от 1 до ' + c.options.length);
+        }
+        if (!isOptionalText(c.explanation)) errors.push(name + ': explanation должно быть строкой');
+      });
+      return errors;
+    },
+    emptyResponse: function (task) {
+      return task.criteria.map(function () { return null; });
+    },
+    isEmpty: function (task, response) {
+      return !Array.isArray(response) || response.every(function (n) { return n === null || n === undefined; });
+    },
+    isComplete: function (task, response) {
+      return Array.isArray(response) && response.length === task.criteria.length &&
+        response.every(function (n) { return n !== null && n !== undefined; });
+    },
+    /** Незаполненные основания (null) допустимы: при проверке они считаются ошибками. */
+    cleanResponse: function (task, response) {
+      if (!Array.isArray(response) || response.length !== task.criteria.length) {
+        throw new Error('Ответ должен содержать по номеру на каждое основание');
+      }
+      return response.map(function (n, i) {
+        if (n === null || n === undefined) return null;
+        if (!Number.isInteger(n) || n < 1 || n > task.criteria[i].options.length) {
+          throw new Error('Некорректный номер варианта: ' + n);
+        }
+        return n;
+      });
+    },
+    /** details.perItem — верно ли каждое основание; details.mistakes — число неверных. */
+    check: function (task, response) {
+      var perItem = task.criteria.map(function (c, i) { return response[i] === c.match; });
+      var mistakes = perItem.filter(function (ok) { return !ok; }).length;
+      return {
+        verdict: mistakes === 0 ? 'correct' : 'incorrect',
+        details: { mistakes: mistakes, perItem: perItem }
+      };
+    },
+    getCorrect: function (task) {
+      return task.criteria.map(function (c) { return c.match; });
+    },
+    formatResponse: function (task, response) {
+      if (!Array.isArray(response) || response.length === 0) return '—';
+      return task.criteria.map(function (c, i) {
+        var n = response[i];
+        return c.title + ' — ' + (n === null || n === undefined ? '?' : c.options[n - 1]);
+      }).join('; ');
+    }
+  });
+
+  /* ---------- norm-structure: гипотеза, диспозиция и санкция в тексте нормы ---------- */
+
+  var NORM_ROLES = ['hypothesis', 'disposition', 'sanction'];
+  var NORM_ROLE_TITLES = { hypothesis: 'гипотеза', disposition: 'диспозиция', sanction: 'санкция', none: 'не элемент структуры' };
+
+  /** Допустимые роли фрагмента: role и, если спорно, alsoAccept. 'none' — фрагмент не отмечается. */
+  function acceptedRoles(segment) {
+    return [segment.role].concat(segment.alsoAccept || []);
+  }
+
+  /** Короткая цитата: длинный фрагмент сокращается до начала и конца. */
+  function quote(text) {
+    var words = text.split(' ');
+    if (words.length <= 8) return '«' + text + '»';
+    return '«' + words.slice(0, 4).join(' ') + ' … ' + words.slice(-3).join(' ') + '»';
+  }
+
+  /** Разметка (массив ролей по фрагментам) → { роль: текст выделенных фрагментов или null }. */
+  function structureElements(task, marks) {
+    var result = {};
+    NORM_ROLES.forEach(function (role) {
+      var parts = [];
+      task.segments.forEach(function (s, i) { if (marks[i] === role) parts.push(s.text); });
+      result[role] = parts.length ? parts.join(' ') : null;
+    });
+    return result;
+  }
+
+  register('norm-structure', {
+    /**
+     * segments — текст нормы, разбитый на фрагменты:
+     *   [{ text, role: 'hypothesis' | 'disposition' | 'sanction' | 'none', alsoAccept?, explanation? }];
+     * alsoAccept — другие роли, которые тоже засчитываются (для фрагментов, которые
+     * учебники трактуют по-разному); elements — комментарий к каждому элементу
+     * структуры (выражен ли он в тексте и где искать невыраженный).
+     * Ответ — роль на каждый фрагмент; null — фрагмент не отмечен (= 'none').
+     */
+    validateTask: function (task) {
+      var errors = validateNorm(task, false);
+      if (!Array.isArray(task.segments) || task.segments.length < 3) {
+        return errors.concat('нужно не меньше трёх фрагментов в segments');
+      }
+      var allRoles = NORM_ROLES.concat('none');
+      task.segments.forEach(function (s, i) {
+        var name = 'фрагмент ' + (i + 1);
+        if (!s || !isText(s.text)) { errors.push(name + ': нет текста'); return; }
+        if (allRoles.indexOf(s.role) === -1) errors.push(name + ': role должно быть одним из: ' + allRoles.join(', '));
+        if (s.alsoAccept !== undefined) {
+          if (!Array.isArray(s.alsoAccept) || !s.alsoAccept.every(function (r) { return allRoles.indexOf(r) !== -1 && r !== s.role; })) {
+            errors.push(name + ': alsoAccept — список других ролей');
+          } else if (!isText(s.explanation)) errors.push(name + ': спорный фрагмент (alsoAccept) должен объяснять, почему засчитываются обе трактовки');
+        }
+        if (!isOptionalText(s.explanation)) errors.push(name + ': explanation должно быть строкой');
+      });
+      if (!task.segments.some(function (s) { return s.role === 'disposition'; })) {
+        errors.push('в норме должна быть выделена диспозиция');
+      }
+      if (!task.elements || typeof task.elements !== 'object' || !NORM_ROLES.every(function (r) { return isText(task.elements[r]); })) {
+        errors.push('elements: нужен комментарий к гипотезе, диспозиции и санкции');
+      }
+      return errors;
+    },
+    emptyResponse: function (task) {
+      return task.segments.map(function () { return null; });
+    },
+    isEmpty: function (task, response) {
+      return !Array.isArray(response) || response.every(function (r) { return r === null || r === undefined; });
+    },
+    /** Неотмеченный фрагмент — тоже ответ («не элемент структуры»), поэтому достаточно одной отметки. */
+    isComplete: function (task, response) {
+      return Array.isArray(response) && response.some(function (r) { return r !== null && r !== undefined; });
+    },
+    cleanResponse: function (task, response) {
+      if (!Array.isArray(response) || response.length !== task.segments.length) {
+        throw new Error('Ответ должен содержать отметку для каждого фрагмента');
+      }
+      return response.map(function (r) {
+        if (r === null || r === undefined || r === 'none') return null;
+        if (NORM_ROLES.indexOf(r) === -1) throw new Error('Некорректная отметка фрагмента: ' + r);
+        return r;
+      });
+    },
+    /**
+     * details.perItem — верно ли отмечен каждый фрагмент;
+     * details.elements — по каждому элементу: выражен ли он по ключу и выделил ли его ученик.
+     */
+    check: function (task, response) {
+      var perItem = task.segments.map(function (s, i) {
+        return acceptedRoles(s).indexOf(response[i] || 'none') !== -1;
+      });
+      var mistakes = perItem.filter(function (ok) { return !ok; }).length;
+      var elements = {};
+      NORM_ROLES.forEach(function (role) {
+        elements[role] = {
+          expected: task.segments.some(function (s) { return s.role === role; }),
+          marked: response.indexOf(role) !== -1
+        };
+      });
+      return {
+        verdict: mistakes === 0 ? 'correct' : 'incorrect',
+        details: { mistakes: mistakes, perItem: perItem, elements: elements }
+      };
+    },
+    getCorrect: function (task) {
+      return task.segments.map(function (s) { return s.role === 'none' ? null : s.role; });
+    },
+    formatResponse: function (task, response) {
+      if (!Array.isArray(response) || response.every(function (r) { return !r; })) return '—';
+      var elements = structureElements(task, response);
+      return NORM_ROLES.map(function (role) {
+        return NORM_ROLE_TITLES[role] + ' — ' + (elements[role] ? quote(elements[role]) : 'не выражена');
+      }).join('; ');
+    },
+    roles: NORM_ROLES,
+    roleTitles: NORM_ROLE_TITLES,
+    acceptedRoles: acceptedRoles,
+    structureElements: structureElements
   });
 
   OLY.types = {

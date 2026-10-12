@@ -69,7 +69,7 @@ test('у каждого типа заданий в банке есть отри�
   for (const task of OLY.tasks) {
     assert.ok(OLY.ui.views.has(task.type), `${task.id}: нет отрисовки для ${task.type}`);
   }
-  assert.deepEqual(OLY.ui.views.list(), ['single-select', 'multiple-select', 'matching']);
+  assert.deepEqual(OLY.ui.views.list(), ['single-select', 'multiple-select', 'matching', 'criteria', 'norm-structure']);
 });
 
 test('реестр отрисовки: новый тип подключается регистрацией', () => {

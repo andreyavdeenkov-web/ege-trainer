@@ -306,3 +306,148 @@ a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focu
   .stat dd { font-size: 20px; }
   .filters-group .segmented { display: flex; }
 }
+
+/* ===== Задания по тексту нормы: criteria и norm-structure ===== */
+:root {
+  --role-hypothesis: #7c3aed;
+  --role-disposition: #2563eb;
+  --role-sanction: #c2410c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --role-hypothesis: #c4b5fd;
+    --role-disposition: #93c5fd;
+    --role-sanction: #fdba74;
+  }
+}
+:root[data-theme="dark"] {
+  --role-hypothesis: #c4b5fd;
+  --role-disposition: #93c5fd;
+  --role-sanction: #fdba74;
+}
+
+.norm-card {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-left: 4px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-2);
+}
+.norm-card__text { margin: 0; font-size: 17px; line-height: 1.7; }
+.norm-card__source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.norm-card__draft {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 13px;
+}
+
+.criteria .matching__rows { margin-top: 16px; }
+.criteria__choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0 42px; }
+.criteria__choice {
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.criteria__choice:hover { border-color: var(--primary); }
+.criteria__choice.is-selected { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 600; }
+
+.structure__tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.structure__tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.structure__tool-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--surface);
+  font-size: 13px;
+  font-weight: 800;
+}
+.structure__tool--hypothesis .structure__tool-mark { background: var(--role-hypothesis); }
+.structure__tool--disposition .structure__tool-mark { background: var(--role-disposition); }
+.structure__tool--sanction .structure__tool-mark { background: var(--role-sanction); }
+.structure__tool.is-selected { border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus); font-weight: 600; }
+
+.seg {
+  padding: 1px 2px;
+  border: 0;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.seg--active { cursor: pointer; }
+.seg--active:hover { background: var(--primary-soft); }
+.seg--active:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.seg__label { margin-left: 2px; font-size: 11px; font-weight: 800; }
+.seg--hypothesis { border-bottom: 3px solid var(--role-hypothesis); background: color-mix(in srgb, var(--role-hypothesis) 14%, transparent); }
+.seg--disposition { border-bottom: 3px solid var(--role-disposition); background: color-mix(in srgb, var(--role-disposition) 14%, transparent); }
+.seg--sanction { border-bottom: 3px solid var(--role-sanction); background: color-mix(in srgb, var(--role-sanction) 14%, transparent); }
+.seg--hypothesis .seg__label { color: var(--role-hypothesis); }
+.seg--disposition .seg__label { color: var(--role-disposition); }
+.seg--sanction .seg__label { color: var(--role-sanction); }
+.seg--wrong { outline: 2px solid var(--wrong); outline-offset: 1px; }
+
+.structure-summary { display: grid; gap: 6px; margin: 12px 0 0; }
+.structure-summary__row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; font-size: 15px; }
+.structure-summary dt { font-weight: 700; }
+.structure-summary dd { margin: 0; }
+.structure-summary__row--hypothesis dt { color: var(--role-hypothesis); }
+.structure-summary__row--disposition dt { color: var(--role-disposition); }
+.structure-summary__row--sanction dt { color: var(--role-sanction); }
+.structure__note { margin-top: 8px; font-size: 14px; }
+.structure__caption { margin: 16px 0 0; font-size: 15px; }
+.structure__caption + .norm-card { margin-top: 6px; }
+.structure__elements,
+.structure__fragments { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.structure__element,
+.structure__fragment {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.structure__element--hypothesis { border-left: 4px solid var(--role-hypothesis); }
+.structure__element--disposition { border-left: 4px solid var(--role-disposition); }
+.structure__element--sanction { border-left: 4px solid var(--role-sanction); }
+.structure__fragment.status-wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
+.structure__fragment-text { font-weight: 600; }
+
+@media (max-width: 560px) {
+  .criteria__choices { margin-left: 0; }
+  .structure-summary__row { grid-template-columns: 1fr; gap: 0; }
+}
