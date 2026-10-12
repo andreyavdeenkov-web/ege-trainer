@@ -116,21 +116,37 @@ test('Демо-задания не дублируются в рабочем ба
   }
 });
 
-test('IV-1 и IV-2: размечаются только выраженные фрагменты, реконструкция — отдельными вопросами', () => {
+test('Задания на структуру нормы: трёхэлементная модель, независимая оценка элементов, без спорных границ и лишних вопросов', () => {
   const OLY = work();
-  for (const id of ['PR-LAW-NRM-007', 'PR-LAW-NRM-008']) {
-    const task = OLY.getTask(id);
-    assert.equal(task.type, 'text-markup');
-    assert.match(task.markupHint, /только то, что прямо/);
-    assert.ok(task.sections.some((s) => /Реконструкция|Невыраженн/.test(s.title)), id);
+  const ids = ['PR-LAW-NRM-007', 'PR-LAW-NRM-008', 'PR-LAW-NRM-009', 'PR-LAW-NRM-010', 'PR-LAW-NRC-001', 'PR-LAW-NRC-002', 'PR-LAW-NRC-003', 'PR-LAW-NRC-004'];
+  const missingSeen = { H: 0, D: 0, S: 0 };
+  for (const id of ids) {
+    const t = OLY.getTask(id);
+    assert.equal(t.type, 'text-markup', id);
+    assert.deepEqual(t.palette.map((p) => p.id), ['H', 'D', 'S'], id);
+    assert.equal(t.markup.scoring, 'independent', id);
+    assert.ok(Object.values(t.markup.key).every((k) => typeof k === 'string'), id + ': без спорных границ');
+    assert.ok((t.sections || []).length <= 1, id);
+    assert.doesNotMatch(JSON.stringify(t), /лекци|Условие применения санкции|КоАП/, id);
+    assert.match(t.markupHint, /только то, что прямо выражено/, id);
+    const used = new Set(Object.values(t.markup.key));
+    ['H', 'D', 'S'].forEach((k) => { if (!used.has(k)) missingSeen[k]++; });
+    // Элемент, ошибочно размеченный другим, снимает баллы только у этих двух элементов.
+    const type = OLY.types.get(t.type);
+    for (const [frag, k] of Object.entries(t.markup.key)) {
+      const other = ['H', 'D', 'S'].find((x) => x !== k);
+      const r = type.getCorrect(t);
+      r.marks[frag] = other;
+      const g = type.check(t, r);
+      const el = g.details.markup.elements;
+      ['H', 'D', 'S'].forEach((x) => {
+        const expected = (x === k || x === other) ? 0 : 1;
+        assert.equal(el[x].points, expected, id + ': ' + frag + ' как ' + other + ' → ' + x);
+      });
+    }
   }
-  // В IV-2 санкции в тексте нет: её «дописывание» снимает балл санкции.
-  const t = OLY.getTask('PR-LAW-NRM-008');
-  const r = OLY.types.get(t.type).getCorrect(t);
-  r.marks.a4 = 'S';
-  const g = OLY.grade.gradeTask(t, r);
-  assert.equal(g.details.markup.elements.S.status, 'wrong');
-  assert.equal(g.details.components.T.earned, 4);
+  // Среди заданий есть такие, где ученик должен распознать отсутствие каждого из трёх элементов.
+  assert.ok(missingSeen.H >= 1 && missingSeen.D >= 1 && missingSeen.S >= 1, JSON.stringify(missingSeen));
 });
 
 const BLOCKS = [

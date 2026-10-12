@@ -23,83 +23,6 @@
         "PR-LAW-NRM-005"
       ]
     },
-    "ТК РФ | ст. 122, ч. 2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-008"
-      ]
-    },
-    "Конституция РФ | ст. 38, ч. 3": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-009"
-      ]
-    },
-    "СК РФ | ст. 87, п. 1": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-009"
-      ]
-    },
-    "СК РФ | ст. 87, п. 2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-009"
-      ]
-    },
-    "СК РФ | ст. 115 «Ответственность за несвоевременную уплату алиментов», п. 2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-009"
-      ]
-    },
-    "СК РФ | ст. 89, п. 2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-010"
-      ]
-    },
-    "СК РФ | ст. 89, п. 1": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-010"
-      ]
-    },
     "УК РФ | ст. 125": {
       "status": "pending",
       "edition": "",
@@ -276,62 +199,7 @@
         "PR-LAW-NRC-001"
       ]
     },
-    "ГК РФ | ст. 1064, п. 1 абз. 1 и п. 2 (первое предложение)": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRC-002"
-      ]
-    },
-    "УК РФ | ст. 264, ч. 1 (санкция — с сокращениями)": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRC-003"
-      ]
-    },
-    "УК РФ | ст. 26, ч. 1": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRC-003"
-      ]
-    },
-    "ГК РФ | ст. 1079, п. 1 (фрагмент)": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRC-003"
-      ]
-    },
     "ГК РФ | ст. 1, п. 3": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRC-004"
-      ]
-    },
-    "ГК РФ | ст. 10, п. 2 (фрагмент)": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -593,6 +461,61 @@
       "comment": "",
       "tasks": [
         "PR-LAW-NRM-007"
+      ]
+    },
+    "ТК РФ | ст. 122, ч. 2, первое предложение": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-008"
+      ]
+    },
+    "СК РФ | ст. 115 «Ответственность за несвоевременную уплату алиментов», п. 2, первое предложение": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-009"
+      ]
+    },
+    "СК РФ | ст. 69, абз. 1–2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-010"
+      ]
+    },
+    "ГК РФ | ст. 1064, п. 2, первое предложение": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-002"
+      ]
+    },
+    "ТК РФ | ст. 142, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRC-003"
       ]
     }
   }

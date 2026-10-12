@@ -190,30 +190,29 @@ test('text-markup: структура ответа проверяется', () =
 
 /* ---------- Демонстрационные задания ---------- */
 
-test('Демо: разметка ч. 3 ст. 38 Конституции и п. 2 ст. 89 СК — эталон 16 и 11 баллов, тексты помечены несверенными', () => {
+test('Рабочий банк: задания на структуру — эталон даёт полный балл, тексты помечены несверенными', () => {
   const OLY = loadBank('olympiad-work.html');
-  for (const [id, max] of [['PR-LAW-NRM-009', 16], ['PR-LAW-NRM-010', 11]]) {
+  for (const id of ['PR-LAW-NRM-008', 'PR-LAW-NRM-009', 'PR-LAW-NRM-010']) {
     const task = OLY.getTask(id);
     assert.equal(task.type, 'text-markup');
     assert.equal(task.draft, true);
     assert.ok(task.legal.every((b) => b.verified === false), id);
     const g = OLY.grade.gradeTask(task, OLY.types.get(task.type).getCorrect(task));
     assert.equal(g.verdict, 'correct', id);
-    assert.equal(g.points, max, id);
+    assert.equal(g.points, task.scoring.maxPoints, id);
   }
 });
 
-test('Демо ч. 3 ст. 38: санкцию в тексте не размечают; судебное взыскание как мера ответственности — ½', () => {
+test('Независимая оценка (СК ст. 115 п. 2): санкция, размеченная как диспозиция, — 0 за санкцию и 0 за диспозицию', () => {
   const OLY = loadBank('olympiad-work.html');
   const task = OLY.getTask('PR-LAW-NRM-009');
   const response = OLY.types.get(task.type).getCorrect(task);
-  response.marks.k3 = 'S';
-  response.rows['role-c'] = { c: 5, f: [], e: [] };
+  response.marks.f2 = 'D';
   const g = OLY.grade.gradeTask(task, response);
-  assert.equal(g.details.markup.elements.S.status, 'wrong');
-  assert.equal(g.details.markup.elements.D.status, 'note');
-  assert.equal(g.details.rows['role-c'].choicePoints, 0.5);
-  assert.equal(g.points, 14.5);
+  assert.equal(g.details.markup.elements.H.points, 1);
+  assert.equal(g.details.markup.elements.D.points, 0);
+  assert.equal(g.details.markup.elements.S.points, 0);
+  assert.equal(g.points, 1);
   assert.equal(g.verdict, 'partial');
 });
 
@@ -224,14 +223,14 @@ test('text-markup в попытке: «частично», баллы по ко�
   const attempt = A.createAttempt({ mode: 'practice', olympiad: 'PR', subject: 'social', taskIds: [task.id],
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   const response = OLY.types.get(task.type).getCorrect(task);
-  response.marks.a4 = 'S';   // «в судебном порядке» как санкция — одна ошибка, один балл
+  response.marks.f2 = null;   // гипотеза пропущена — 0 только за гипотезу
   A.setResponse(attempt, task.id, response);
   const result = A.check(attempt, task.id);
   assert.equal(result.verdict, 'partial');
-  assert.equal(result.points, 10);
+  assert.equal(result.points, 2);
   assert.equal(A.summary(attempt).partial, 1);
   const outcome = OLY.ui.session.outcome(attempt);
-  assert.deepEqual(outcome.components.T, { earned: 3, max: 4 });
+  assert.deepEqual(outcome.components.T, { earned: 2, max: 3 });
   A.finish(attempt);
   const scope = { olympiad: 'PR', subject: 'social', discipline: 'LAW', topic: 'LAW-NRM' };
   const restored = OLY.ui.progress.restore(JSON.parse(JSON.stringify(A.snapshot(attempt))), scope);
