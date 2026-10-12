@@ -34,17 +34,6 @@
         "PR-LAW-NRM-011"
       ]
     },
-    "Федеральный закон «О защите населения и территорий от чрезвычайных ситуаций природного и техногенного характера» | ст. 11, п. 1, пп. «у»": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-001"
-      ]
-    },
     "КоАП РФ | ст. 20.6.1, ч. 1": {
       "status": "pending",
       "edition": "",
@@ -68,28 +57,6 @@
       ]
     },
     "ТК РФ | ст. 21, ч. 2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-002"
-      ]
-    },
-    "ТК РФ | ст. 12, ч. 4": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-002"
-      ]
-    },
-    "ТК РФ | ст. 12, ч. 5": {
       "status": "pending",
       "edition": "",
       "source": "",
@@ -516,6 +483,39 @@
       "comment": "",
       "tasks": [
         "PR-LAW-NRC-004"
+      ]
+    },
+    "Федеральный закон «О защите населения и территорий от чрезвычайных ситуаций природного и техногенного характера» | ст. 11, п. 1, пп. «ф»": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-001"
+      ]
+    },
+    "ТК РФ | ст. 12, ч. 7": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
+      ]
+    },
+    "ТК РФ | ст. 12, ч. 8": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-002"
       ]
     }
   }
