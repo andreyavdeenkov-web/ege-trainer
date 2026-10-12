@@ -371,3 +371,12 @@ test('Журнал сверки: есть запись по каждому по�
     }
   }
 });
+
+test('LAW-NRM — единый последовательный список: название блока не показывается, блоки заданий сохранены; другие темы без изменений', () => {
+  const OLY = work();
+  const topics = OLY.getDiscipline('social', 'LAW').topics;
+  assert.deepEqual(topics.filter((t) => t.sequential).map((t) => t.id), ['LAW-NRM']);
+  for (const task of nrm(OLY)) assert.ok(OLY.getBlock(task.subject, task.topic, task.block), task.id + ': блок в данных');
+  assert.throws(() => OLY.defineSubject({ id: 'zz', title: 'Тест', disciplines: [{ id: 'ZZZ', title: 'Тест',
+    topics: [{ id: 'ZZZ-AAA', title: 'Тема', sequential: 'да' }] }] }), /sequential должно быть true или false/);
+});

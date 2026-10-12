@@ -101,7 +101,9 @@
    *   discipline.sections — разделы дисциплины [{ id: 'theory', title: 'Теория права' }];
    *                         topic.section — id раздела, к которому относится тема;
    *   topic.blocks        — содержательные блоки темы в учебном порядке
-   *                         [{ id: 'concept', title: 'Понятие права' }]; задание указывает block.
+   *                         [{ id: 'concept', title: 'Понятие права' }]; задание указывает block;
+   *   topic.sequential    — true: задания темы показываются единым последовательным списком,
+   *                         без названия блока над заданием (блоки остаются в данных).
    */
   OLY.defineSubject = function (subject) {
     var errors = [];
@@ -128,6 +130,9 @@
           errors.push('тема ' + topic.id + ': неизвестный раздел ' + topic.section);
         }
         validateParts(topic.blocks, 'тема ' + topic.id + ': блок', errors);
+        if (topic.sequential !== undefined && typeof topic.sequential !== 'boolean') {
+          errors.push('тема ' + topic.id + ': sequential должно быть true или false');
+        }
         topicsById[topic.id] = topic;
       });
     });

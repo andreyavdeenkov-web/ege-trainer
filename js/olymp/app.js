@@ -829,7 +829,8 @@
     dom.taskLevel.hidden = task.level === undefined;
     dom.taskLevel.textContent = task.level === undefined ? '' : fmt.levelLabel(task.level);
     if (task.level !== undefined) dom.taskLevel.dataset.level = String(task.level);
-    var block = task.block ? OLY.getBlock(task.subject, task.topic, task.block) : null;
+    var topic = OLY.getTopic(task.subject, task.topic);
+    var block = task.block && !(topic && topic.sequential) ? OLY.getBlock(task.subject, task.topic, task.block) : null;
     dom.taskBlock.hidden = !block;
     dom.taskBlock.textContent = block ? block.title : '';
     renderSources(dom.taskSources, task.id);
