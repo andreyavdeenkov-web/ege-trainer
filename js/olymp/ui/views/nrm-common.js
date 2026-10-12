@@ -392,17 +392,21 @@
 
     var fullyRight = !!detail && detail.choice === 'ok' && (!row.evidence || detail.evidence === 'ok');
     var reason = detail ? choiceReason(row, answer, detail) : null;
+    // Тема с collapsedFeedback: сразу видны только ответы и баллы, причина ошибки — внутри свёрнутого объяснения.
+    var topic = OLY.getTopic ? OLY.getTopic(task.subject, task.topic) : null;
+    var collapsed = !!(topic && topic.collapsedFeedback);
 
     if (detail) {
       var cls = detail.choice === 'ok' ? 'text-right' : (detail.choice === 'partial' ? 'text-warn' : 'text-wrong');
       card.appendChild(answerLine('Ваш ответ: ', chosenText(row, answer), cls, detail.choice));
       if (detail.choice !== 'ok') card.appendChild(answerLine('Правильно: ', keyText(row), 'text-right'));
-      if (reason) card.appendChild(el('p', 'nrm-rv__mistake', reason.short));
+      if (reason && !collapsed) card.appendChild(el('p', 'nrm-rv__mistake', reason.short));
     } else {
       card.appendChild(answerLine('Правильно: ', keyText(row), 'text-right'));
     }
 
     var fullTexts = [];
+    if (reason && collapsed) fullTexts.push(reason.short);
     if (reason && reason.full) fullTexts.push(reason.full);
     fullTexts.push(row.explanation);
 

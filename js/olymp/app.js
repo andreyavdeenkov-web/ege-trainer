@@ -648,7 +648,7 @@
       : discipline.title + (section ? ' · ' + section.title : '');
     dom.setupTitle.textContent = route.topic === 'all' ? discipline.title : topicTitle(route);
     var policy = policyOf(route);
-    dom.setupNote.textContent = isPracticum(route) ? SETUP_NOTES.practicumStart
+    dom.setupNote.textContent = isPracticum(route) ? ((topic && topic.description) || SETUP_NOTES.practicumStart)
       : P.wholeTopicOnly(policy) ? SETUP_NOTES.singleAttempt
       : route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
     setTitle([dom.setupTitle.textContent, olympiad.title]);
@@ -851,14 +851,35 @@
     dom.feedback.hidden = !result;
     // Типичная ошибка — только после неверного (или частично верного) ответа.
     var showMistake = !!(result && (result.verdict === 'incorrect' || result.verdict === 'partial') && task.typicalMistake);
+    var topic = OLY.getTopic(task.subject, task.topic);
+    var collapsed = !!(topic && topic.collapsedFeedback);
     dom.typicalMistake.hidden = !showMistake;
-    dom.typicalMistakeText.textContent = showMistake ? task.typicalMistake : '';
+    fillNote(dom.typicalMistake, dom.typicalMistakeText, showMistake ? task.typicalMistake : '', collapsed);
     dom.explanation.hidden = !(result && task.explanation);
-    dom.explanationText.textContent = result && task.explanation ? task.explanation : '';
+    fillNote(dom.explanation, dom.explanationText, result && task.explanation ? task.explanation : '', collapsed);
 
     renderActions();
     renderProgress();
     renderNav();
+  }
+
+  /**
+   * Текст блока «Типичная ошибка» / «Разбор». В темах с collapsedFeedback текст свёрнут
+   * в <details> с тем же заголовком: ученик раскрывает комментарий сам.
+   */
+  function fillNote(box, textEl, text, collapsed) {
+    var title = box.querySelector('.explanation__title');
+    var old = box.querySelector('details[data-note]');
+    if (old) box.removeChild(old);
+    if (title) title.hidden = collapsed;
+    textEl.hidden = collapsed;
+    textEl.textContent = collapsed ? '' : text;
+    if (!collapsed || !text) return;
+    var details = el('details', 'nrm-more');
+    details.setAttribute('data-note', '');
+    details.appendChild(el('summary', null, title ? title.textContent : ''));
+    details.appendChild(el('p', 'nrm-more__text', text));
+    box.appendChild(details);
   }
 
   function onResponse(response) {

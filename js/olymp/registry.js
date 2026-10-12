@@ -133,6 +133,14 @@
         if (topic.sequential !== undefined && typeof topic.sequential !== 'boolean') {
           errors.push('тема ' + topic.id + ': sequential должно быть true или false');
         }
+        // description — пояснение на стартовом экране темы практикума вместо общего;
+        // collapsedFeedback — после проверки комментарии к ответам свёрнуты, видны только результаты.
+        if (topic.description !== undefined && !isText(topic.description)) {
+          errors.push('тема ' + topic.id + ': description должно быть непустой строкой');
+        }
+        if (topic.collapsedFeedback !== undefined && typeof topic.collapsedFeedback !== 'boolean') {
+          errors.push('тема ' + topic.id + ': collapsedFeedback должно быть true или false');
+        }
         topicsById[topic.id] = topic;
       });
     });

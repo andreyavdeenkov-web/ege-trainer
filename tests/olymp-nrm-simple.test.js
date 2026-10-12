@@ -143,3 +143,21 @@ test('Перемешивание: правильный ответ не стои�
   const first = positions2.filter((p) => p === 0).length;
   assert.ok(first >= positions2.length / 3 && first <= positions2.length * 2 / 3, 'двухвариантные: первым ' + first + ' из ' + positions2.length);
 });
+
+test('Тема: своё описание на старте и свёрнутые комментарии; у других тем настройки нет', () => {
+  const OLY = simple();
+  const topic = OLY.getTopic('social', 'LAW-NKL');
+  assert.equal(topic.description, 'В каждом задании вам предстоит классифицировать правовую норму по нескольким основаниям. После проверки вы получите подробный разбор каждого ответа.');
+  assert.equal(topic.collapsedFeedback, true);
+  for (const id of ['LAW-CPT', 'LAW-NRM', 'LAW-NRA', 'LAW-NRB', 'LAW-NRC', 'LAW-NRD']) {
+    const other = OLY.getTopic('social', id);
+    assert.equal(other.collapsedFeedback, undefined, id);
+    assert.equal(other.description, undefined, id);
+  }
+});
+
+test('Ст. 57: постоянный характер объяснён отсутствием срока, без довода о бюджете', () => {
+  const time = rowsOf(simple().getTask('PR-LAW-NKL-001')).find((r) => r.id === 'time');
+  assert.ok(!/бюджет/.test(time.explanation));
+  assert.match(time.explanation, /срок её действия заранее не ограничен/);
+});
