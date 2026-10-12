@@ -372,7 +372,8 @@
       "officialText": "",
       "comment": "",
       "tasks": [
-        "PR-LAW-NRB-005"
+        "PR-LAW-NRB-005",
+        "PR-LAW-NRD-003"
       ]
     },
     "Конституция РФ | ст. 20, ч. 1": {
@@ -494,6 +495,138 @@
       "comment": "",
       "tasks": [
         "PR-LAW-NRC-007"
+      ]
+    },
+    "ТК РФ | ст. 91, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-001"
+      ]
+    },
+    "ТК РФ | ст. 9, ч. 2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-001"
+      ]
+    },
+    "ТК РФ | ст. 8, ч. 4": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-001"
+      ]
+    },
+    "ТК РФ | ст. 99, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-001"
+      ]
+    },
+    "ТК РФ | ст. 192, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-001"
+      ]
+    },
+    "КоАП РФ | ст. 12.6 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-002"
+      ]
+    },
+    "Правила дорожного движения РФ (утв. постановлением Правительства РФ) | п. 2.1.2 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-002"
+      ]
+    },
+    "КоАП РФ | ст. 2.1, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-002"
+      ]
+    },
+    "КоАП РФ | ст. 2.3, ч. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-002"
+      ]
+    },
+    "ГК РФ | ст. 1083, п. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-003"
+      ]
+    },
+    "ГК РФ | ст. 1067": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-003"
+      ]
+    },
+    "УК РФ | ст. 39, чч. 1–2": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRD-003"
       ]
     }
   }
