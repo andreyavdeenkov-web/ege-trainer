@@ -452,17 +452,6 @@
         "PR-LAW-NRM-009"
       ]
     },
-    "ТК РФ | ст. 419, ч. 1": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-010"
-      ]
-    },
     "УПК РФ | ст. 117": {
       "status": "pending",
       "edition": "",
@@ -516,6 +505,17 @@
       "comment": "",
       "tasks": [
         "PR-LAW-NRM-002"
+      ]
+    },
+    "НК РФ | ст. 119, п. 1": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-010"
       ]
     }
   }

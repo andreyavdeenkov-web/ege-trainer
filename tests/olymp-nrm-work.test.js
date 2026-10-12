@@ -158,9 +158,17 @@ test('Задания на структуру нормы: трёхэлемент�
   assert.match(plain('PR-LAW-NRM-009'), /могут быть применены/);
   assert.match(plain('PR-LAW-NRC-002'), /может быть наложено/);
   assert.match(plain('PR-LAW-NRC-004'), /Гражданин Российской Федерации/);
-  // Санкции: денежное взыскание — мера процессуального принуждения; ст. 419 ТК — отсылочная санкция.
+  // Санкции: денежное взыскание — мера процессуального принуждения; п. 1 ст. 119 НК — относительно определённая санкция.
   assert.match(OLY.getTask('PR-LAW-NRC-002').explanation, /мера процессуального принуждения/);
-  assert.match(OLY.getTask('PR-LAW-NRM-010').markup.elements.S.explanation, /отсылочной санкцией/);
+  const nk = OLY.getTask('PR-LAW-NRM-010');
+  assert.equal(nk.legal[0].act + ' ' + nk.legal[0].ref, 'НК РФ ст. 119, п. 1');
+  assert.match(nk.markup.elements.S.explanation, /относительно определённая санкция/);
+  assert.match(nk.markup.elements.S.explanation, /не выбирается по усмотрению/);
+  assert.match(nk.explanation, /не более 30\s% этой суммы и не менее 1\s000\sрублей/);
+  assert.match(nk.markup.elements.S.explanation, /исключений и оснований освобождения/);
+  assert.match(nk.legal[0].fragments.map((f) => f.text).join(''), /расчета по страховым взносам.*не уплаченной \(не перечисленной\).*\(доплате, перечислению\) на основании данной налоговой декларации \(расчета\)/);
+  // Ст. 419 ТК выведена из обязательной части (спорно само наличие санкции).
+  assert.ok(!OLY.tasks.some((t) => t.topic === 'LAW-NRM' && (t.legal || []).some((b) => /419/.test(b.ref))));
   const sanctions = ids.filter((id) => Object.values(OLY.getTask(id).markup.key).includes('S'));
   assert.ok(sanctions.length >= 3, 'есть задания на распознавание санкции: ' + sanctions);
   // Учебная модель разметки названа в условии; альтернативный подход не объявлен ошибочным.
