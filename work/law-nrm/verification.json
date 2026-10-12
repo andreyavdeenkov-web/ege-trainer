@@ -23,50 +23,6 @@
         "PR-LAW-NRM-005"
       ]
     },
-    "ГПК РФ | ст. 39, ч. 1": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-006"
-      ]
-    },
-    "ГПК РФ | ст. 39, ч. 2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-006"
-      ]
-    },
-    "ГПК РФ | ст. 32": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-006"
-      ]
-    },
-    "ГПК РФ | ст. 3, ч. 2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRM-006"
-      ]
-    },
     "СК РФ | ст. 80, пп. 1 и 3": {
       "status": "pending",
       "edition": "",
@@ -309,50 +265,6 @@
         "PR-LAW-NRA-004"
       ]
     },
-    "ТК РФ | ст. 92, ч. 1 (фрагмент)": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRB-002"
-      ]
-    },
-    "Конституция РФ | ст. 57": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRB-003"
-      ]
-    },
-    "КоАП РФ | ст. 2.3, чч. 1–2": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRB-004"
-      ]
-    },
-    "ГК РФ | ст. 1066": {
-      "status": "pending",
-      "edition": "",
-      "source": "",
-      "checked": "",
-      "officialText": "",
-      "comment": "",
-      "tasks": [
-        "PR-LAW-NRB-005"
-      ]
-    },
     "ГК РФ | ст. 1064, п. 1, абз. 1": {
       "status": "pending",
       "edition": "",
@@ -361,7 +273,6 @@
       "officialText": "",
       "comment": "",
       "tasks": [
-        "PR-LAW-NRB-005",
         "PR-LAW-NRD-003"
       ]
     },
@@ -627,6 +538,61 @@
       "comment": "",
       "tasks": [
         "PR-LAW-NRB-001"
+      ]
+    },
+    "ГПК РФ | ст. 39, ч. 1 (полномочия истца)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRM-006"
+      ]
+    },
+    "ТК РФ | ст. 81, ч. 6": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-002"
+      ]
+    },
+    "Конституция РФ | ст. 57, первое предложение": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-003"
+      ]
+    },
+    "УК РФ | ст. 158, ч. 1 (санкция — с сокращениями)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-004"
+      ]
+    },
+    "Земельный кодекс РФ | ст. 42, абз. 1–2 (фрагмент)": {
+      "status": "pending",
+      "edition": "",
+      "source": "",
+      "checked": "",
+      "officialText": "",
+      "comment": "",
+      "tasks": [
+        "PR-LAW-NRB-005"
       ]
     }
   }

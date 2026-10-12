@@ -165,15 +165,25 @@ test('Блоки А–Г: подключённые блоки полные по 
   assert.equal(loadBank().tasks.filter((t) => /^LAW-NR/.test(t.topic)).length, 0);
 });
 
-test('Блок Б: «специальная» в двух основаниях; исключительная — только если норма сама устанавливает противоположное последствие', () => {
+test('Задания на классификацию: одно предписание, простые вопросы без доказательств, отрасль — из общего набора 11 отраслей', () => {
   const OLY = work();
-  const row = (t, id) => (t.sections ? OLY.nrmRows.rowsOf(t.sections) : t.parts.flatMap((p) => p.rows || [])).find((r) => r.id === id);
-  const koap = OLY.getTask('PR-LAW-NRB-004');
-  assert.equal(row(koap, 'a2').options[row(koap, 'a2').key[0]], 'Специальная');   // по кругу лиц
-  assert.equal(row(koap, 'a3').options[row(koap, 'a3').key[0]], 'Специальная');   // по объёму: «может быть освобождено» — усмотрение
-  const gk = OLY.getTask('PR-LAW-NRB-005');
-  assert.equal(row(gk, 'a3').options[row(gk, 'a3').key[0]], 'Исключительная');    // «не подлежит возмещению» — сама норма
-  assert.match(koap.definitions.find((d) => /объёму/.test(d.term)).text, /сама устанавливает последствие, противоположное/);
+  const ids = ['PR-LAW-NRM-005', 'PR-LAW-NRM-006', 'PR-LAW-NRB-001', 'PR-LAW-NRB-002', 'PR-LAW-NRB-003', 'PR-LAW-NRB-004', 'PR-LAW-NRB-005'];
+  const branches = OLY.nrmClassify.BRANCHES.map((b) => b.name);
+  assert.equal(branches.length, 11);
+  for (const id of ids) {
+    const t = OLY.getTask(id);
+    assert.equal(t.type, 'analysis-grid', id);
+    assert.equal(t.sections.length, 1, id);
+    assert.equal(t.legal.length, 1, id + ': одно предписание');
+    const rows = t.sections[0].rows;
+    assert.ok(rows.length >= 4 && rows.length <= 6, id);
+    assert.ok(rows.every((r) => !r.evidence && !r.followUp && !r.context), id + ': без доказательств и дополнительных частей');
+    assert.deepEqual(rows[0].options, branches, id + ': отрасль — из общего набора');
+    assert.doesNotMatch(JSON.stringify(t), /лекци/i, id);
+  }
+  // Второе предложение п. 1 ст. 80 СК не используется как пример диспозитивной нормы.
+  const sk = OLY.getTask('PR-LAW-NRB-001');
+  assert.doesNotMatch(sk.legal[0].fragments.map((f) => f.text).join(''), /самостоятельно/);
 });
 
 test('Тема классификации социальных норм исключена из обязательной части', () => {

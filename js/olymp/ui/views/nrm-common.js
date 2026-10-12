@@ -298,7 +298,8 @@
   }
 
   function chipGroup(options, label, onToggle, multi, order) {
-    var group = el('div', 'nrm-chips');
+    // Длинный список вариантов (например, отрасли права) — компактная сетка, а не «лента» кнопок.
+    var group = el('div', 'nrm-chips' + (options.length >= 7 ? ' nrm-chips--many' : ''));
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', label);
     var buttons = options.map(function (text, i) {

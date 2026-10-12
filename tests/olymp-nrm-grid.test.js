@@ -193,17 +193,17 @@ test('analysis-grid: структура ответа проверяется; у�
 test('analysis-grid в попытке: «частично» в итогах, баллы по компонентам, восстановление после перезагрузки', () => {
   const OLY = loadBank('olympiad-work.html');
   const A = OLY.attempt;
-  const task = OLY.getTask('PR-LAW-NRM-006');
+  const task = OLY.getTask('PR-LAW-NRM-002');   // I-3: карта с доказательствами
   const type = OLY.types.get(task.type);
   const attempt = A.createAttempt({ mode: 'practice', olympiad: 'PR', subject: 'social', taskIds: [task.id],
     settings: { discipline: 'LAW', topic: 'LAW-NRM', filters: {} } });
   const response = type.getCorrect(task);
-  response['method-narrow'] = { c: 1, f: [], e: ['f2'] };
+  response.p4 = { c: 0, f: [], e: ['e8'] };   // неверный выбор и неверное доказательство
   A.setResponse(attempt, task.id, response);
   const result = A.check(attempt, task.id);
   assert.equal(result.verdict, 'partial');
-  assert.equal(result.points, 16);
-  assert.equal(result.maxPoints, 18);
+  assert.equal(result.points, 15);
+  assert.equal(result.maxPoints, 17);
 
   const summary = A.summary(attempt);
   assert.equal(summary.partial, 1);
@@ -211,8 +211,8 @@ test('analysis-grid в попытке: «частично» в итогах, б�
   assert.equal(summary.incorrect, 0);
   const outcome = OLY.ui.session.outcome(attempt);
   assert.equal(outcome.partial, 1);
-  assert.equal(outcome.components.possible, 18);
-  assert.deepEqual(outcome.components.T, { earned: 2, max: 3 });
+  assert.equal(outcome.components.possible, 17);
+  assert.deepEqual(outcome.components.T, { earned: 6, max: 7 });
   assert.equal(OLY.ui.session.taskState(attempt, task.id), 'partial');
   assert.deepEqual(OLY.ui.session.subsetIds(attempt, 'mistakes'), [task.id]);
   assert.deepEqual(OLY.ui.session.subsetIds(attempt, 'skipped'), []);

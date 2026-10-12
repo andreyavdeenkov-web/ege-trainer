@@ -503,3 +503,20 @@ html.nrm-ctx-open { overflow: hidden; }
   .nrm-split .nrm-fillbar__text { flex: 1 0 100%; }
   .nrm-split .nrm-fillbar .btn { flex: 1 1 auto; }
 }
+
+/* Длинный список вариантов (7 и больше, например отрасли права): сетка равных ячеек.
+   Компьютер — 3–4 колонки, телефон — 2 колонки, экран уже 360 px — 1 колонка. */
+.nrm-chips--many { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.nrm-chips--many .nrm-chip { border-radius: var(--radius-sm); min-height: 40px; padding: 7px 10px; line-height: 1.3; }
+@media (max-width: 560px) {
+  .nrm-chips--many { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nrm-chips--many .nrm-chip { font-size: 13px; min-height: 44px; padding: 7px 8px; hyphens: auto; -webkit-hyphens: auto; }
+}
+@media (max-width: 380px) {
+  .nrm-chips--many { gap: 5px; }
+  .nrm-chips--many .nrm-chip { font-size: 12.5px; padding: 6px 6px; letter-spacing: -0.1px; }
+}
+/* Очень узкий экран — одна колонка (последним, чтобы перекрыть правила выше). */
+@media (max-width: 359px) {
+  .nrm-chips--many { grid-template-columns: 1fr; }
+}
