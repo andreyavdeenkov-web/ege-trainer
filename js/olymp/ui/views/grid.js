@@ -47,7 +47,7 @@
     var sectionParts = [];
     var openEvidence = null;
 
-    var box = el('div', 'nrm-grid');
+    var box = el('div', 'nrm-grid' + (N.topicFlag(task, 'normAsHeading') ? ' nrm-grid--norm' : ''));
     var notice = N.demoNotice(task);
     if (notice) box.appendChild(notice);
     var lay = N.layout(task, box);
@@ -240,7 +240,7 @@
     var response = result ? copyResponse(task, result.response) : null;
     var details = result && result.details ? result.details.rows : null;
 
-    var box = el('div', 'nrm-grid is-review');
+    var box = el('div', 'nrm-grid is-review' + (N.topicFlag(task, 'normAsHeading') ? ' nrm-grid--norm' : ''));
     var notice = N.demoNotice(task);
     if (notice) box.appendChild(notice);
     var lay = N.layout(task, box);

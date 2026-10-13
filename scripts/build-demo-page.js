@@ -53,12 +53,14 @@ const PAGES = {
     file: 'olympiad-nrm-simple.html',
     title: 'Классификация норм',
     data: ['work/law-nrm/classify.js', 'work/law-nrm-simple/common.js', 'work/law-nrm-simple/series-1.js', 'work/law-nrm-simple/series-2.js'],
-    banner: '<strong>Тренажёр «Классификация правовых норм» — не опубликован.</strong> Задания на методической проверке; нормативные тексты не сверены с официальными источниками.',
-    reset: 'Сбросить попытку тренажёра',
+    // Плашки нет (решение преподавателя от 13.10.2026). Статус сверки текстов — в данных заданий
+    // (verification, legal[].verified) и в спецификации; официальная сверка не завершена.
+    banner: null,
     scope: 'PR/LAW/LAW-NKL'
   }
 };
 
+/** Страница без плашки (page.banner: null) — без плашки и без кнопки сброса попытки. */
 function banner(page) {
   return [
     '  <div class="nrm-demo-banner" role="note">',
@@ -100,13 +102,13 @@ function build(kind) {
   html = html.replace(/<title>([^<]*)<\/title>/, (m, title) => '<title>' + page.title + ' · ' + title + '</title>');
   html = replaceOnce(html, '<link rel="stylesheet" href="css/olymp.css">',
     '<link rel="stylesheet" href="css/olymp.css">\n  <link rel="stylesheet" href="css/olymp-nrm.css">');
-  html = replaceOnce(html, '<body class="olymp">\n', '<body class="olymp">\n' + banner(page) + '\n');
+  if (page.banner) html = replaceOnce(html, '<body class="olymp">\n', '<body class="olymp">\n' + banner(page) + '\n');
   for (const [after, list] of INSERT_AFTER) {
     const scripts = list.flatMap((s) => (s === '@DATA' ? page.data : [s]));
     const tag = '<script src="' + after + '"></script>';
     html = replaceOnce(html, tag, tag + scripts.map((s) => '\n  <script src="' + s + '"></script>').join(''));
   }
-  html = replaceOnce(html, '</body>', resetScript(page) + '\n</body>');
+  if (page.banner) html = replaceOnce(html, '</body>', resetScript(page) + '\n</body>');
   return replaceOnce(html, '<!DOCTYPE html>\n',
     '<!DOCTYPE html>\n<!-- Сгенерировано scripts/build-demo-page.js из olympiad.html. Не редактировать вручную. -->\n');
 }

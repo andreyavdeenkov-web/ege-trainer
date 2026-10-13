@@ -141,6 +141,14 @@
         if (topic.collapsedFeedback !== undefined && typeof topic.collapsedFeedback !== 'boolean') {
           errors.push('тема ' + topic.id + ': collapsedFeedback должно быть true или false');
         }
+        // hideVerificationNotes — ученик не видит пометок о сверке нормативных текстов (данные о сверке
+        // в заданиях сохраняются); normAsHeading — вместо формулировки вопроса главным элементом задания
+        // служит текст нормы (формулировка остаётся в данных и в разборе на экране итогов).
+        ['hideVerificationNotes', 'normAsHeading'].forEach(function (flag) {
+          if (topic[flag] !== undefined && typeof topic[flag] !== 'boolean') {
+            errors.push('тема ' + topic.id + ': ' + flag + ' должно быть true или false');
+          }
+        });
         topicsById[topic.id] = topic;
       });
     });

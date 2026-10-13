@@ -98,7 +98,7 @@ OLY.defineSubject({
         // Упрощённый тренажёр «Классификация правовых норм» (в разработке, страница olympiad-nrm-simple.html).
         { id: 'LAW-NKL', title: 'Классификация правовых норм', section: 'theory',
           description: 'В каждом задании вам предстоит классифицировать правовую норму по нескольким основаниям. После проверки вы получите подробный разбор каждого ответа.',
-          collapsedFeedback: true }
+          collapsedFeedback: true, hideVerificationNotes: true, normAsHeading: true }
       ]
     }
   ]

@@ -37,6 +37,10 @@
 .nrm-legal__edition { font-weight: 500; color: var(--text-muted); }
 .nrm-legal__edition.is-unverified { color: var(--warn); }
 .nrm-legal__text { margin: 0; font-size: 16px; line-height: 1.9; }
+/* Тема с normAsHeading: текст нормы — главный элемент задания (вместо формулировки вопроса). */
+.nrm-grid--norm .nrm-legal { padding: 14px 18px; }
+.nrm-grid--norm .nrm-legal__ref { margin-bottom: 8px; }
+.nrm-grid--norm .nrm-legal__text { font-size: 19px; line-height: 1.65; font-weight: 500; color: var(--text); }
 
 /* Фрагмент — строчный элемент: подсветка повторяется на каждой строке переноса. */
 .nrm-frag {
@@ -193,6 +197,8 @@
 
 @media (max-width: 560px) {
   .nrm-legal__text { font-size: 15.5px; }
+  .nrm-grid--norm .nrm-legal { padding: 12px 12px; }
+  .nrm-grid--norm .nrm-legal__text { font-size: 17px; line-height: 1.6; }
   .nrm-block { padding: 10px 8px; }
   .nrm-sum { grid-template-columns: 1fr; }
   .nrm-sum__tile { flex-direction: row; justify-content: space-between; align-items: baseline; }

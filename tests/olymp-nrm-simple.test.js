@@ -229,3 +229,29 @@ test('Серия 2: основание «По кругу лиц» не зада�
     assert.match(t.verification.note, /официальное опубликование не проверено/, t.id);
   }
 });
+
+test('Ученический интерфейс: без плашки и пометок о сверке, текст нормы вместо заголовка; статус сверки сохранён в данных', () => {
+  const html = fs.readFileSync(path.join(root, PAGE), 'utf8');
+  assert.ok(!html.includes('nrm-demo-banner') && !html.includes('nrm-demo-reset'), 'плашки нет');
+  // Страницы углублённого практикума — с прежними плашками.
+  for (const page of ['olympiad-work.html', 'olympiad-demo.html']) {
+    assert.ok(fs.readFileSync(path.join(root, page), 'utf8').includes('nrm-demo-banner'), page);
+  }
+  const OLY = simple();
+  const topic = OLY.getTopic('social', 'LAW-NKL');
+  assert.equal(topic.hideVerificationNotes, true);
+  assert.equal(topic.normAsHeading, true);
+  for (const id of ['LAW-CPT', 'LAW-NRM', 'LAW-NRA', 'LAW-NRB', 'LAW-NRC', 'LAW-NRD']) {
+    const other = OLY.getTopic('social', id);
+    assert.equal(other.hideVerificationNotes, undefined, id);
+    assert.equal(other.normAsHeading, undefined, id);
+  }
+  // Удаление пометок не означает завершённой сверки: данные о статусе остаются в каждом задании.
+  for (const task of series(OLY)) {
+    assert.equal(task.verification.status, 'unconfirmed', task.id);
+    assert.ok(task.legal.every((b) => b.verified === false), task.id);
+    // Общая инструкция — на стартовом экране, в задании её нет.
+    assert.ok(task.sections.every((s) => s.hint === undefined), task.id);
+  }
+  assert.match(topic.description, /классифицировать правовую норму по нескольким основаниям/);
+});

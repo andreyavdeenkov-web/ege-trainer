@@ -835,6 +835,8 @@
     dom.taskBlock.textContent = block ? block.title : '';
     renderSources(dom.taskSources, task.id);
     dom.taskQuestion.textContent = task.question;
+    // Тема с normAsHeading: формулировка вопроса не показывается — главный элемент задания текст нормы.
+    dom.taskQuestion.hidden = !!(topic && topic.normAsHeading);
     dom.taskHint.textContent = result ? 'Ответ проверен — изменить его нельзя.' : view.hint(task);
     dom.taskCard.classList.toggle('is-review', !!result);
 

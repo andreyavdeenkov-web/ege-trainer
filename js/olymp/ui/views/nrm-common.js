@@ -56,8 +56,16 @@
     return 'nrm-' + task.id + '-' + id;
   }
 
+  /** Настройка темы задания (hideVerificationNotes, normAsHeading, collapsedFeedback). */
+  function topicFlag(task, name) {
+    var topic = task && OLY.getTopic ? OLY.getTopic(task.subject, task.topic) : null;
+    return !!(topic && topic[name]);
+  }
+
   function demoNotice(task) {
     var box;
+    // Тема с hideVerificationNotes: пометок о сверке ученик не видит, данные о сверке остаются в задании.
+    if (topicFlag(task, 'hideVerificationNotes')) return null;
     if (task.demo) {
       box = el('p', 'nrm-demo-note');
       box.appendChild(el('strong', null, 'Демонстрационное задание. '));
@@ -219,6 +227,7 @@
     var parts = {};
     var blocks = options.blocks || task.legal || [];
     var mains = blocks.filter(function (b) { return b.role === 'main'; });
+    var hideVerification = topicFlag(task, 'hideVerificationNotes');
     var refs = blocks.filter(function (b) { return b.role === 'reference'; });
 
     function block(b) {
@@ -226,7 +235,7 @@
       var head = el('div', 'nrm-legal__ref');
       head.appendChild(el('span', null, b.act + ', ' + b.ref));
       if (b.fictional) head.appendChild(el('span', 'nrm-legal__edition', 'учебный документ из условия задачи'));
-      else head.appendChild(el('span', 'nrm-legal__edition' + (b.verified ? '' : ' is-unverified'),
+      else if (b.verified || !hideVerification) head.appendChild(el('span', 'nrm-legal__edition' + (b.verified ? '' : ' is-unverified'),
         b.verified ? (b.edition + ' · проверено ' + b.checked) : 'текст не сверен с официальным источником'));
       box.appendChild(head);
       var text = el('p', 'nrm-legal__text');
@@ -777,6 +786,7 @@
     contextButton: contextButton,
     chipGroup: chipGroup,
     displayOrder: displayOrder,
+    topicFlag: topicFlag,
     keyText: keyText,
     chosenText: chosenText,
     choiceReason: choiceReason,
