@@ -255,3 +255,19 @@ test('Ученический интерфейс: без плашки и поме
   }
   assert.match(topic.description, /классифицировать правовую норму по нескольким основаниям/);
 });
+
+test('Подсказка о клавишах: часть про 1–9 — отдельный элемент, на всех страницах; ввод цифрами есть у старых типов', () => {
+  for (const page of ['olympiad.html', 'olympiad-demo.html', 'olympiad-work.html', PAGE]) {
+    const html = fs.readFileSync(path.join(root, page), 'utf8');
+    assert.match(html, /Клавиши <span id="kbd-hint-digits"><kbd>1<\/kbd>–<kbd>9<\/kbd> выбирают варианты, <\/span><kbd>Enter<\/kbd>/, page);
+  }
+  const OLY = simple();
+  // Задания LAW-CPT (single-select, multiple-select, matching) — с вводом цифрами, подсказка показывается.
+  for (const type of ['single-select', 'multiple-select', 'matching']) {
+    assert.equal(typeof OLY.ui.views.get(type).keyInput, 'function', type);
+  }
+  // Классификационная карта ввода цифрами не имеет — часть подсказки про 1–9 скрывается.
+  assert.equal(OLY.ui.views.get('analysis-grid').keyInput, undefined);
+  // Заголовок задания для экранных чтецов: класс визуального скрытия определён.
+  assert.match(fs.readFileSync(path.join(root, 'css/olymp.css'), 'utf8'), /\.visually-hidden \{/);
+});

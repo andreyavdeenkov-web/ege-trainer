@@ -161,6 +161,7 @@
     taskBlock: $('task-block'),
     taskSources: $('task-sources'),
     taskQuestion: $('task-question'),
+    kbdHintDigits: $('kbd-hint-digits'),
     taskHint: $('task-hint'),
     answer: $('answer'),
     feedback: $('feedback'),
@@ -279,13 +280,28 @@
     state.reviewFilter = 'all';
   }
 
-  /** «Пройдено: 18 из 24 верно» / «Проверено: 5 из 24». */
+  /**
+   * «Пройдено: 18 из 24 верно» / «Проверено: 5 из 24». Если за попытку начислены баллы —
+   * «Пройдено · баллы: 66 из 111 · полностью верно: 3 из 20 заданий», чтобы число верных
+   * заданий не принимали за баллы.
+   */
   function attemptStatusLine(attempt) {
     if (attempt.finishedAt) {
       var o = S.outcome(attempt);
+      // Максимум — как на экране итогов: для практикума «Норма права» — по всем заданиям попытки.
+      if (o.showPoints) {
+        return 'Пройдено · баллы: ' + fmtPoints(o.points) + ' из ' + fmtPoints(o.components ? o.components.possible : o.maxPoints) +
+          ' · полностью верно: ' + o.correct + ' из ' + o.total + ' ' + fmt.plural(o.total, 'задания', 'заданий', 'заданий');
+      }
       return 'Пройдено: ' + o.correct + ' из ' + o.total + ' верно';
     }
     return 'Проверено: ' + S.checkedCount(attempt) + ' из ' + attempt.taskIds.length;
+  }
+
+  /** Ссылка на норму задания: «Конституция РФ, ст. 57 (первое предложение)»; без блока нормы — формулировка вопроса. */
+  function normLabel(task) {
+    var main = (task.legal || []).filter(function (b) { return b.role === 'main'; })[0];
+    return main ? main.act + ', ' + main.ref : task.question;
   }
 
   /** Меняет адрес без повторной отрисовки (в песочнице без history — просто ничего). */
@@ -834,9 +850,13 @@
     dom.taskBlock.hidden = !block;
     dom.taskBlock.textContent = block ? block.title : '';
     renderSources(dom.taskSources, task.id);
-    dom.taskQuestion.textContent = task.question;
     // Тема с normAsHeading: формулировка вопроса не показывается — главный элемент задания текст нормы.
-    dom.taskQuestion.hidden = !!(topic && topic.normAsHeading);
+    // Заголовок остаётся для экранных чтецов (визуально скрыт) и называет норму, а не повторяет её текст.
+    var normHeading = !!(topic && topic.normAsHeading);
+    dom.taskQuestion.textContent = normHeading ? normLabel(task) : task.question;
+    dom.taskQuestion.classList.toggle('visually-hidden', normHeading);
+    // Подсказка «Клавиши 1–9 выбирают варианты» — только если у типа задания есть ввод с клавиатуры.
+    if (dom.kbdHintDigits) dom.kbdHintDigits.hidden = !view.keyInput;
     dom.taskHint.textContent = result ? 'Ответ проверен — изменить его нельзя.' : view.hint(task);
     dom.taskCard.classList.toggle('is-review', !!result);
 
@@ -1241,13 +1261,17 @@
       if (solved && result.scored) mark.textContent += ' · ' + fmtPoints(result.points) + ' из ' + fmtPoints(result.maxPoints);
       head.appendChild(mark);
       summary.appendChild(head);
-      summary.appendChild(el('p', 'mistake__question', task.question));
+      // Тема с normAsHeading: текст нормы показывается в блоке нормы разбора, здесь — только ссылка на неё.
+      var reviewTopic = OLY.getTopic(task.subject, task.topic);
+      summary.appendChild(el('p', 'mistake__question',
+        reviewTopic && reviewTopic.normAsHeading ? normLabel(task) : task.question));
 
       var answers = el('p', 'mistake__answers');
       if (typeof views.get(task.type).feedbackSummary === 'function') {
         // Новые типы: вместо строки ответа — баллы по компонентам.
         var comp = solved && result.details && result.details.components;
         answers.textContent = comp ? componentLine(comp) : 'Задание не решено — эталон в разборе.';
+        answers.appendChild(document.createTextNode(' · '));
       } else if (solved) {
         answers.appendChild(el('span', null, 'Ваш ответ: '));
         answers.appendChild(el('strong', taskState === 'correct' ? 'text-right' : 'text-wrong',
