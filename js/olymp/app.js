@@ -183,6 +183,10 @@
     resultPoints: $('result-points'),
     resultNote: $('result-note'),
     againBtn: $('again-btn'),
+    restartBtn: $('restart-btn'),
+    restartBar: $('restart-bar'),
+    restartCancel: $('restart-cancel'),
+    restartOk: $('restart-ok'),
     skippedBtn: $('skipped-btn'),
     mistakesBtn: $('mistakes-btn'),
     topicsBtn: $('topics-btn'),
@@ -646,8 +650,23 @@
     practicumStart: 'Задания идут в учебной последовательности: от основных понятий к применению и олимпиадным кейсам.',
     practicumSingleAttempt: 'Практикум сохраняет ваш прогресс. После завершения пройти его заново нельзя, но вы сможете вернуться к своим ответам и разобрать их.',
     inProgress: 'Ответы сохраняются в этом браузере. Можно продолжить с того места, где вы остановились; после завершения тему можно будет только просматривать.',
-    completed: 'Повторное прохождение темы пока недоступно. В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор.'
+    completed: 'Повторное прохождение темы пока недоступно. В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор.',
+    // Темы с allowRestart: после завершения тему можно начать заново с экрана итогов.
+    practicumRestart: 'Практикум сохраняет ваш прогресс. После завершения вы сможете разобрать свои ответы и при желании пройти практикум заново.',
+    completedRestart: 'В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор, а также начать практикум заново.'
   };
+
+  /** Тема маршрута или null (для «Все темы дисциплины»). */
+  function topicOfRoute(route) {
+    if (!route || !route.topic || route.topic === 'all') return null;
+    return OLY.getTopic(subjectOf(OLY.getOlympiad(route.olympiad)), route.topic);
+  }
+
+  /** Тему можно начать заново после завершения (настройка темы allowRestart). */
+  function restartAllowed(route) {
+    var topic = topicOfRoute(route);
+    return !!(topic && topic.allowRestart);
+  }
 
   /** Выбранные фильтры; если тренировка охватывает всю тему (практикум) — без фильтров. */
   function currentSelection(scope) {
@@ -671,7 +690,7 @@
     // Предупреждение об одной попытке — на старте темы практикума, если повторы запрещены.
     var warn = isPracticum(route) && !policy.allowRetake;
     dom.setupWarning.hidden = !warn;
-    dom.setupWarning.textContent = warn ? SETUP_NOTES.practicumSingleAttempt : '';
+    dom.setupWarning.textContent = warn ? (restartAllowed(route) ? SETUP_NOTES.practicumRestart : SETUP_NOTES.practicumSingleAttempt) : '';
 
     // Новую попытку начать нельзя — вместо настройки статус и одна основная кнопка.
     var attempt = attemptFor(route);
@@ -683,7 +702,8 @@
       dom.setupStatusLabel.textContent = completed ? 'Тема пройдена' : 'Тренировка начата';
       dom.setupStatusText.textContent = attemptStatusLine(attempt);
       dom.setupStatusBtn.textContent = completed ? 'Посмотреть результаты' : 'Продолжить тренировку';
-      dom.setupNote.textContent = completed ? SETUP_NOTES.completed : SETUP_NOTES.inProgress;
+      dom.setupNote.textContent = completed ? (restartAllowed(route) ? SETUP_NOTES.completedRestart : SETUP_NOTES.completed)
+        : SETUP_NOTES.inProgress;
       dom.setupWarning.hidden = true;
       return;
     }
@@ -1095,7 +1115,9 @@
       dom.confirmText.textContent = 'Не ' + fmt.plural(n, 'проверено', 'проверены', 'проверено') + ' ' +
         fmt.tasksCount(n) + ' — ' + fmt.plural(n, 'оно будет засчитано как пропущенное',
         'они будут засчитаны как пропущенные', 'они будут засчитаны как пропущенные') + '.' +
-        (policyOf(state.attemptRoute).allowRetake ? '' : ' Пройти тему заново будет нельзя — останется просмотр результатов.') +
+        (policyOf(state.attemptRoute).allowRetake ? ''
+          : restartAllowed(state.attemptRoute) ? ' Начать тему заново можно будет на экране итогов.'
+          : ' Пройти тему заново будет нельзя — останется просмотр результатов.') +
         ' Завершить тренировку?';
       dom.confirmOk.textContent = 'Завершить';
     } else {
@@ -1192,8 +1214,13 @@
     dom.mistakesBtn.textContent = 'Повторить ошибки (' + o.incorrect + ')';
     dom.topicsBtn.classList.toggle('btn--primary', !policy.allowRetake);
     dom.topicsBtn.classList.toggle('btn--ghost', policy.allowRetake);
+    // «Начать заново» — только для тем с allowRestart и только после полного завершения попытки.
+    var restartable = P.canRestart(topicOfRoute(route), attempt);
+    dom.restartBtn.hidden = !restartable;
+    dom.restartBar.hidden = true;
     dom.resultNote.hidden = policy.allowRetake;
     dom.resultNote.textContent = policy.allowRetake ? ''
+      : restartable ? 'Ниже — все задания с вашими ответами, правильными ответами и разбором. Чтобы пройти практикум ещё раз, нажмите «Начать заново».'
       : 'Повторное прохождение темы пока недоступно. Ниже — все задания с вашими ответами, правильными ответами и разбором.';
 
     dom.reviewAllLabel.textContent = 'Все (' + o.total + ')';
@@ -1375,6 +1402,30 @@
     if (!P.canRetry(policyOf(state.attemptRoute), 'mistakes')) return;
     startAttempt(state.attemptRoute, S.arrangeIds(state.attemptRoute.olympiad, S.subsetIds(state.attempt, 'mistakes')));
   });
+  /* «Начать заново»: подтверждение → удаление попытки только этой темы → стартовый экран темы. */
+  function hideRestartConfirm() {
+    dom.restartBar.hidden = true;
+  }
+  dom.restartBtn.addEventListener('click', function () {
+    if (!P.canRestart(topicOfRoute(state.attemptRoute), state.attempt)) return;
+    dom.restartBar.hidden = false;
+    dom.restartBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    dom.restartCancel.focus({ preventScroll: true });
+  });
+  dom.restartCancel.addEventListener('click', function () {
+    hideRestartConfirm();
+    dom.restartBtn.focus({ preventScroll: true });
+  });
+  dom.restartOk.addEventListener('click', function () {
+    var route = state.attemptRoute;
+    if (!route || !P.canRestart(topicOfRoute(route), state.attempt)) return;
+    hideRestartConfirm();
+    store.remove(scopeOf(route));
+    state.attempt = null;
+    state.attemptRoute = null;
+    go(router.withName(route, 'setup'));
+  });
+
   dom.topicsBtn.addEventListener('click', function () {
     var route = state.attemptRoute;
     go({ name: 'discipline', olympiad: route.olympiad, discipline: route.discipline });
@@ -1397,6 +1448,11 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !dom.restartBar.hidden) {
+      hideRestartConfirm();
+      dom.restartBtn.focus({ preventScroll: true });
+      return;
+    }
     if (!state.route || state.route.name !== 'train' || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Escape' && state.confirm) {
       hideConfirm();

@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "node scripts/serve.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "node tests/e2e/law-nkl-restart.e2e.js"
   },
   "engines": {
     "node": ">=18"

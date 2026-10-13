@@ -144,7 +144,8 @@
         // hideVerificationNotes — ученик не видит пометок о сверке нормативных текстов (данные о сверке
         // в заданиях сохраняются); normAsHeading — вместо формулировки вопроса главным элементом задания
         // служит текст нормы (формулировка остаётся в данных и в разборе на экране итогов).
-        ['hideVerificationNotes', 'normAsHeading'].forEach(function (flag) {
+        // allowRestart — после полного завершения тему можно начать заново (только эта тема).
+        ['hideVerificationNotes', 'normAsHeading', 'allowRestart'].forEach(function (flag) {
           if (topic[flag] !== undefined && typeof topic[flag] !== 'boolean') {
             errors.push('тема ' + topic.id + ': ' + flag + ' должно быть true или false');
           }

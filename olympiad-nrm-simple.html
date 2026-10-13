@@ -189,9 +189,17 @@
         <p class="result__note muted" id="result-note" hidden></p>
         <div class="result__actions">
           <button type="button" class="btn btn--primary btn--lg" id="again-btn">Ещё раз по теме</button>
+          <button type="button" class="btn btn--ghost btn--lg" id="restart-btn" hidden>Начать заново</button>
           <button type="button" class="btn btn--ghost btn--lg" id="skipped-btn" hidden></button>
           <button type="button" class="btn btn--ghost btn--lg" id="mistakes-btn" hidden></button>
           <button type="button" class="btn btn--ghost btn--lg" id="topics-btn">К темам</button>
+        </div>
+        <div class="exit-bar" id="restart-bar" role="alertdialog" aria-labelledby="restart-text" hidden>
+          <p class="exit-bar__text" id="restart-text">Все ответы и баллы текущей попытки будут удалены. Начать заново?</p>
+          <div class="exit-bar__actions">
+            <button type="button" class="btn btn--ghost" id="restart-cancel">Отмена</button>
+            <button type="button" class="btn btn--primary" id="restart-ok">Начать заново</button>
+          </div>
         </div>
       </div>
 
