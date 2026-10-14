@@ -71,7 +71,8 @@ function goodMatching() {
     type: 'matching',
     question: 'Установите соответствие.',
     source: { kind: 'author' },
-    items: [1, 2, 1].map((match) => ({ text: 'пример', match, explanation: 'Объяснение соответствия с причиной и терминами.' })),
+    columns: ['Примеры', 'Понятия'],
+    items: [1, 2, 1, 2, 1].map((match, i) => ({ text: 'пример ' + (i + 1), match, explanation: 'Объяснение соответствия с причиной и терминами.' })),
     options: ['первое', 'второе']
   };
 }
@@ -106,9 +107,9 @@ test('правила новых заданий: формат ЕГЭ и объя�
   delete noSource.source;
   assert.match(newTaskErrors(EGE, noSource).join('; '), /source/);
 
-  const four = goodMultiple();
-  four.statements.pop();
-  assert.match(newTaskErrors(EGE, four).join('; '), /5 или 6/);
+  const fourStatements = goodMultiple();
+  fourStatements.statements.pop();
+  assert.match(newTaskErrors(EGE, fourStatements).join('; '), /5 или 6/);
 
   const oneCorrect = goodMultiple();
   oneCorrect.statements.forEach((s, i) => { s.correct = i === 0; s.explanation = explain(s.correct ? 'Верно.' : 'Неверно.'); });
@@ -125,6 +126,14 @@ test('правила новых заданий: формат ЕГЭ и объя�
   const five = goodExclude();
   five.statements.pop();
   assert.match(newTaskErrors(EGE, five).join('; '), /ровно 6/);
+
+  const four = goodMatching();
+  four.items.pop();
+  assert.match(newTaskErrors(EGE, four).join('; '), /ровно 5 позиций/);
+
+  const sixOptions = goodMatching();
+  sixOptions.options = ['a', 'b', 'c', 'd', 'e', 'f'];
+  assert.match(newTaskErrors(EGE, sixOptions).join('; '), /от 2 до 5 вариантов/);
 
   const unexplained = goodMatching();
   delete unexplained.items[2].explanation;

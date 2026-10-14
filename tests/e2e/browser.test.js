@@ -90,13 +90,39 @@ async function assertNoHorizontalScroll(page, where) {
 const radio = (page, name, value) => page.locator(`input[name="${name}"][value="${value}"]`);
 const pick = (page, name, value) => page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"])`).click();
 
-/** Ключ текущего задания: ищем задание банка по тексту вопроса на экране. */
+/**
+ * Ключ текущего задания: ищем задание банка по тексту вопроса и первой позиции
+ * (у разных заданий вопрос может совпадать, например «Выберите верные суждения о функциях семьи.»).
+ */
 async function currentKey(page) {
   return page.evaluate(() => {
     const q = document.getElementById('task-question').textContent;
-    const task = window.EGE.tasks.find((t) => t.question === q);
-    return { id: task.id, type: window.EGE.scoring.getTaskType(task), key: window.EGE.scoring.getCorrect(task) };
+    const first = document.querySelector('#statements:not([hidden]) .statement__text, #matching:not([hidden]) .match-row__text');
+    const firstText = first ? first.textContent : null;
+    const task = window.EGE.tasks.find((t) => t.question === q &&
+      (t.statements ? t.statements[0].text : t.items[0].text) === firstText);
+    return {
+      id: task.id,
+      type: window.EGE.scoring.getTaskType(task),
+      key: Array.from(window.EGE.scoring.getCorrect(task)),
+      maxPoints: window.EGE.scoring.getMaxPoints(task),
+      hasSource: !!task.source,
+      hasFeature: !!task.commonFeature
+    };
   });
+}
+
+/** Отвечает на текущее задание ключом (кликами, как ученик). */
+async function answerWithKey(page, { type, key }) {
+  if (type === 'matching') {
+    for (let row = 0; row < key.length; row++) {
+      await page.click(`.match-choice[data-row="${row}"][data-n="${key[row]}"]`);
+    }
+  } else {
+    for (const n of key) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
+  }
+  await page.click('#submit-btn');
+  await page.waitForSelector('#feedback:not([hidden])');
 }
 
 for (const config of CONFIGS) {
@@ -128,7 +154,7 @@ for (const config of CONFIGS) {
     assert.match(await page.locator('label.topic-option:has(input[value="OBS-ACT"]) .topic-option__count').textContent(), /^1 задание$/);
 
     // Смена раздела: тема сбрасывается, формат сохраняется; в разделе нет заданий формата.
-    await pick(page, 'section', 'SOC');
+    await pick(page, 'section', 'ECO');
     assert.ok(await radio(page, 'topic', 'all').isChecked());
     assert.ok(await radio(page, 'format', 'exclude-two').isChecked());
     assert.ok(await page.locator('#start-btn').isDisabled());
@@ -145,7 +171,7 @@ for (const config of CONFIGS) {
     await pick(page, 'format', 'multiple');
     await page.reload();
     assert.ok(await radio(page, 'format', 'multiple').isChecked());
-    assert.ok(await radio(page, 'section', 'SOC').isChecked());
+    assert.ok(await radio(page, 'section', 'ECO').isChecked());
 
     assert.deepEqual(errors, []);
     await context.close();
@@ -225,15 +251,15 @@ for (const config of CONFIGS) {
 
   test(`${config.name}: выбор нескольких ответов, итоги и повторное прохождение`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'SOC');
-    await pick(page, 'topic', 'SOC-FAM');
+    await pick(page, 'section', 'ECO');
     await pick(page, 'format', 'multiple');
+    assert.equal(await page.textContent('#start-btn'), 'Начать: 3 задания');
     await page.click('#start-btn');
 
-    const { type, key } = await currentKey(page);
-    assert.equal(type, 'multiple');
+    const first = await currentKey(page);
+    assert.equal(first.type, 'multiple');
     // Один пропущенный верный ответ — 1 балл.
-    for (const n of key.slice(1)) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
+    for (const n of first.key.slice(1)) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
     await page.click('#submit-btn');
     await page.waitForSelector('#feedback:not([hidden])');
     assert.equal(await page.textContent('.points__value'), '1 из 2 баллов');
@@ -241,19 +267,22 @@ for (const config of CONFIGS) {
     // У старых заданий нет source — блок пояснений скрыт.
     assert.ok(await page.locator('#task-notes').isHidden());
 
+    for (let i = 1; i < 3; i++) {
+      await page.click('#next-btn');
+      await answerWithKey(page, await currentKey(page));
+    }
     await page.click('#next-btn');
     await page.waitForSelector('#screen-result:not([hidden])');
-    assert.equal(await page.textContent('#result-score'), '1 из 2 баллов');
+    assert.equal(await page.textContent('#result-score'), '5 из 6 баллов');
     await assertNoHorizontalScroll(page, 'итоги');
     await shot(page, config, '7-result');
 
     await page.click('#restart-btn');
     await page.waitForSelector('#screen-quiz:not([hidden])');
-    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 1 · выполнено 0$/);
+    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 3 · выполнено 0$/);
     assert.ok(await page.locator('#feedback').isHidden());
     assert.equal(await page.locator('#statements .statement.is-selected').count(), 0);
-    for (const n of key) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
-    await page.click('#submit-btn');
+    await answerWithKey(page, await currentKey(page));
     assert.equal(await page.textContent('.points__value'), '2 из 2 баллов');
     assert.deepEqual(errors, []);
     await context.close();
@@ -262,7 +291,7 @@ for (const config of CONFIGS) {
   test(`${config.name}: поля схемы 2 в разборе (тестовые задания)`, async () => {
     const { page, context, errors } = await open(config, { withFixture: true });
     await pick(page, 'section', 'SOC');
-    await pick(page, 'topic', 'SOC-FAM');
+    await pick(page, 'topic', 'SOC-GRP');
     await pick(page, 'format', 'exclude-two');
     await page.click('#start-btn');
     for (const n of [2, 5]) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
@@ -297,6 +326,43 @@ for (const config of CONFIGS) {
     assert.ok(await page.locator('#task-notes .task-notes__feature').count() === 0, 'общий признак только у exclude-two');
     await assertNoHorizontalScroll(page, 'разбор matching');
     await shot(page, config, '10-schema2-matching-answered');
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+  test(`${config.name}: тема «Семья и брак» — все 31 задание проходят и отображаются`, async () => {
+    const { page, context, errors } = await open(config);
+    await pick(page, 'section', 'SOC');
+    await pick(page, 'topic', 'SOC-FAM');
+    await pick(page, 'format', 'all');
+    assert.equal(await page.textContent('#start-btn'), 'Начать: 31 задание');
+    await page.click('#start-btn');
+
+    const seen = new Set();
+    let max = 0;
+    for (let i = 0; i < 31; i++) {
+      const task = await currentKey(page);
+      assert.ok(!seen.has(task.id), `задание ${task.id} повторилось`);
+      seen.add(task.id);
+      await assertNoHorizontalScroll(page, `${task.id}, до ответа`);
+      await answerWithKey(page, task);
+      max += task.maxPoints;
+      assert.equal(await page.textContent('.points__value'),
+        task.maxPoints === 1 ? '1 из 1 балла' : '2 из 2 баллов', task.id);
+      if (task.hasSource) {
+        assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание', task.id);
+      }
+      assert.equal(await page.locator('#task-notes .task-notes__feature').count(), task.hasFeature ? 1 : 0, task.id);
+      // Объяснение есть у каждого суждения или позиции.
+      const parts = task.type === 'matching' ? '.match-row' : '#statements .statement';
+      const explained = '.statement__explanation';
+      assert.equal(await page.locator(`${parts} ${explained}`).count(), await page.locator(parts).count(), task.id);
+      await assertNoHorizontalScroll(page, `${task.id}, разбор`);
+      if (['SOC-FAM-013', 'SOC-FAM-020', 'SOC-FAM-029'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
+      await page.click('#next-btn');
+    }
+    await page.waitForSelector('#screen-result:not([hidden])');
+    assert.equal(max, 16 * 2 + 5 + 10 * 2);
+    assert.equal(await page.textContent('#result-percent'), '100%');
     assert.deepEqual(errors, []);
     await context.close();
   });

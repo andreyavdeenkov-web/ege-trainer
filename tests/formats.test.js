@@ -39,9 +39,11 @@ test('формат сужает пул; сумма по форматам рав�
 
 test('фильтр формата учитывает раздел и тему', () => {
   assert.deepEqual(ids(EGE.getPool('OBS', 'OBS-ACT', 'exclude-two')), ['OBS-ACT-001']);
-  assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'matching').length, 0);
-  assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'multiple').length, 1);
-  assert.equal(EGE.getPool('all', 'all', 'matching').length, 3);
+  assert.equal(EGE.getPool('ECO', 'all', 'exclude-two').length, 0);
+  assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'multiple').length, 16);
+  assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'exclude-two').length, 5);
+  assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'matching').length, 10);
+  assert.equal(EGE.getPool('OBS', 'all', 'matching').length, 3);
   // Снятые с выдачи задания не возвращаются и через фильтр.
   EGE.getPool('all', 'all', 'multiple').forEach((t) => assert.ok(!t.retired));
 });
@@ -105,7 +107,9 @@ test('смешанная попытка: баллы по каждому форм
   const pool = [...EGE.getPool('OBS', 'OBS-ACT', 'multiple').slice(0, 2),
     ...EGE.getPool('all', 'all', 'exclude-two'), ...EGE.getPool('all', 'all', 'matching')];
   const a = A.createAttempt({ settings: { section: 'all', topic: 'all', format: 'all' }, taskIds: pool.map((t) => t.id) });
-  assert.equal(A.maxScore(a, EGE.getTask), 2 * 2 + 1 + 3 * 2);
+  const excludeCount = EGE.getPool('all', 'all', 'exclude-two').length;
+  const matchingCount = EGE.getPool('all', 'all', 'matching').length;
+  assert.equal(A.maxScore(a, EGE.getTask), 2 * 2 + excludeCount * 1 + matchingCount * 2);
 
   let expected = 0;
   pool.forEach((task, i) => {

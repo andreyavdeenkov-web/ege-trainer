@@ -69,7 +69,13 @@ function newTaskErrors(EGE, task) {
   };
 
   if (type === 'matching') {
-    if (task.items.length < 2) errors.push('не меньше двух позиций');
+    // Структура заданий ЕГЭ на соответствие: позиции А–Д, во втором столбце 2–5 вариантов,
+    // номера могут повторяться.
+    if (task.items.length !== 5) errors.push('matching: ровно 5 позиций (А–Д)');
+    if (task.options.length < 2 || task.options.length > 5) errors.push('matching: во втором столбце от 2 до 5 вариантов');
+    if (!Array.isArray(task.columns)) errors.push('matching: нужны заголовки столбцов columns');
+    if (new Set(task.items.map((i) => i.text)).size !== task.items.length) errors.push('matching: позиции повторяются');
+    if (new Set(task.options).size !== task.options.length) errors.push('matching: варианты повторяются');
     task.items.forEach((item, i) => {
       if (!explained(item.explanation)) errors.push(`позиция ${i + 1}: нужно содержательное объяснение`);
     });
