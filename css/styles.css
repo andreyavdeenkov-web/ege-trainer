@@ -496,18 +496,47 @@ button, input { font: inherit; color: inherit; }
 .task-notes__text { margin-top: 6px; }
 .task-notes__source { font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
 
-.statement.status-hit { border-color: var(--right-border); background: var(--right-bg); }
-.statement.status-hit .statement__tag { color: var(--right); background: color-mix(in srgb, var(--right) 14%, transparent); }
-.statement.status-hit .statement__num,
-.statement.status-hit .statement__check { background: var(--right); border-color: var(--right); color: #fff; }
+/*
+ * Иерархия разбора: ошибка заметнее всего (сплошная яркая рамка, заливка, белый ярлык),
+ * пропуск — пунктирная янтарная рамка, верно выбранное — спокойная карточка с зелёной
+ * полосой слева, невыбранное неверное — приглушено. Статус дублируется текстом и значком.
+ */
+.statement__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  vertical-align: -3px;
+}
+
+.is-answered .statement__explanation { color: var(--text); opacity: .88; }
+
+.statement.status-hit {
+  border-color: color-mix(in srgb, var(--right) 30%, var(--border));
+  box-shadow: inset 4px 0 0 var(--right);
+}
+.statement.status-hit .statement__tag { color: var(--right); background: color-mix(in srgb, var(--right) 10%, transparent); }
+.statement.status-hit .statement__num { color: var(--right); border-color: color-mix(in srgb, var(--right) 50%, var(--border)); }
+.statement.status-hit .statement__check { background: var(--right); border-color: var(--right); }
 .statement.status-hit .statement__check::after { transform: rotate(45deg) scale(1); }
 
-.statement.status-missed { border-color: var(--warn-border); background: var(--warn-bg); border-style: dashed; }
-.statement.status-missed .statement__tag { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
-.statement.status-missed .statement__num { background: var(--warn); border-color: var(--warn); color: #fff; }
+.statement.status-missed { border-color: var(--warn); border-style: dashed; background: var(--warn-bg); }
+.statement.status-missed .statement__tag { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.statement.status-missed .statement__num { background: var(--warn); border-color: var(--warn); color: var(--warn-bg); }
+.statement.status-missed .statement__check { border-color: var(--warn); border-style: dashed; }
 
-.statement.status-wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
-.statement.status-wrong .statement__tag { color: var(--wrong); background: color-mix(in srgb, var(--wrong) 14%, transparent); }
+.statement.status-wrong {
+  border-color: var(--wrong);
+  background: var(--wrong-bg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wrong) 18%, transparent);
+}
+.statement.status-wrong .statement__tag { color: var(--wrong-bg); background: var(--wrong); }
+.statement.status-wrong .statement__text { font-weight: 600; }
 .statement.status-wrong .statement__num,
 .statement.status-wrong .statement__check { background: var(--wrong); border-color: var(--wrong); color: #fff; }
 /* крестик вместо галочки */
@@ -601,13 +630,21 @@ button, input { font: inherit; color: inherit; }
 .match-row.is-filled .match-row__picked { color: var(--primary); font-weight: 600; }
 .match-row__result { margin: 8px 0 0 42px; }
 .match-row__line { font-size: 15px; }
-.match-row__result .statement__tag { margin-top: 6px; }
-.match-row.status-right { border-color: var(--right-border); background: var(--right-bg); }
-.match-row.status-right .match-row__letter { background: var(--right); color: #fff; }
-.match-row.status-right .statement__tag { color: var(--right); background: color-mix(in srgb, var(--right) 14%, transparent); }
-.match-row.status-wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
+.match-row__result .statement__tag { margin: 0 0 6px; }
+.matching.is-answered .statement__explanation { color: var(--text); opacity: .88; }
+.match-row.status-right {
+  border-color: color-mix(in srgb, var(--right) 30%, var(--border));
+  box-shadow: inset 4px 0 0 var(--right);
+}
+.match-row.status-right .match-row__letter { color: var(--right); background: color-mix(in srgb, var(--right) 12%, transparent); }
+.match-row.status-right .statement__tag { color: var(--right); background: color-mix(in srgb, var(--right) 10%, transparent); }
+.match-row.status-wrong {
+  border-color: var(--wrong);
+  background: var(--wrong-bg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wrong) 18%, transparent);
+}
 .match-row.status-wrong .match-row__letter { background: var(--wrong); color: #fff; }
-.match-row.status-wrong .statement__tag { color: var(--wrong); background: color-mix(in srgb, var(--wrong) 14%, transparent); }
+.match-row.status-wrong .statement__tag { color: var(--wrong-bg); background: var(--wrong); }
 .matching__key { margin-top: 12px; font-size: 15px; }
 .review-item__body .matching { margin-top: 4px; }
 .review-item__body .matching__legend { background: var(--surface); }

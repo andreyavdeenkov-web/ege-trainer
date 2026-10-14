@@ -264,6 +264,9 @@ for (const config of CONFIGS) {
     await page.waitForSelector('#feedback:not([hidden])');
     assert.equal(await page.textContent('.points__value'), '1 из 2 баллов');
     assert.equal(await page.locator('#statements .statement.status-missed').count(), 1);
+    // Статус в разборе выражен не только цветом: подпись и значок.
+    assert.match(await page.textContent('#statements .statement.status-missed .statement__tag'), /Пропущено — это суждение верное/);
+    assert.equal(await page.locator('#statements .statement.status-missed .statement__icon[aria-hidden="true"]').count(), 1);
     // У старых заданий нет source — блок пояснений скрыт.
     assert.ok(await page.locator('#task-notes').isHidden());
 
