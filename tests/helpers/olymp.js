@@ -21,9 +21,9 @@ const CORE_SCRIPTS = [
   'js/olymp/attempt.js'
 ];
 
-/** Скрипты olympiad.html в порядке подключения. */
-function pageScripts() {
-  const html = fs.readFileSync(path.join(root, 'olympiad.html'), 'utf8');
+/** Скрипты страницы (по умолчанию olympiad.html) в порядке подключения. */
+function pageScripts(page = 'olympiad.html') {
+  const html = fs.readFileSync(path.join(root, page), 'utf8');
   return [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
 }
 
@@ -31,12 +31,12 @@ function pageScripts() {
 const DOM_SCRIPTS = ['js/olymp/app.js'];
 
 /**
- * Реальный банк: все скрипты olympiad.html (ядро, данные, модули интерфейса),
- * кроме DOM_SCRIPTS. Данные обращаются к глобальному OLY — он передаётся параметром.
+ * Реальный банк: все скрипты страницы (по умолчанию olympiad.html; для демо —
+ * olympiad-demo.html): ядро, данные, модули интерфейса, кроме DOM_SCRIPTS. Данные обращаются к глобальному OLY — он передаётся параметром.
  */
-function loadBank() {
+function loadBank(page = 'olympiad.html') {
   const sandbox = {};
-  for (const src of pageScripts().filter((s) => !DOM_SCRIPTS.includes(s))) {
+  for (const src of pageScripts(page).filter((s) => !DOM_SCRIPTS.includes(s))) {
     const code = fs.readFileSync(path.join(root, src), 'utf8');
     const run = vm.runInThisContext('(function (window, globalThis, OLY) {\n' + code + '\n})', { filename: src });
     run(undefined, sandbox, sandbox.OLY);
