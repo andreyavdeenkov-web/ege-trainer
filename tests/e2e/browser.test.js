@@ -88,13 +88,7 @@ async function assertNoHorizontalScroll(page, where) {
 }
 
 const radio = (page, name, value) => page.locator(`input[name="${name}"][value="${value}"]`);
-/** Выбор карточки; формат спрятан в блоке «Настроить тренировку» — сначала раскрываем его. */
-async function pick(page, name, value) {
-  if (name === 'format' && !(await page.locator('#train-settings').evaluate((d) => d.open))) {
-    await page.click('#train-settings > summary');
-  }
-  await page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"])`).click();
-}
+const pick = (page, name, value) => page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"])`).click();
 
 /**
  * Ключ текущего задания: ищем задание банка по тексту вопроса и первой позиции
@@ -131,12 +125,37 @@ async function answerWithKey(page, { type, key }) {
   await page.waitForSelector('#feedback:not([hidden])');
 }
 
+/**
+ * Проходит задания тренировки верными ответами, пока текущим не станет задание
+ * нужного типа (формат на главном экране не выбирается — порядок заданий случайный).
+ */
+async function advanceTo(page, type) {
+  for (;;) {
+    const task = await currentKey(page);
+    if (task.type === type) return task;
+    await answerWithKey(page, task);
+    await page.click('#next-btn');
+  }
+}
+
+/** Счётчики, которые должны быть на карточках: все задания во всех форматах. */
+const bankCounts = (page) => page.evaluate(() => ({
+  all: EGE.getTasksBySection('all').length,
+  OBS: EGE.getTasksBySection('OBS').length,
+  'OBS-ACT': EGE.getTasksByTopic('OBS-ACT').length,
+  SOC: EGE.getTasksBySection('SOC').length,
+  'SOC-FAM': EGE.getTasksByTopic('SOC-FAM').length
+}));
+const countOf = (page, name, value) =>
+  page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"]) .topic-option__count`).textContent();
+
 for (const config of CONFIGS) {
-  test(`${config.name}: стартовый экран, тема и фильтры`, async () => {
+  test(`${config.name}: главный экран — только раздел и тема, все форматы`, async () => {
     const { page, context, errors } = await open(config);
     await assert.doesNotReject(page.waitForSelector('#start-title'));
     assert.equal(await page.textContent('#start-title'),
       'Практикуй задания ЕГЭ по обществознанию и разбирай каждую ошибку');
+    assert.doesNotMatch(await page.textContent('.hero__lead'), /формат/i);
 
     // Тема оформления применилась: фон страницы тёмный только в тёмной теме.
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
@@ -144,65 +163,45 @@ for (const config of CONFIGS) {
     const dark = (r + g + b) / 3 < 100;
     assert.equal(dark, config.colorScheme === 'dark', `фон ${bg}`);
 
-    // На главном экране — раздел и тема; формат свёрнут в «Настроить тренировку».
-    assert.ok(!(await page.locator('#train-settings').evaluate((d) => d.open)), 'блок формата свёрнут');
-    assert.ok(await page.locator('#format-options').isHidden());
-    assert.equal((await page.textContent('#train-settings > summary')).replace(/\s+/g, ' ').trim(),
-      'Настроить тренировку Все форматы заданий');
-    assert.ok(await radio(page, 'format', 'all').isChecked());
-    assert.deepEqual(await page.locator('#format-options .topic-option__title').allTextContents(),
-      ['Все форматы заданий', 'Выбор нескольких ответов', 'Два лишних термина', 'Установление соответствия']);
+    // Выбора формата нет ни в каком виде.
+    assert.equal(await page.locator('input[name="format"], #train-settings, #format-options').count(), 0);
+    assert.deepEqual(await page.locator('#start-form legend').allTextContents(), ['Раздел', 'Тема']);
+
+    // Счётчики — все задания во всех форматах.
+    const counts = await bankCounts(page);
+    assert.match(await countOf(page, 'section', 'all'), new RegExp(`^${counts.all} `));
+    assert.match(await countOf(page, 'section', 'SOC'), new RegExp(`^${counts.SOC} `));
     await assertNoHorizontalScroll(page, 'старт');
     await shot(page, config, '1-start');
 
-    // Раздел → тема → формат.
     await pick(page, 'section', 'OBS');
+    assert.match(await countOf(page, 'topic', 'OBS-ACT'), /^16 заданий$/);
     await pick(page, 'topic', 'OBS-ACT');
-    await pick(page, 'format', 'exclude-two');
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 1 задание');
-    assert.equal(await page.textContent('#format-summary'), 'Два лишних термина');
-    assert.ok(await page.locator('#train-settings.is-custom').count() === 1, 'суженный выбор выделен');
-    // Счётчик темы показывает задания выбранного формата.
-    assert.match(await page.locator('label.topic-option:has(input[value="OBS-ACT"]) .topic-option__count').textContent(), /^1 задание$/);
-    await shot(page, config, '2-format-open');
+    assert.equal(await page.textContent('#start-btn'), 'Начать: 16 заданий');
+    await pick(page, 'section', 'SOC');
+    assert.ok(await radio(page, 'topic', 'all').isChecked(), 'смена раздела сбрасывает тему');
+    await pick(page, 'topic', 'SOC-FAM');
+    assert.equal(await page.textContent('#start-btn'), `Начать: ${counts['SOC-FAM']} задание`);
+    await shot(page, config, '2-topic');
 
-    // Смена темы: формат сбрасывается на «Все форматы заданий», счётчики — снова по всем форматам.
-    await pick(page, 'topic', 'all');
-    assert.ok(await radio(page, 'format', 'all').isChecked());
-    assert.equal(await page.textContent('#format-summary'), 'Все форматы заданий');
-    assert.equal(await page.locator('#train-settings.is-custom').count(), 0);
-    assert.match(await page.locator('label.topic-option:has(input[value="OBS-ACT"]) .topic-option__count').textContent(), /^16 заданий$/);
-
-    // Смена раздела: тема — «Весь раздел», формат — «Все форматы заданий».
-    await pick(page, 'format', 'matching');
-    await pick(page, 'section', 'ECO');
-    assert.ok(await radio(page, 'topic', 'all').isChecked());
-    assert.ok(await radio(page, 'format', 'all').isChecked());
-    assert.ok(!(await page.locator('#start-btn').isDisabled()));
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 3 задания');
-    // Форматы, которых нет в разделе, недоступны.
-    assert.ok(await radio(page, 'format', 'matching').isDisabled());
-    assert.ok(await radio(page, 'format', 'exclude-two').isDisabled());
-
-    // Раздел и тема запоминаются, формат — нет: после перезагрузки снова все форматы.
-    await pick(page, 'format', 'multiple');
-    assert.equal(await page.textContent('#format-summary'), 'Выбор нескольких ответов');
+    // Раздел и тема запоминаются.
     await page.reload();
-    assert.ok(await radio(page, 'section', 'ECO').isChecked());
-    assert.ok(await radio(page, 'format', 'all').isChecked());
-    assert.equal(await page.textContent('#format-summary'), 'Все форматы заданий');
-    assert.ok(!(await page.locator('#train-settings').evaluate((d) => d.open)));
+    assert.ok(await radio(page, 'section', 'SOC').isChecked());
+    assert.ok(await radio(page, 'topic', 'SOC-FAM').isChecked());
 
     assert.deepEqual(errors, []);
     await context.close();
   });
 
-  test(`${config.name}: сохранённые настройки не ограничивают формат при открытии`, async () => {
-    for (const storage of [JSON.stringify({ section: 'OBS', topic: 'OBS-ACT' }), JSON.stringify({ section: 'OBS', topic: 'all', format: 'essay' }),
-      JSON.stringify({ section: 'OBS', topic: 'all', format: 'matching' })]) {
+  test(`${config.name}: сохранённый ранее формат не ограничивает набор заданий`, async () => {
+    for (const format of ['matching', 'exclude-two', 'multiple', 'essay']) {
+      const storage = JSON.stringify({ section: 'OBS', topic: 'OBS-ACT', format });
       const { page, context, errors } = await open(config, { storage });
-      assert.ok(await radio(page, 'format', 'all').isChecked());
-      assert.ok(await radio(page, 'section', 'OBS').isChecked());
+      assert.ok(await radio(page, 'topic', 'OBS-ACT').isChecked());
+      assert.equal(await page.textContent('#start-btn'), 'Начать: 16 заданий', format);
+      await page.click('#start-btn');
+      assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 /);
+      assert.equal(await page.locator('#task-nav .task-nav__item').count(), 16);
       assert.deepEqual(errors, []);
       await context.close();
     }
@@ -212,11 +211,9 @@ for (const config of CONFIGS) {
     const { page, context, errors } = await open(config);
     await pick(page, 'section', 'OBS');
     await pick(page, 'topic', 'OBS-ACT');
-    await pick(page, 'format', 'exclude-two');
     await page.click('#start-btn');
 
-    const { type, key } = await currentKey(page);
-    assert.equal(type, 'exclude-two');
+    const { key } = await advanceTo(page, 'exclude-two');
     assert.match(await page.textContent('#task-hint'), /Выбрано: 0 из 2/);
 
     const wrong = [1, 2, 3, 4, 5, 6].find((n) => !key.includes(n));
@@ -245,13 +242,10 @@ for (const config of CONFIGS) {
   test(`${config.name}: соответствие — частичный ответ не засчитывается, верный — 2 балла`, async () => {
     const { page, context, errors } = await open(config);
     await pick(page, 'section', 'OBS');
-    await pick(page, 'topic', 'all');
-    await pick(page, 'format', 'matching');
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 3 задания');
+    await pick(page, 'topic', 'OBS-ACT');
     await page.click('#start-btn');
 
-    const { type, key } = await currentKey(page);
-    assert.equal(type, 'matching');
+    const { key } = await advanceTo(page, 'matching');
     for (let row = 0; row < key.length - 1; row++) {
       await page.click(`.match-choice[data-row="${row}"][data-n="${key[row]}"]`);
     }
@@ -273,7 +267,6 @@ for (const config of CONFIGS) {
   test(`${config.name}: выбор нескольких ответов, итоги и повторное прохождение`, async () => {
     const { page, context, errors } = await open(config);
     await pick(page, 'section', 'ECO');
-    await pick(page, 'format', 'multiple');
     assert.equal(await page.textContent('#start-btn'), 'Начать: 3 задания');
     await page.click('#start-btn');
 
@@ -316,57 +309,62 @@ for (const config of CONFIGS) {
     const { page, context, errors } = await open(config, { withFixture: true });
     await pick(page, 'section', 'SOC');
     await pick(page, 'topic', 'SOC-GRP');
-    await pick(page, 'format', 'exclude-two');
+    assert.equal(await page.textContent('#start-btn'), 'Начать: 2 задания');
     await page.click('#start-btn');
-    for (const n of [2, 5]) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
-    await page.click('#submit-btn');
-    await page.waitForSelector('#task-notes:not([hidden])');
-    assert.match(await page.textContent('#task-notes .task-notes__feature'), /Общий признак ряда.*Тестовый общий признак/s);
-    assert.equal(await page.textContent('#task-notes .task-notes__source'),
-      'Источник: Тестовое пособие, 2025, с. 1, № 1 (формулировка адаптирована)');
-    assert.match(await page.textContent('#statements .statement[data-number="2"] .statement__mistake'), /Типичная ошибка: Тестовая типичная ошибка/);
-    await assertNoHorizontalScroll(page, 'разбор exclude-two');
-    await shot(page, config, '8-schema2-exclude');
+
+    // В тестовой теме два задания — exclude-two и matching — в случайном порядке.
+    for (let i = 0; i < 2; i++) {
+      const task = await currentKey(page);
+      if (task.type === 'exclude-two') {
+        for (const n of [2, 5]) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
+        await page.click('#submit-btn');
+        await page.waitForSelector('#task-notes:not([hidden])');
+        assert.match(await page.textContent('#task-notes .task-notes__feature'), /Общий признак ряда.*Тестовый общий признак/s);
+        assert.equal(await page.textContent('#task-notes .task-notes__source'),
+          'Источник: Тестовое пособие, 2025, с. 1, № 1 (формулировка адаптирована)');
+        assert.match(await page.textContent('#statements .statement[data-number="2"] .statement__mistake'), /Типичная ошибка: Тестовая типичная ошибка/);
+        await assertNoHorizontalScroll(page, 'разбор exclude-two');
+        await shot(page, config, '8-schema2-exclude');
+      } else {
+        // Соответствие с повторами, 7 вариантами и длинной формулировкой.
+        for (let row = 0; row < task.key.length; row++) {
+          await page.click(`.match-choice[data-row="${row}"][data-n="${task.key[row]}"]`);
+        }
+        await assertNoHorizontalScroll(page, 'matching, 7 вариантов');
+        await shot(page, config, '9-schema2-matching-draft');
+        await page.click('#submit-btn');
+        assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание');
+        assert.match(await page.textContent('.match-row[data-row="0"] .statement__mistake'), /Тестовая ошибка соответствия/);
+        assert.equal(await page.locator('#task-notes .task-notes__feature').count(), 0, 'общий признак только у exclude-two');
+        await assertNoHorizontalScroll(page, 'разбор matching');
+        await shot(page, config, '10-schema2-matching-answered');
+      }
+      await page.click('#next-btn');
+    }
 
     // Итоги: пояснения есть и в разборе.
-    await page.click('#next-btn');
     await page.waitForSelector('#screen-result:not([hidden])');
     await page.click('#expand-all-btn');
-    assert.match(await page.textContent('#review-list .task-notes__source'), /Тестовое пособие/);
-
-    // Соответствие с повторами, 7 вариантами и длинной формулировкой.
-    await page.click('#home-btn');
-    await pick(page, 'format', 'matching');
-    await page.click('#start-btn');
-    const { key } = await currentKey(page);
-    for (let row = 0; row < key.length; row++) {
-      await page.click(`.match-choice[data-row="${row}"][data-n="${key[row]}"]`);
-    }
-    await assertNoHorizontalScroll(page, 'matching, 7 вариантов');
-    await shot(page, config, '9-schema2-matching-draft');
-    await page.click('#submit-btn');
-    assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание');
-    assert.match(await page.textContent('.match-row[data-row="0"] .statement__mistake'), /Тестовая ошибка соответствия/);
-    assert.ok(await page.locator('#task-notes .task-notes__feature').count() === 0, 'общий признак только у exclude-two');
-    await assertNoHorizontalScroll(page, 'разбор matching');
-    await shot(page, config, '10-schema2-matching-answered');
+    assert.match(await page.locator('#review-list').textContent(), /Тестовое пособие/);
     assert.deepEqual(errors, []);
     await context.close();
   });
+
   test(`${config.name}: тема «Семья и брак» — все 31 задание проходят и отображаются`, async () => {
     const { page, context, errors } = await open(config);
     await pick(page, 'section', 'SOC');
     await pick(page, 'topic', 'SOC-FAM');
-    await pick(page, 'format', 'all');
     assert.equal(await page.textContent('#start-btn'), 'Начать: 31 задание');
     await page.click('#start-btn');
 
     const seen = new Set();
+    const types = new Set();
     let max = 0;
     for (let i = 0; i < 31; i++) {
       const task = await currentKey(page);
       assert.ok(!seen.has(task.id), `задание ${task.id} повторилось`);
       seen.add(task.id);
+      types.add(task.type);
       await assertNoHorizontalScroll(page, `${task.id}, до ответа`);
       await answerWithKey(page, task);
       max += task.maxPoints;
@@ -378,13 +376,13 @@ for (const config of CONFIGS) {
       assert.equal(await page.locator('#task-notes .task-notes__feature').count(), task.hasFeature ? 1 : 0, task.id);
       // Объяснение есть у каждого суждения или позиции.
       const parts = task.type === 'matching' ? '.match-row' : '#statements .statement';
-      const explained = '.statement__explanation';
-      assert.equal(await page.locator(`${parts} ${explained}`).count(), await page.locator(parts).count(), task.id);
+      assert.equal(await page.locator(`${parts} .statement__explanation`).count(), await page.locator(parts).count(), task.id);
       await assertNoHorizontalScroll(page, `${task.id}, разбор`);
       if (['SOC-FAM-033', 'SOC-FAM-038', 'SOC-FAM-040'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
       await page.click('#next-btn');
     }
     await page.waitForSelector('#screen-result:not([hidden])');
+    assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple'], 'в тренировке все три формата');
     assert.equal(max, 16 * 2 + 5 + 10 * 2);
     assert.equal(await page.textContent('#result-percent'), '100%');
     assert.deepEqual(errors, []);
