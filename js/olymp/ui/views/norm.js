@@ -1,10 +1,14 @@
 /**
  * Олимпиады, интерфейс: задания по тексту нормы права.
  *   criteria       — классификация нормы по нескольким основаниям;
- *   norm-structure — разметка гипотезы, диспозиции и санкции в тексте нормы.
+ *   norm-structure — гипотеза, диспозиция и санкция в тексте нормы.
  *
  * Над полем ответа — карточка нормы: текст и ссылка на акт. Если текст ещё не
  * сверен с официальной публикацией (norm.verified: false), карточка помечается.
+ *
+ * Разбор компактный: результат по каждому основанию (элементу) прямо в задании,
+ * объяснение — только у ошибок; общий разбор показывает экран задания.
+ * Поэтому answerInline: экраны не повторяют ответ отдельной строкой.
  */
 (function (root) {
   'use strict';
@@ -19,7 +23,14 @@
     return OLY.types.get('norm-structure');
   }
 
-  /** Карточка нормы. body — содержимое цитаты (текст или фрагменты разметки). */
+  /** «Верно: 5 из 6 оснований». */
+  function scoreLine(result, many) {
+    var perItem = (result.details && result.details.perItem) || [];
+    var right = perItem.filter(Boolean).length;
+    return 'Верно: ' + right + ' из ' + perItem.length + ' ' + many;
+  }
+
+  /** Карточка нормы. body — содержимое цитаты (текст или размеченные фрагменты). */
   function normCard(task, body) {
     var el = ui.el;
     var card = el('figure', 'norm-card');
@@ -33,6 +44,30 @@
     }
     card.appendChild(cite);
     return card;
+  }
+
+  /** Строка «Ваш ответ: … · Правильно: …» для ошибки. */
+  function mistakeLine(mine, right) {
+    var el = ui.el;
+    var line = el('p', 'result-row__line');
+    line.appendChild(el('span', 'muted', 'Ваш ответ: '));
+    line.appendChild(el('strong', 'text-wrong', mine));
+    line.appendChild(el('span', 'muted', ' · правильно: '));
+    line.appendChild(el('strong', 'text-right', right));
+    return line;
+  }
+
+  /** Строка результата: заголовок, значение, статус; при ошибке — пояснение. */
+  function resultRow(className, title, status, value, extra) {
+    var el = ui.el;
+    var li = el('li', 'result-row ' + className + (status ? ' status-' + status : ''));
+    var head = el('p', 'result-row__head');
+    head.appendChild(el('span', 'result-row__title', title));
+    if (value) head.appendChild(el('span', 'result-row__value', value));
+    if (status) head.appendChild(el('span', 'result-row__mark', status === 'right' ? 'верно' : 'ошибка'));
+    li.appendChild(head);
+    (extra || []).forEach(function (node) { li.appendChild(node); });
+    return li;
   }
 
   /* ---------- criteria ---------- */
@@ -49,14 +84,6 @@
     var next = normalizedCriteria(task, response);
     next[row] = next[row] === n ? null : n;
     return next;
-  }
-
-  function criterionHead(c, row) {
-    var el = ui.el;
-    var head = el('div', 'match-row__head');
-    head.appendChild(el('span', 'match-row__letter', String(row + 1)));
-    head.appendChild(el('span', 'match-row__text', c.title));
-    return head;
   }
 
   function renderCriteria(container, task, ctx) {
@@ -80,7 +107,10 @@
 
     task.criteria.forEach(function (c, row) {
       var li = el('li', 'match-row');
-      li.appendChild(criterionHead(c, row));
+      var head = el('div', 'match-row__head');
+      head.appendChild(el('span', 'match-row__letter', String(row + 1)));
+      head.appendChild(el('span', 'match-row__text', c.title));
+      li.appendChild(head);
       var choices = el('div', 'criteria__choices');
       choices.setAttribute('role', 'radiogroup');
       choices.setAttribute('aria-label', c.title);
@@ -120,37 +150,22 @@
     var response = solved ? normalizedCriteria(task, ctx.result.response) : null;
     var box = el('div', 'criteria is-answered');
     box.appendChild(normCard(task, task.norm.text));
-    var rows = el('ol', 'matching__rows');
+    var rows = el('ol', 'result-rows');
 
     task.criteria.forEach(function (c, row) {
-      var li = el('li', 'match-row');
-      li.appendChild(criterionHead(c, row));
-      var result = el('div', 'match-row__result');
       var right = c.options[c.match - 1];
-      if (solved) {
-        var value = response[row];
-        var ok = value === c.match;
-        li.classList.add(ok ? 'status-right' : 'status-wrong');
-        var mine = el('p', 'match-row__line');
-        mine.appendChild(el('span', 'muted', 'Ваш ответ: '));
-        mine.appendChild(el('strong', ok ? 'text-right' : 'text-wrong', value === null ? 'не выбран' : c.options[value - 1]));
-        result.appendChild(mine);
-        if (!ok) {
-          var key = el('p', 'match-row__line');
-          key.appendChild(el('span', 'muted', 'Правильно: '));
-          key.appendChild(el('strong', 'text-right', right));
-          result.appendChild(key);
-        }
-        result.appendChild(el('span', 'statement__tag', ok ? 'Верно' : 'Ошибка'));
-      } else {
-        var line = el('p', 'match-row__line');
-        line.appendChild(el('span', 'muted', 'Правильно: '));
-        line.appendChild(el('strong', 'text-right', right));
-        result.appendChild(line);
+      if (!solved) {
+        rows.appendChild(resultRow('', c.title, null, right));
+        return;
       }
-      if (c.explanation) result.appendChild(el('p', 'statement__explanation', c.explanation));
-      li.appendChild(result);
-      rows.appendChild(li);
+      var value = response[row];
+      if (value === c.match) {
+        rows.appendChild(resultRow('', c.title, 'right', right));
+        return;
+      }
+      var extra = [mistakeLine(value === null ? 'не выбран' : c.options[value - 1], right)];
+      if (c.explanation) extra.push(el('p', 'result-row__why', c.explanation));
+      rows.appendChild(resultRow('', c.title, 'wrong', null, extra));
     });
 
     box.appendChild(rows);
@@ -173,7 +188,9 @@
     render: renderCriteria,
     renderReview: renderCriteriaReview,
     keyInput: criteriaKeyInput,
-    choose: chooseCriterion
+    choose: chooseCriterion,
+    answerInline: true,
+    resultLine: function (task, result) { return scoreLine(result, 'оснований'); }
   });
 
   /* ---------- norm-structure ---------- */
@@ -181,34 +198,54 @@
   function normalizedMarks(task, response) {
     return task.segments.map(function (s, i) {
       var r = Array.isArray(response) ? response[i] : null;
-      return r === undefined || r === 'none' ? null : r;
+      return r === undefined || s.role === 'context' ? null : r;
     });
   }
 
   /** Отметка фрагмента «маркером» role; тот же маркер на отмеченном фрагменте снимает отметку. */
   function mark(task, response, index, role) {
     var next = normalizedMarks(task, response);
+    if (task.segments[index].role === 'context') return next;
     next[index] = role === null || next[index] === role ? null : role;
     return next;
   }
 
-  function segmentNode(segment, role) {
+  /** Содержимое фрагмента: текст и метка Г / Д / С. */
+  function fillSegment(node, segment, role) {
     var el = ui.el;
-    var node = el('span', 'seg' + (role ? ' seg--' + role : ''));
+    node.textContent = '';
     node.appendChild(el('span', 'seg__text', segment.text));
     if (role) node.appendChild(el('sup', 'seg__label', ROLE_SHORT[role]));
-    return node;
   }
 
-  /** Сводка «Гипотеза: «…» / не выражена». */
-  function summaryList(task, marks, className) {
+  function segmentClass(segment, role) {
+    if (segment.role === 'context') return 'seg seg--context';
+    return 'seg' + (role ? ' seg--' + role : '');
+  }
+
+  /** Текст нормы из фрагментов (для разбора — без интерактивности). */
+  function staticText(task, marks, statusOf) {
+    var el = ui.el;
+    var text = el('span', 'structure__text');
+    task.segments.forEach(function (segment, i) {
+      var node = el('span', segmentClass(segment, marks[i]));
+      if (statusOf && segment.role !== 'context') node.classList.add(statusOf(i) ? 'seg--right' : 'seg--wrong');
+      fillSegment(node, segment, marks[i]);
+      text.appendChild(node);
+      if (i < task.segments.length - 1) text.appendChild(document.createTextNode(' '));
+    });
+    return text;
+  }
+
+  /** «Гипотеза — «…» / не выражена». */
+  function summaryList(task, marks) {
     var el = ui.el;
     var elements = structureType().structureElements(task, marks);
-    var list = el('dl', 'structure-summary' + (className ? ' ' + className : ''));
+    var list = el('dl', 'structure-summary');
     structureType().roles.forEach(function (role) {
       var row = el('div', 'structure-summary__row structure-summary__row--' + role);
       row.appendChild(el('dt', null, ROLE_TITLE[role]));
-      row.appendChild(el('dd', elements[role] ? null : 'muted', elements[role] ? '«' + elements[role] + '»' : 'не выражена'));
+      row.appendChild(el('dd', elements[role] ? null : 'muted', elements[role] ? '«' + elements[role] + '»' : 'не отмечена'));
       list.appendChild(row);
     });
     return list;
@@ -224,12 +261,11 @@
     toolbar.setAttribute('role', 'radiogroup');
     toolbar.setAttribute('aria-label', 'Маркер');
     var tools = structureType().roles.concat('erase').map(function (role) {
-      var label = role === 'erase' ? 'Снять отметку' : ROLE_TITLE[role];
       var btn = el('button', 'structure__tool structure__tool--' + role);
       btn.type = 'button';
       btn.setAttribute('role', 'radio');
       if (role !== 'erase') btn.appendChild(el('span', 'structure__tool-mark', ROLE_SHORT[role]));
-      btn.appendChild(el('span', null, label));
+      btn.appendChild(el('span', null, role === 'erase' ? 'Снять отметку' : ROLE_TITLE[role]));
       btn.addEventListener('click', function () {
         tool = role;
         paint();
@@ -240,46 +276,49 @@
     box.appendChild(toolbar);
 
     var text = el('span', 'structure__text');
-    var buttons = task.segments.map(function (segment, i) {
-      // Строчный элемент, а не <button>: фрагменты должны переноситься как обычный текст.
-      var btn = el('span', 'seg');
-      btn.setAttribute('role', 'button');
-      btn.tabIndex = 0;
-      function apply() {
-        marks = mark(task, marks, i, tool === 'erase' ? null : tool);
-        paint();
-        ctx.onChange(marks.slice());
+    var nodes = task.segments.map(function (segment, i) {
+      var node = el('span');
+      if (segment.role !== 'context') {
+        // Строчный элемент, а не <button>: фрагменты переносятся как обычный текст.
+        node.setAttribute('role', 'button');
+        node.tabIndex = 0;
+        var apply = function () {
+          marks = mark(task, marks, i, tool === 'erase' ? null : tool);
+          paint();
+          ctx.onChange(marks.slice());
+        };
+        node.addEventListener('click', apply);
+        node.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          e.stopPropagation();
+          apply();
+        });
       }
-      btn.addEventListener('click', apply);
-      btn.addEventListener('keydown', function (e) {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        e.stopPropagation();
-        apply();
-      });
-      text.appendChild(btn);
+      text.appendChild(node);
       if (i < task.segments.length - 1) text.appendChild(document.createTextNode(' '));
-      return btn;
+      return node;
     });
     box.appendChild(normCard(task, text));
 
     var summaryBox = el('div', 'structure__summary');
     box.appendChild(summaryBox);
     box.appendChild(el('p', 'structure__note muted',
-      'Неотмеченный элемент считается невыраженным в этом тексте.'));
+      'Отмечать нужно только элементы структуры. Элемент, которого нет в тексте, оставьте неотмеченным.'));
 
     function paint() {
       tools.forEach(function (t) {
         t.btn.classList.toggle('is-selected', t.role === tool);
         t.btn.setAttribute('aria-checked', String(t.role === tool));
       });
-      buttons.forEach(function (btn, i) {
+      nodes.forEach(function (node, i) {
+        var segment = task.segments[i];
         var role = marks[i];
-        var fresh = segmentNode(task.segments[i], role);
-        btn.className = fresh.className + ' seg--active';
-        btn.textContent = '';
-        while (fresh.firstChild) btn.appendChild(fresh.firstChild);
-        btn.setAttribute('aria-label', task.segments[i].text + ' — ' + (role ? ROLE_TITLE[role] : 'не отмечен'));
+        node.className = segmentClass(segment, role) + (segment.role === 'context' ? '' : ' seg--active');
+        fillSegment(node, segment, role);
+        if (segment.role !== 'context') {
+          node.setAttribute('aria-label', segment.text + ' — ' + (role ? ROLE_TITLE[role] : 'не отмечен'));
+        }
       });
       summaryBox.textContent = '';
       summaryBox.appendChild(summaryList(task, marks));
@@ -297,72 +336,38 @@
     };
   }
 
-  function roleName(role) {
-    return role ? ROLE_TITLE[role].toLowerCase() : 'без отметки';
+  function elementText(text) {
+    return text ? '«' + text + '»' : 'в тексте не выражена';
   }
 
   function renderStructureReview(container, task, ctx) {
     var el = ui.el;
     var type = structureType();
     var solved = !!(ctx.result && ctx.result.verdict !== 'unanswered');
-    var marks = solved ? normalizedMarks(task, ctx.result.response) : null;
-    var key = normalizedMarks(task, type.getCorrect(task));
+    var key = type.getCorrect(task);
+    var marks = solved ? normalizedMarks(task, ctx.result.response) : key;
     var box = el('div', 'structure is-answered');
 
-    function markup(roles, withStatus) {
-      var text = el('span', 'structure__text');
-      task.segments.forEach(function (segment, i) {
-        var node = segmentNode(segment, roles[i]);
-        if (withStatus) {
-          var ok = type.acceptedRoles(segment).indexOf(roles[i] || 'none') !== -1;
-          node.classList.add(ok ? 'seg--right' : 'seg--wrong');
-        }
-        text.appendChild(node);
-        if (i < task.segments.length - 1) text.appendChild(document.createTextNode(' '));
-      });
-      return text;
-    }
+    box.appendChild(normCard(task, staticText(task, marks, solved ? function (i) { return marks[i] === key[i]; } : null)));
 
-    if (solved) {
-      box.appendChild(el('h4', 'structure__caption', 'Ваша разметка'));
-      box.appendChild(normCard(task, markup(marks, true)));
-    }
-    box.appendChild(el('h4', 'structure__caption', 'Правильная разметка'));
-    box.appendChild(normCard(task, markup(key, false)));
-
-    var elements = el('ul', 'structure__elements');
+    var keyElements = type.structureElements(task, key);
+    var myElements = type.structureElements(task, marks);
+    var perElement = solved ? type.check(task, marks).details.perElement : null;
+    var rows = el('ol', 'result-rows');
     type.roles.forEach(function (role) {
-      var li = el('li', 'structure__element structure__element--' + role);
-      var expressed = task.segments.some(function (s) { return s.role === role; });
-      var head = el('p', 'structure__element-head');
-      head.appendChild(el('strong', null, ROLE_TITLE[role] + ': '));
-      head.appendChild(el('span', null, expressed ? 'выражена в тексте' : 'в тексте не выражена'));
-      li.appendChild(head);
-      li.appendChild(el('p', 'statement__explanation', task.elements[role]));
-      elements.appendChild(li);
-    });
-    box.appendChild(elements);
-
-    var notes = el('ol', 'structure__fragments');
-    task.segments.forEach(function (segment, i) {
-      var ok = solved ? type.acceptedRoles(segment).indexOf(marks[i] || 'none') !== -1 : true;
-      if (ok && !segment.explanation) return;
-      var li = el('li', 'structure__fragment ' + (ok ? 'status-right' : 'status-wrong'));
-      li.appendChild(el('p', 'structure__fragment-text', '«' + segment.text + '»'));
-      if (!ok) {
-        var line = el('p', 'match-row__line');
-        line.appendChild(el('span', 'muted', 'Ваша отметка: '));
-        line.appendChild(el('strong', 'text-wrong', roleName(marks[i])));
-        line.appendChild(el('span', 'muted', ' · правильно: '));
-        line.appendChild(el('strong', 'text-right', type.acceptedRoles(segment).map(function (r) {
-          return r === 'none' ? 'без отметки' : roleName(r);
-        }).join(' или ')));
-        li.appendChild(line);
+      var cls = 'result-row--' + role;
+      if (!solved) {
+        rows.appendChild(resultRow(cls, ROLE_TITLE[role], null, elementText(keyElements[role])));
+      } else if (perElement[role].ok) {
+        rows.appendChild(resultRow(cls, ROLE_TITLE[role], 'right', elementText(keyElements[role])));
+      } else {
+        rows.appendChild(resultRow(cls, ROLE_TITLE[role], 'wrong', null, [
+          mistakeLine(myElements[role] ? '«' + myElements[role] + '»' : 'не отмечена', elementText(keyElements[role])),
+          el('p', 'result-row__why', task.elements[role])
+        ]));
       }
-      if (segment.explanation) li.appendChild(el('p', 'statement__explanation', segment.explanation));
-      notes.appendChild(li);
     });
-    if (notes.childNodes.length) box.appendChild(notes);
+    box.appendChild(rows);
 
     container.textContent = '';
     container.appendChild(box);
@@ -370,10 +375,12 @@
 
   ui.views.register('norm-structure', {
     hint: function () {
-      return 'Выберите маркер и отметьте фрагменты текста. Элемент, которого нет в тексте, не отмечайте.';
+      return 'Выберите маркер и отметьте в тексте гипотезу, диспозицию и санкцию — те, что в нём выражены.';
     },
     render: renderStructure,
     renderReview: renderStructureReview,
-    mark: mark
+    mark: mark,
+    answerInline: true,
+    resultLine: function (task, result) { return scoreLine(result, 'элементов'); }
   });
 })(typeof window !== 'undefined' ? window : globalThis);

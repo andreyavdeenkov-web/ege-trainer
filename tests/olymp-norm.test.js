@@ -27,10 +27,10 @@ function structureTask(overrides) {
     id: 'TST-LAW-NRM-902', type: 'norm-structure', question: 'Отметьте элементы.',
     norm: norm(),
     segments: [
-      { text: 'Гражданин', role: 'none', alsoAccept: ['hypothesis'], explanation: 'Адресат: засчитываются оба ответа.' },
+      { text: 'Гражданин', role: 'context' },
       { text: 'в случае, если…,', role: 'hypothesis' },
-      { text: 'имеет право', role: 'disposition' },
-      { text: 'на замену.', role: 'disposition' }
+      { text: 'имеет право на замену.', role: 'disposition' },
+      { text: 'а также в других случаях', role: 'none' }
     ],
     elements: { hypothesis: 'есть', disposition: 'есть', sanction: 'нет' }
   }, overrides);
@@ -78,11 +78,9 @@ test('norm-structure: проверка данных', () => {
   const segs = structureTask().segments;
   const cases = [
     [{ norm: norm({ text: 'x' }) }, /складывается из segments/],
-    [{ segments: segs.slice(0, 2) }, /не меньше трёх фрагментов/],
+    [{ segments: segs.slice(0, 1) }, /не меньше двух фрагментов/],
     [{ segments: segs.map((s) => ({ ...s, role: s.role === 'disposition' ? 'none' : s.role })) }, /должна быть выделена диспозиция/],
     [{ segments: [{ text: 'a', role: 'rule' }, ...segs.slice(1)] }, /role должно быть одним из/],
-    [{ segments: [{ text: 'a', role: 'none', alsoAccept: ['hypothesis'] }, ...segs.slice(1)] }, /почему засчитываются обе трактовки/],
-    [{ segments: [{ text: 'a', role: 'none', alsoAccept: ['none'], explanation: 'x' }, ...segs.slice(1)] }, /alsoAccept/],
     [{ elements: { hypothesis: 'a', disposition: 'b' } }, /elements/]
   ];
   for (const [overrides, error] of cases) {
@@ -90,23 +88,30 @@ test('norm-structure: проверка данных', () => {
   }
 });
 
-test('norm-structure: неотмеченный фрагмент — «не элемент», спорный фрагмент засчитывается в обеих трактовках', () => {
+test('norm-structure: проверка по трём элементам; невыраженный элемент верен без отметок', () => {
   const T = loadCore().types.get('norm-structure');
   const task = structureTask();
   assert.ok(T.isEmpty(task, T.emptyResponse(task)));
   assert.ok(T.isComplete(task, [null, 'hypothesis', null, null]));
-  assert.deepEqual(T.cleanResponse(task, ['none', 'hypothesis', 'disposition', null]), [null, 'hypothesis', 'disposition', null]);
-  assert.throws(() => T.cleanResponse(task, ['rule', null, null, null]), /Некорректная отметка/);
+  assert.throws(() => T.cleanResponse(task, ['hypothesis', null, null, null]), /не размечается/);
+  assert.throws(() => T.cleanResponse(task, [null, 'rule', null, null]), /Некорректная отметка/);
   assert.throws(() => T.cleanResponse(task, [null]), /для каждого фрагмента/);
 
   const key = T.getCorrect(task);
-  assert.deepEqual(key, [null, 'hypothesis', 'disposition', 'disposition']);
-  assert.equal(T.check(task, key).verdict, 'correct');
-  assert.equal(T.check(task, ['hypothesis', 'hypothesis', 'disposition', 'disposition']).verdict, 'correct');
-  const wrong = T.check(task, [null, 'hypothesis', 'disposition', 'sanction']);
-  assert.equal(wrong.verdict, 'incorrect');
-  assert.deepEqual(wrong.details.perItem, [true, true, true, false]);
-  assert.deepEqual(wrong.details.elements.sanction, { expected: false, marked: true });
+  assert.deepEqual(key, [null, 'hypothesis', 'disposition', null]);
+  const right = T.check(task, key);
+  assert.equal(right.verdict, 'correct');
+  assert.deepEqual(right.details.perItem, [true, true, true]);
+  assert.deepEqual(right.details.perElement.sanction, { ok: true, expressed: false, marked: false });
+
+  // Ловушка (role: 'none'), отмеченная как санкция, — ошибка только в элементе «санкция».
+  const trap = T.check(task, [null, 'hypothesis', 'disposition', 'sanction']);
+  assert.equal(trap.verdict, 'incorrect');
+  assert.deepEqual(trap.details.perItem, [true, true, false]);
+  assert.deepEqual(trap.details.perElement.sanction, { ok: false, expressed: false, marked: true });
+  // Пропущенная гипотеза — ошибка в элементе «гипотеза».
+  assert.deepEqual(T.check(task, [null, null, 'disposition', null]).details.perItem, [false, true, true]);
+
   assert.equal(T.formatResponse(task, key), 'гипотеза — «в случае, если…,»; диспозиция — «имеет право на замену.»; санкция — не выражена');
   assert.equal(T.formatResponse(task, [null, null, null, null]), '—');
 });
@@ -130,6 +135,14 @@ test('отрисовка: выбор по основанию и маркер ф�
   assert.deepEqual(marks, [null, 'disposition', null, null]);
   assert.deepEqual(structure.mark(st, marks, 1, 'disposition'), [null, null, null, null]);
   assert.deepEqual(structure.mark(st, marks, 1, null), [null, null, null, null]);
+  assert.deepEqual(structure.mark(st, marks, 0, 'hypothesis'), marks, 'адресат (context) не размечается');
+
+  // Экран не повторяет ответ строкой: только счёт по основаниям и элементам.
+  assert.ok(criteria.answerInline && structure.answerInline);
+  const T = OLY.types.get('criteria');
+  assert.equal(criteria.resultLine(task, { details: T.check(task, [2, 2]).details }), 'Верно: 1 из 2 оснований');
+  const S = OLY.types.get('norm-structure');
+  assert.equal(structure.resultLine(st, { details: S.check(st, [null, 'hypothesis', 'disposition', 'sanction']).details }), 'Верно: 2 из 3 элементов');
 });
 
 /* ---------- Образцы в банке ---------- */
@@ -138,49 +151,95 @@ function nrmTasks(OLY) {
   return OLY.query({ olympiad: 'PR', subject: 'social', topic: 'LAW-NRM' });
 }
 
+/** Единые названия оснований и порядок вариантов во всех заданиях модуля. */
+const CRITERIA = {
+  'Материальная или процессуальная': ['материальная', 'процессуальная'],
+  'Способ установления правила поведения': ['императивная', 'диспозитивная', 'поощрительная'],
+  'Характер предписания': ['запрещающая', 'обязывающая', 'управомочивающая'],
+  'Функция': ['регулятивная', 'охранительная'],
+  'Срок действия': ['временная', 'постоянная'],
+  'Круг лиц': ['общая', 'специальная'],
+  'Уровень принятия': ['федеральная', 'региональная', 'локальная'],
+  'Специализированная норма': ['учредительная', 'декларативная', 'дефинитивная', 'коллизионная', 'оперативная', '«каучуковая»']
+};
+
 test('LAW-NRM: тема в разделе «Теория права», два образца на утверждение', () => {
   const OLY = loadBank();
   const topic = OLY.getTopic('social', 'LAW-NRM');
   assert.equal(topic.title, 'Норма права: классификация и структура');
   assert.equal(topic.section, 'theory');
-  assert.deepEqual(topic.blocks.map((b) => b.id), ['classification', 'structure', 'synthesis']);
-  assert.deepEqual(OLY.sortByOrder(nrmTasks(OLY)).map((t) => t.id), ['PR-LAW-NRM-001', 'PR-LAW-NRM-008']);
+  assert.deepEqual(topic.blocks.map((b) => b.id), ['classification', 'structure', 'specialized']);
+  assert.deepEqual(OLY.sortByOrder(nrmTasks(OLY)).map((t) => t.id), ['PR-LAW-NRM-001', 'PR-LAW-NRM-009']);
   // LAW-CPT не затронут.
   assert.equal(OLY.query({ olympiad: 'PR', subject: 'social', topic: 'LAW-CPT' }).length, 24);
+});
+
+test('LAW-NRM: основания классификации — единые названия и порядок вариантов', () => {
+  const OLY = loadBank();
+  for (const task of nrmTasks(OLY).filter((t) => t.type === 'criteria')) {
+    const titles = task.criteria.map((c) => c.title);
+    assert.equal(new Set(titles).size, titles.length, task.id);
+    for (const c of task.criteria) {
+      if (c.title === 'Отрасль права') {
+        assert.ok(c.options.every((o) => /правовая$/.test(o)), `${task.id}: отрасль — прилагательные на «-правовая»`);
+      } else {
+        assert.deepEqual(c.options, CRITERIA[c.title], `${task.id}: основание «${c.title}»`);
+      }
+    }
+  }
 });
 
 test('LAW-NRM: ключи образцов', () => {
   const OLY = loadBank();
   const a = OLY.getTask('PR-LAW-NRM-001');
-  assert.deepEqual(OLY.types.get(a.type).getCorrect(a), [2, 2, 1, 1, 1]);
-  assert.deepEqual(a.criteria.map((c) => c.options[c.match - 1]),
-    ['семейное право', 'обязывающая', 'императивная', 'регулятивная', 'материальная']);
-  const b = OLY.getTask('PR-LAW-NRM-008');
-  assert.deepEqual(OLY.types.get(b.type).getCorrect(b), [null, 'hypothesis', 'hypothesis', 'disposition', 'disposition']);
+  assert.deepEqual(a.criteria.map((c) => c.title + ': ' + c.options[c.match - 1]), [
+    'Отрасль права: семейно-правовая',
+    'Материальная или процессуальная: материальная',
+    'Способ установления правила поведения: императивная',
+    'Характер предписания: обязывающая',
+    'Функция: регулятивная',
+    'Уровень принятия: федеральная'
+  ]);
+  const b = OLY.getTask('PR-LAW-NRM-009');
+  assert.deepEqual(OLY.types.get(b.type).getCorrect(b), [null, 'hypothesis', 'disposition']);
   assert.ok(!b.segments.some((s) => s.role === 'sanction'), 'санкция в ч. 3 ст. 59 не выражена');
 });
 
-test('LAW-NRM: текст нормы склеивается из фрагментов без искажений; у каждого основания и фрагмента — объяснение', () => {
+test('LAW-NRM: текст нормы склеивается из фрагментов без искажений; объяснения есть у каждого основания и элемента', () => {
   const OLY = loadBank();
-  const b = OLY.getTask('PR-LAW-NRM-008');
+  const b = OLY.getTask('PR-LAW-NRM-009');
   assert.equal(b.segments.map((s) => s.text).join(' '),
     'Гражданин Российской Федерации в случае, если его убеждениям или вероисповеданию противоречит несение военной службы, ' +
     'а также в других установленных федеральным законом случаях имеет право на замену ее альтернативной гражданской службой.');
+  const clean = (text, where) => {
+    assert.ok(text && text.length > 40, where);
+    assert.equal(text, text.trim(), where);
+    assert.ok(!/\s{2,}|\n/.test(text), where);
+  };
   for (const task of nrmTasks(OLY)) {
-    assert.ok(task.explanation.length > 100, task.id);
-    assert.ok(task.typicalMistake, task.id);
-    for (const part of task.criteria || task.segments) {
-      assert.ok(part.explanation && part.explanation.length > 40, `${task.id}: «${part.title || part.text}» без объяснения`);
-      assert.equal(part.explanation, part.explanation.trim());
-      assert.ok(!/\s{2,}|\n/.test(part.explanation), task.id);
-    }
+    clean(task.explanation, task.id);
+    // Один итоговый разбор: отдельной «типичной ошибки» в модуле нет.
+    assert.equal(task.typicalMistake, undefined, task.id);
+    if (task.criteria) task.criteria.forEach((c) => clean(c.explanation, `${task.id}: ${c.title}`));
+    if (task.elements) Object.entries(task.elements).forEach(([k, v]) => clean(v, `${task.id}: ${k}`));
   }
 });
 
-test('LAW-NRM: у каждой нормы указаны акт, статья и статус сверки текста', () => {
+test('LAW-NRM: ученику не показываются ссылки на конкретный учебник или лекцию', () => {
+  const OLY = loadBank();
+  const forbidden = /лекци|Литинск|Ростовцев|учебник[уе]? /i;
+  for (const task of nrmTasks(OLY)) {
+    const texts = [task.question, task.explanation, task.norm.text || '',
+      ...(task.criteria || []).flatMap((c) => [c.title, c.explanation, ...c.options]),
+      ...Object.values(task.elements || {})];
+    for (const text of texts) assert.ok(!forbidden.test(text), `${task.id}: «${text.slice(0, 40)}…»`);
+  }
+});
+
+test('LAW-NRM: у каждой нормы указаны акт, статья и статус сверки; без сверки задание не готово к публикации', () => {
   const OLY = loadBank();
   for (const task of nrmTasks(OLY)) {
     assert.ok(task.norm.act && task.norm.ref, task.id);
-    assert.equal(typeof task.norm.verified, 'boolean', task.id);
+    assert.equal(task.norm.verified, false, `${task.id}: тексты ещё не сверены с официальной публикацией`);
   }
 });

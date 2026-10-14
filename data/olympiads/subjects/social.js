@@ -77,7 +77,7 @@ OLY.defineSubject({
           blocks: [
             { id: 'classification', title: 'Классификация норм' },
             { id: 'structure', title: 'Структура нормы' },
-            { id: 'synthesis', title: 'Норма и статья закона' }
+            { id: 'specialized', title: 'Специализированные нормы' }
           ]
         }
       ]

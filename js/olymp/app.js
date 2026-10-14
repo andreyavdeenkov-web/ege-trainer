@@ -166,6 +166,8 @@
     feedback: $('feedback'),
     verdict: $('verdict'),
     feedbackCorrect: $('feedback-correct'),
+    feedbackCorrectRow: $('feedback-correct-row'),
+    feedbackUserRow: $('feedback-user-row'),
     feedbackUser: $('feedback-user'),
     feedbackPointsRow: $('feedback-points-row'),
     feedbackPoints: $('feedback-points'),
@@ -885,7 +887,13 @@
     } else if (!correct && result.details && Array.isArray(result.details.perItem)) {
       caption = 'Ошибок в позициях: ' + result.details.mistakes + ' из ' + result.details.perItem.length;
     }
+    // Отрисовка, которая показывает результат по каждой позиции прямо в задании,
+    // не повторяет ответ строкой: только вердикт и счёт.
+    var view = views.get(task.type);
+    if (view.answerInline) caption = view.resultLine(task, result);
     if (caption) dom.verdict.appendChild(el('span', 'points__caption', caption));
+    dom.feedbackCorrectRow.hidden = !!view.answerInline;
+    dom.feedbackUserRow.hidden = !!view.answerInline;
     dom.feedbackCorrect.textContent = type.formatResponse(task, result.correct);
     dom.feedbackUser.textContent = type.formatResponse(task, result.response);
     dom.feedbackPointsRow.hidden = !result.scored;
@@ -1158,7 +1166,11 @@
       summary.appendChild(el('p', 'mistake__question', task.question));
 
       var answers = el('p', 'mistake__answers');
-      if (solved) {
+      var taskView = views.get(task.type);
+      if (taskView.answerInline) {
+        // Ответ по позициям виден в разборе — здесь только счёт.
+        if (solved) answers.appendChild(el('strong', taskState === 'correct' ? 'text-right' : 'text-wrong', taskView.resultLine(task, result)));
+      } else if (solved) {
         answers.appendChild(el('span', null, 'Ваш ответ: '));
         answers.appendChild(el('strong', taskState === 'correct' ? 'text-right' : 'text-wrong',
           type.formatResponse(task, result.response)));
@@ -1166,8 +1178,8 @@
       } else {
         answers.appendChild(el('span', null, 'Правильный ответ: '));
       }
-      answers.appendChild(el('strong', 'text-right', type.formatResponse(task, type.getCorrect(task))));
-      summary.appendChild(answers);
+      if (!taskView.answerInline) answers.appendChild(el('strong', 'text-right', type.formatResponse(task, type.getCorrect(task))));
+      if (answers.childNodes.length) summary.appendChild(answers);
       summary.appendChild(el('span', 'review-item__toggle', 'Показать разбор'));
 
       var body = el('div', 'review-item__body');

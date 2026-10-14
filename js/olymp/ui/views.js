@@ -12,7 +12,10 @@
  *                                         возвращает { set(response) } для обновления извне;
  *   renderReview(container, task, ctx)  → разбор только для чтения;
  *                                         ctx: { response, result } (result = null — задание не решено);
- *   keyInput(task, response, digit)     → новый ответ по нажатию цифры или null (необязательно).
+ *   keyInput(task, response, digit)     → новый ответ по нажатию цифры или null (необязательно);
+ *   answerInline: true, resultLine(task, result) → необязательно: разбор сам показывает ответ
+ *                                         по каждой позиции, поэтому экраны не повторяют ответ
+ *                                         строкой, а выводят resultLine («Верно 5 из 6 оснований»).
  */
 (function (root) {
   'use strict';

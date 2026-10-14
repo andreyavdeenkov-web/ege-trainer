@@ -430,22 +430,39 @@ a.topic-option:focus-visible .topic-option__body { outline: 3px solid var(--focu
 .structure-summary__row--disposition dt { color: var(--role-disposition); }
 .structure-summary__row--sanction dt { color: var(--role-sanction); }
 .structure__note { margin-top: 8px; font-size: 14px; }
-.structure__caption { margin: 16px 0 0; font-size: 15px; }
-.structure__caption + .norm-card { margin-top: 6px; }
-.structure__elements,
-.structure__fragments { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
-.structure__element,
-.structure__fragment {
+.seg--context { border-bottom-color: transparent; color: var(--text-muted); }
+
+/* Разбор: результат по основанию или элементу структуры, пояснение — только у ошибки. */
+.result-rows { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.result-row {
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
-.structure__element--hypothesis { border-left: 4px solid var(--role-hypothesis); }
-.structure__element--disposition { border-left: 4px solid var(--role-disposition); }
-.structure__element--sanction { border-left: 4px solid var(--role-sanction); }
-.structure__fragment.status-wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
-.structure__fragment-text { font-weight: 600; }
+.result-row__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.result-row__title { font-weight: 700; }
+.result-row__value { flex: 1 1 auto; min-width: 0; }
+.result-row__mark {
+  margin-left: auto;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.result-row.status-right { border-color: var(--right-border); }
+.result-row.status-right .result-row__mark { color: var(--right); background: var(--right-bg); }
+.result-row.status-wrong { border-color: var(--wrong-border); background: var(--wrong-bg); }
+.result-row.status-wrong .result-row__mark { color: var(--wrong); background: color-mix(in srgb, var(--wrong) 14%, transparent); }
+.result-row__line { margin-top: 4px; font-size: 15px; }
+.result-row__why { margin-top: 6px; font-size: 15px; color: var(--text-muted); }
+.result-row--hypothesis .result-row__title { color: var(--role-hypothesis); }
+.result-row--disposition .result-row__title { color: var(--role-disposition); }
+.result-row--sanction .result-row__title { color: var(--role-sanction); }
+.review-item__body .result-row:not(.status-wrong) { background: var(--surface); }
+
+/* Шапка закреплена: прокрутка к элементу (scrollIntoView, фокус) не уводит его под шапку. */
+html { scroll-padding-top: 88px; }
 
 @media (max-width: 560px) {
   .criteria__choices { margin-left: 0; }

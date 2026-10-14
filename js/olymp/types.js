@@ -439,12 +439,8 @@
   /* ---------- norm-structure: гипотеза, диспозиция и санкция в тексте нормы ---------- */
 
   var NORM_ROLES = ['hypothesis', 'disposition', 'sanction'];
-  var NORM_ROLE_TITLES = { hypothesis: 'гипотеза', disposition: 'диспозиция', sanction: 'санкция', none: 'не элемент структуры' };
-
-  /** Допустимые роли фрагмента: role и, если спорно, alsoAccept. 'none' — фрагмент не отмечается. */
-  function acceptedRoles(segment) {
-    return [segment.role].concat(segment.alsoAccept || []);
-  }
+  var NORM_ROLE_TITLES = { hypothesis: 'гипотеза', disposition: 'диспозиция', sanction: 'санкция' };
+  var SEGMENT_ROLES = NORM_ROLES.concat('none', 'context');
 
   /** Короткая цитата: длинный фрагмент сокращается до начала и конца. */
   function quote(text) {
@@ -453,48 +449,55 @@
     return '«' + words.slice(0, 4).join(' ') + ' … ' + words.slice(-3).join(' ') + '»';
   }
 
-  /** Разметка (массив ролей по фрагментам) → { роль: текст выделенных фрагментов или null }. */
+  /** Номера фрагментов (с 0), отмеченных ролью role. */
+  function markedAs(marks, role) {
+    var result = [];
+    marks.forEach(function (r, i) { if (r === role) result.push(i); });
+    return result;
+  }
+
+  /** Разметка (массив ролей по фрагментам) → { роль: текст отмеченных фрагментов или null }. */
   function structureElements(task, marks) {
     var result = {};
     NORM_ROLES.forEach(function (role) {
-      var parts = [];
-      task.segments.forEach(function (s, i) { if (marks[i] === role) parts.push(s.text); });
-      result[role] = parts.length ? parts.join(' ') : null;
+      var idx = markedAs(marks, role);
+      result[role] = idx.length ? idx.map(function (i) { return task.segments[i].text; }).join(' ') : null;
     });
     return result;
   }
 
+  function keyMarks(task) {
+    return task.segments.map(function (s) { return NORM_ROLES.indexOf(s.role) === -1 ? null : s.role; });
+  }
+
   register('norm-structure', {
     /**
+     * Классическая трёхэлементная структура: гипотеза, диспозиция, санкция.
      * segments — текст нормы, разбитый на фрагменты:
-     *   [{ text, role: 'hypothesis' | 'disposition' | 'sanction' | 'none', alsoAccept?, explanation? }];
-     * alsoAccept — другие роли, которые тоже засчитываются (для фрагментов, которые
-     * учебники трактуют по-разному); elements — комментарий к каждому элементу
-     * структуры (выражен ли он в тексте и где искать невыраженный).
-     * Ответ — роль на каждый фрагмент; null — фрагмент не отмечен (= 'none').
+     *   role: 'hypothesis' | 'disposition' | 'sanction' — элемент структуры;
+     *   role: 'none'    — фрагмент можно отметить, но он не является элементом (ловушка);
+     *   role: 'context' — фрагмент не размечается (например, адресат нормы).
+     * elements — короткое объяснение по каждому элементу; показывается, если
+     * элемент определён неверно.
+     * Ответ — роль на каждый фрагмент; null — фрагмент не отмечен. Проверяется
+     * каждый элемент: набор отмеченных фрагментов должен совпасть с ключом;
+     * элемент, которого нет в тексте, верен, если ничего не отмечено.
      */
     validateTask: function (task) {
       var errors = validateNorm(task, false);
-      if (!Array.isArray(task.segments) || task.segments.length < 3) {
-        return errors.concat('нужно не меньше трёх фрагментов в segments');
+      if (!Array.isArray(task.segments) || task.segments.length < 2) {
+        return errors.concat('нужно не меньше двух фрагментов в segments');
       }
-      var allRoles = NORM_ROLES.concat('none');
       task.segments.forEach(function (s, i) {
         var name = 'фрагмент ' + (i + 1);
         if (!s || !isText(s.text)) { errors.push(name + ': нет текста'); return; }
-        if (allRoles.indexOf(s.role) === -1) errors.push(name + ': role должно быть одним из: ' + allRoles.join(', '));
-        if (s.alsoAccept !== undefined) {
-          if (!Array.isArray(s.alsoAccept) || !s.alsoAccept.every(function (r) { return allRoles.indexOf(r) !== -1 && r !== s.role; })) {
-            errors.push(name + ': alsoAccept — список других ролей');
-          } else if (!isText(s.explanation)) errors.push(name + ': спорный фрагмент (alsoAccept) должен объяснять, почему засчитываются обе трактовки');
-        }
-        if (!isOptionalText(s.explanation)) errors.push(name + ': explanation должно быть строкой');
+        if (SEGMENT_ROLES.indexOf(s.role) === -1) errors.push(name + ': role должно быть одним из: ' + SEGMENT_ROLES.join(', '));
       });
-      if (!task.segments.some(function (s) { return s.role === 'disposition'; })) {
+      if (!task.segments.some(function (s) { return s && s.role === 'disposition'; })) {
         errors.push('в норме должна быть выделена диспозиция');
       }
       if (!task.elements || typeof task.elements !== 'object' || !NORM_ROLES.every(function (r) { return isText(task.elements[r]); })) {
-        errors.push('elements: нужен комментарий к гипотезе, диспозиции и санкции');
+        errors.push('elements: нужно объяснение к гипотезе, диспозиции и санкции');
       }
       return errors;
     },
@@ -504,7 +507,7 @@
     isEmpty: function (task, response) {
       return !Array.isArray(response) || response.every(function (r) { return r === null || r === undefined; });
     },
-    /** Неотмеченный фрагмент — тоже ответ («не элемент структуры»), поэтому достаточно одной отметки. */
+    /** Неотмеченный элемент — тоже ответ («в тексте не выражен»), поэтому достаточно одной отметки. */
     isComplete: function (task, response) {
       return Array.isArray(response) && response.some(function (r) { return r !== null && r !== undefined; });
     },
@@ -512,35 +515,38 @@
       if (!Array.isArray(response) || response.length !== task.segments.length) {
         throw new Error('Ответ должен содержать отметку для каждого фрагмента');
       }
-      return response.map(function (r) {
-        if (r === null || r === undefined || r === 'none') return null;
+      return response.map(function (r, i) {
+        if (r === null || r === undefined) return null;
         if (NORM_ROLES.indexOf(r) === -1) throw new Error('Некорректная отметка фрагмента: ' + r);
+        if (task.segments[i].role === 'context') throw new Error('Фрагмент ' + (i + 1) + ' не размечается');
         return r;
       });
     },
     /**
-     * details.perItem — верно ли отмечен каждый фрагмент;
-     * details.elements — по каждому элементу: выражен ли он по ключу и выделил ли его ученик.
+     * details.perElement — по каждому элементу: { ok, expressed, marked };
+     * details.perItem — верность элементов в порядке гипотеза, диспозиция, санкция.
      */
     check: function (task, response) {
-      var perItem = task.segments.map(function (s, i) {
-        return acceptedRoles(s).indexOf(response[i] || 'none') !== -1;
-      });
-      var mistakes = perItem.filter(function (ok) { return !ok; }).length;
-      var elements = {};
+      var key = keyMarks(task);
+      var perElement = {};
       NORM_ROLES.forEach(function (role) {
-        elements[role] = {
-          expected: task.segments.some(function (s) { return s.role === role; }),
-          marked: response.indexOf(role) !== -1
+        var expected = markedAs(key, role);
+        var marked = markedAs(response, role);
+        perElement[role] = {
+          ok: expected.join() === marked.join(),
+          expressed: expected.length > 0,
+          marked: marked.length > 0
         };
       });
+      var perItem = NORM_ROLES.map(function (role) { return perElement[role].ok; });
+      var mistakes = perItem.filter(function (ok) { return !ok; }).length;
       return {
         verdict: mistakes === 0 ? 'correct' : 'incorrect',
-        details: { mistakes: mistakes, perItem: perItem, elements: elements }
+        details: { mistakes: mistakes, perItem: perItem, perElement: perElement }
       };
     },
     getCorrect: function (task) {
-      return task.segments.map(function (s) { return s.role === 'none' ? null : s.role; });
+      return keyMarks(task);
     },
     formatResponse: function (task, response) {
       if (!Array.isArray(response) || response.every(function (r) { return !r; })) return '—';
@@ -550,8 +556,6 @@
       }).join('; ');
     },
     roles: NORM_ROLES,
-    roleTitles: NORM_ROLE_TITLES,
-    acceptedRoles: acceptedRoles,
     structureElements: structureElements
   });
 
