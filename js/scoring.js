@@ -87,18 +87,72 @@
     return mistakes;
   }
 
+  /** Шкала «ошибки → баллы»: 0 ошибок — максимум, каждая ошибка снимает балл. */
+  function pointsByMistakes(maxPoints) {
+    return function (mistakes) { return Math.max(0, maxPoints - mistakes); };
+  }
+
+  /** Шкала «всё или ничего»: балл только за полностью верный ответ. */
+  function allOrNothing(maxPoints) {
+    return function (mistakes) { return mistakes === 0 ? maxPoints : 0; };
+  }
+
+  /**
+   * Своя проверка для каждого типа: подсчёт ошибок и шкала баллов.
+   * Оценивание типов не смешивается: у multiple и matching одинакова только
+   * шкала, ошибки считаются по-разному. Новый тип — новая строка таблицы.
+   */
+  var GRADERS = {
+    'multiple': { maxPoints: MAX_SCORE, countMistakes: countMistakes, points: pointsByMistakes(MAX_SCORE) },
+    'exclude-two': { maxPoints: 1, countMistakes: countExcludeMistakes, points: allOrNothing(1) },
+    'matching': { maxPoints: MAX_SCORE, countMistakes: countMatchingMistakes, points: pointsByMistakes(MAX_SCORE) }
+  };
+
+  /**
+   * Правила оценивания, на которых построены GRADERS, и статус их сверки
+   * с официальными документами ФИПИ. Пока verified: false, правило —
+   * рабочее правило тренажёра, а не подтверждённый критерий ФИПИ;
+   * после сверки — verified: true и reference (документ, год, раздел).
+   * kimTask — номер задания КИМ, если он подтверждён (иначе null).
+   */
+  var SCORING_RULES = {
+    'multiple': {
+      title: 'Выбор нескольких верных ответов',
+      rule: 'Полное совпадение — 2 балла; один лишний или один пропущенный номер — 1 балл; две ошибки и более — 0.',
+      kimTask: null,
+      verified: false,
+      reference: null
+    },
+    'exclude-two': {
+      title: 'Два термина, «выпадающих» из общего ряда',
+      rule: 'Ровно две позиции; 1 балл только за полностью верный ответ, иначе 0.',
+      kimTask: 1,  // формат задания № 1 демоверсии ФИПИ-2026 (по сведениям автора тренажёра)
+      verified: false,
+      reference: null
+    },
+    'matching': {
+      title: 'Установление соответствия',
+      rule: 'Ошибка — каждая позиция с неверным номером; 0 ошибок — 2 балла, 1 — 1 балл, 2 и более — 0.',
+      kimTask: null,
+      verified: false,
+      reference: null
+    }
+  };
+
+  function graderFor(task) {
+    var grader = GRADERS[getTaskType(task)];
+    if (!grader) throw new Error('Неизвестный тип задания: ' + getTaskType(task));
+    return grader;
+  }
+
   /** Количество ошибок с учётом типа задания. */
   function countTaskMistakes(task, selected, correct) {
-    var key = correct || getCorrect(task);
-    var type = getTaskType(task);
-    if (type === 'matching') return countMatchingMistakes(selected, key);
-    if (type === 'exclude-two') return countExcludeMistakes(selected, key);
-    return countMistakes(selected, key);
+    return graderFor(task).countMistakes(selected, correct || getCorrect(task));
   }
 
   /** Максимальный балл за задание: exclude-two — 1, остальные типы — 2. */
   function getMaxPoints(task) {
-    return getTaskType(task) === 'exclude-two' ? 1 : MAX_SCORE;
+    return graderFor(task).maxPoints;
   }
 
   /**
@@ -107,9 +161,7 @@
    * exclude-two: 1 балл только за полностью верный ответ, иначе 0.
    */
   function scoreTask(task, selected, correct) {
-    var mistakes = countTaskMistakes(task, selected, correct);
-    if (getTaskType(task) === 'exclude-two') return mistakes === 0 ? 1 : 0;
-    return Math.max(0, MAX_SCORE - mistakes);
+    return graderFor(task).points(countTaskMistakes(task, selected, correct));
   }
 
   /**
@@ -184,6 +236,8 @@
     countExcludeMistakes: countExcludeMistakes,
     countMatchingMistakes: countMatchingMistakes,
     countTaskMistakes: countTaskMistakes,
+    GRADERS: GRADERS,
+    SCORING_RULES: SCORING_RULES,
     getMaxPoints: getMaxPoints,
     scoreTask: scoreTask,
     pointsLevel: pointsLevel,

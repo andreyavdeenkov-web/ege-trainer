@@ -474,6 +474,27 @@ button, input { font: inherit; color: inherit; }
   font-weight: 700;
 }
 .statement__explanation { margin-top: 6px; font-size: 15px; color: var(--text-muted); }
+.statement__mistake {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--warn-border);
+  border-radius: 0 8px 8px 0;
+  background: var(--warn-bg);
+  font-size: 14px;
+}
+.statement__mistake strong { color: var(--warn); }
+
+/* Пояснения к заданию после ответа: общий признак ряда и источник */
+.task-notes { margin-top: 16px; display: grid; gap: 8px; }
+.task-notes__feature {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.task-notes__feature .statement__tag { color: var(--primary); background: var(--primary-soft); }
+.task-notes__text { margin-top: 6px; }
+.task-notes__source { font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
 
 .statement.status-hit { border-color: var(--right-border); background: var(--right-bg); }
 .statement.status-hit .statement__tag { color: var(--right); background: color-mix(in srgb, var(--right) 14%, transparent); }

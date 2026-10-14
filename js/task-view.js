@@ -107,6 +107,7 @@
         if (statement.explanation) {
           details.appendChild(el('p', 'statement__explanation', statement.explanation));
         }
+        appendMistake(details, statement.mistake);
         li.appendChild(details);
       } else {
         btn.setAttribute('role', 'checkbox');
@@ -119,6 +120,54 @@
 
       list.appendChild(li);
     });
+  }
+
+  /** «Типичная ошибка: …» под объяснением суждения или позиции (поле mistake). */
+  function appendMistake(parent, mistake) {
+    if (!mistake) return;
+    var p = el('p', 'statement__mistake');
+    p.appendChild(el('strong', null, 'Типичная ошибка: '));
+    p.appendChild(document.createTextNode(mistake));
+    parent.appendChild(p);
+  }
+
+  /**
+   * Подпись источника для разбора или null, если источник не указан.
+   * Поле source задаётся только для достоверно установленных источников.
+   */
+  function sourceLabel(task) {
+    var src = task.source;
+    if (!src) return null;
+    if (src.kind === 'author') return 'Авторское задание';
+    if (src.kind !== 'original' || !src.title) return null;
+    var parts = [src.title];
+    if (src.authors) parts.push(src.authors);
+    if (src.year) parts.push(String(src.year));
+    if (src.ref) parts.push(src.ref);
+    return 'Источник: ' + parts.join(', ') + (src.adapted ? ' (формулировка адаптирована)' : '');
+  }
+
+  /**
+   * Заполняет блок пояснений к заданию после ответа: общий признак ряда
+   * (exclude-two, поле commonFeature) и источник. Возвращает true, если блок не пуст.
+   */
+  function renderTaskNotes(box, task) {
+    box.textContent = '';
+    if (scoring.getTaskType(task) === 'exclude-two' && task.commonFeature) {
+      var feature = el('div', 'task-notes__feature');
+      feature.appendChild(el('span', 'statement__tag', 'Общий признак ряда'));
+      feature.appendChild(el('p', 'task-notes__text', task.commonFeature));
+      box.appendChild(feature);
+    }
+    var source = sourceLabel(task);
+    if (source) box.appendChild(el('p', 'task-notes__source', source));
+    return box.childNodes.length > 0;
+  }
+
+  /** Новый блок пояснений (для экрана итогов) или null, если пояснять нечего. */
+  function createTaskNotes(task) {
+    var box = el('div', 'task-notes');
+    return renderTaskNotes(box, task) ? box : null;
   }
 
   /** Отмечает или снимает отметку с суждения в режиме выбора. */
@@ -204,6 +253,7 @@
         }
         result.appendChild(el('span', 'statement__tag', ok ? 'Соответствие верное' : 'Ошибка'));
         if (item.explanation) result.appendChild(el('p', 'statement__explanation', item.explanation));
+        appendMistake(result, item.mistake);
         li.appendChild(result);
       } else {
         li.classList.toggle('is-filled', value !== null);
@@ -301,6 +351,9 @@
     renderStatements: renderStatements,
     setStatementSelected: setStatementSelected,
     renderMatching: renderMatching,
+    sourceLabel: sourceLabel,
+    renderTaskNotes: renderTaskNotes,
+    createTaskNotes: createTaskNotes,
     renderFeedback: renderFeedback,
     createFeedback: createFeedback
   };
