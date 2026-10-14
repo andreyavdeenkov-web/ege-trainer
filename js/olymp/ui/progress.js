@@ -29,7 +29,8 @@
     return !!value && typeof value === 'object' && !Array.isArray(value);
   }
 
-  var VERDICTS = ['correct', 'incorrect', 'unanswered'];
+  // 'partial' — частичный результат новых типов практикума «Норма права».
+  var VERDICTS = ['correct', 'incorrect', 'partial', 'unanswered'];
 
   /** Ответ подходит заданию по структуре (как при вводе ученика). */
   function validResponse(task, value) {
@@ -120,6 +121,15 @@
           all[scopeKey(scope)] = OLY.attempt.snapshot(attempt);
           backend.write(STORAGE_KEY, all);
         } catch (e) { /* попытка просто не сохранится */ }
+      },
+      /** Удаляет попытку только этой области; попытки других тем не затрагиваются. */
+      remove: function (scope) {
+        try {
+          var all = readAll();
+          if (!Object.prototype.hasOwnProperty.call(all, scopeKey(scope))) return;
+          delete all[scopeKey(scope)];
+          backend.write(STORAGE_KEY, all);
+        } catch (e) { /* хранилище недоступно — удалять нечего */ }
       }
     };
   }
@@ -137,6 +147,15 @@
    */
   function canStartNew(policy, attempt) {
     return topicState(attempt) === 'new' || policy.allowRetake;
+  }
+
+  /**
+   * Можно ли начать тему заново после полного завершения попытки. Решает настройка темы
+   * allowRestart (а не attemptPolicy трека), поэтому правило одной попытки для остальных тем
+   * практикума не меняется.
+   */
+  function canRestart(topic, attempt) {
+    return !!(topic && topic.allowRestart) && topicState(attempt) === 'completed';
   }
 
   /** Можно ли начать новую попытку из ошибок ('mistakes') или пропущенных ('skipped'). */
@@ -171,6 +190,7 @@
     topicState: topicState,
     canStartNew: canStartNew,
     canRetry: canRetry,
+    canRestart: canRestart,
     leavesFreely: leavesFreely,
     wholeTopicOnly: wholeTopicOnly
   };

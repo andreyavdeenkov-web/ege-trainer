@@ -161,6 +161,7 @@
     taskBlock: $('task-block'),
     taskSources: $('task-sources'),
     taskQuestion: $('task-question'),
+    kbdHintDigits: $('kbd-hint-digits'),
     taskHint: $('task-hint'),
     answer: $('answer'),
     feedback: $('feedback'),
@@ -182,6 +183,10 @@
     resultPoints: $('result-points'),
     resultNote: $('result-note'),
     againBtn: $('again-btn'),
+    restartBtn: $('restart-btn'),
+    restartBar: $('restart-bar'),
+    restartCancel: $('restart-cancel'),
+    restartOk: $('restart-ok'),
     skippedBtn: $('skipped-btn'),
     mistakesBtn: $('mistakes-btn'),
     topicsBtn: $('topics-btn'),
@@ -279,13 +284,28 @@
     state.reviewFilter = 'all';
   }
 
-  /** «Пройдено: 18 из 24 верно» / «Проверено: 5 из 24». */
+  /**
+   * «Пройдено: 18 из 24 верно» / «Проверено: 5 из 24». Если за попытку начислены баллы —
+   * «Пройдено · баллы: 66 из 111 · полностью верно: 3 из 20 заданий», чтобы число верных
+   * заданий не принимали за баллы.
+   */
   function attemptStatusLine(attempt) {
     if (attempt.finishedAt) {
       var o = S.outcome(attempt);
+      // Максимум — как на экране итогов: для практикума «Норма права» — по всем заданиям попытки.
+      if (o.showPoints) {
+        return 'Пройдено · баллы: ' + fmtPoints(o.points) + ' из ' + fmtPoints(o.components ? o.components.possible : o.maxPoints) +
+          ' · полностью верно: ' + o.correct + ' из ' + o.total + ' ' + fmt.plural(o.total, 'задания', 'заданий', 'заданий');
+      }
       return 'Пройдено: ' + o.correct + ' из ' + o.total + ' верно';
     }
     return 'Проверено: ' + S.checkedCount(attempt) + ' из ' + attempt.taskIds.length;
+  }
+
+  /** Ссылка на норму задания: «Конституция РФ, ст. 57 (первое предложение)»; без блока нормы — формулировка вопроса. */
+  function normLabel(task) {
+    var main = (task.legal || []).filter(function (b) { return b.role === 'main'; })[0];
+    return main ? main.act + ', ' + main.ref : task.question;
   }
 
   /** Меняет адрес без повторной отрисовки (в песочнице без history — просто ничего). */
@@ -630,8 +650,23 @@
     practicumStart: 'Задания идут в учебной последовательности: от основных понятий к применению и олимпиадным кейсам.',
     practicumSingleAttempt: 'Практикум сохраняет ваш прогресс. После завершения пройти его заново нельзя, но вы сможете вернуться к своим ответам и разобрать их.',
     inProgress: 'Ответы сохраняются в этом браузере. Можно продолжить с того места, где вы остановились; после завершения тему можно будет только просматривать.',
-    completed: 'Повторное прохождение темы пока недоступно. В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор.'
+    completed: 'Повторное прохождение темы пока недоступно. В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор.',
+    // Темы с allowRestart: после завершения тему можно начать заново с экрана итогов.
+    practicumRestart: 'Практикум сохраняет ваш прогресс. После завершения вы сможете разобрать свои ответы и при желании пройти практикум заново.',
+    completedRestart: 'В результатах можно просмотреть все задания, свои ответы, правильные ответы и разбор, а также начать практикум заново.'
   };
+
+  /** Тема маршрута или null (для «Все темы дисциплины»). */
+  function topicOfRoute(route) {
+    if (!route || !route.topic || route.topic === 'all') return null;
+    return OLY.getTopic(subjectOf(OLY.getOlympiad(route.olympiad)), route.topic);
+  }
+
+  /** Тему можно начать заново после завершения (настройка темы allowRestart). */
+  function restartAllowed(route) {
+    var topic = topicOfRoute(route);
+    return !!(topic && topic.allowRestart);
+  }
 
   /** Выбранные фильтры; если тренировка охватывает всю тему (практикум) — без фильтров. */
   function currentSelection(scope) {
@@ -648,14 +683,14 @@
       : discipline.title + (section ? ' · ' + section.title : '');
     dom.setupTitle.textContent = route.topic === 'all' ? discipline.title : topicTitle(route);
     var policy = policyOf(route);
-    dom.setupNote.textContent = isPracticum(route) ? SETUP_NOTES.practicumStart
+    dom.setupNote.textContent = isPracticum(route) ? ((topic && topic.description) || SETUP_NOTES.practicumStart)
       : P.wholeTopicOnly(policy) ? SETUP_NOTES.singleAttempt
       : route.topic === 'all' ? SETUP_NOTES.all : SETUP_NOTES.topic;
     setTitle([dom.setupTitle.textContent, olympiad.title]);
     // Предупреждение об одной попытке — на старте темы практикума, если повторы запрещены.
     var warn = isPracticum(route) && !policy.allowRetake;
     dom.setupWarning.hidden = !warn;
-    dom.setupWarning.textContent = warn ? SETUP_NOTES.practicumSingleAttempt : '';
+    dom.setupWarning.textContent = warn ? (restartAllowed(route) ? SETUP_NOTES.practicumRestart : SETUP_NOTES.practicumSingleAttempt) : '';
 
     // Новую попытку начать нельзя — вместо настройки статус и одна основная кнопка.
     var attempt = attemptFor(route);
@@ -667,7 +702,8 @@
       dom.setupStatusLabel.textContent = completed ? 'Тема пройдена' : 'Тренировка начата';
       dom.setupStatusText.textContent = attemptStatusLine(attempt);
       dom.setupStatusBtn.textContent = completed ? 'Посмотреть результаты' : 'Продолжить тренировку';
-      dom.setupNote.textContent = completed ? SETUP_NOTES.completed : SETUP_NOTES.inProgress;
+      dom.setupNote.textContent = completed ? (restartAllowed(route) ? SETUP_NOTES.completedRestart : SETUP_NOTES.completed)
+        : SETUP_NOTES.inProgress;
       dom.setupWarning.hidden = true;
       return;
     }
@@ -829,11 +865,18 @@
     dom.taskLevel.hidden = task.level === undefined;
     dom.taskLevel.textContent = task.level === undefined ? '' : fmt.levelLabel(task.level);
     if (task.level !== undefined) dom.taskLevel.dataset.level = String(task.level);
-    var block = task.block ? OLY.getBlock(task.subject, task.topic, task.block) : null;
+    var topic = OLY.getTopic(task.subject, task.topic);
+    var block = task.block && !(topic && topic.sequential) ? OLY.getBlock(task.subject, task.topic, task.block) : null;
     dom.taskBlock.hidden = !block;
     dom.taskBlock.textContent = block ? block.title : '';
     renderSources(dom.taskSources, task.id);
-    dom.taskQuestion.textContent = task.question;
+    // Тема с normAsHeading: формулировка вопроса не показывается — главный элемент задания текст нормы.
+    // Заголовок остаётся для экранных чтецов (визуально скрыт) и называет норму, а не повторяет её текст.
+    var normHeading = !!(topic && topic.normAsHeading);
+    dom.taskQuestion.textContent = normHeading ? normLabel(task) : task.question;
+    dom.taskQuestion.classList.toggle('visually-hidden', normHeading);
+    // Подсказка «Клавиши 1–9 выбирают варианты» — только если у типа задания есть ввод с клавиатуры.
+    if (dom.kbdHintDigits) dom.kbdHintDigits.hidden = !view.keyInput;
     dom.taskHint.textContent = result ? 'Ответ проверен — изменить его нельзя.' : view.hint(task);
     dom.taskCard.classList.toggle('is-review', !!result);
 
@@ -848,16 +891,37 @@
       });
     }
     dom.feedback.hidden = !result;
-    // Типичная ошибка — только после неверного ответа.
-    var showMistake = !!(result && result.verdict === 'incorrect' && task.typicalMistake);
+    // Типичная ошибка — только после неверного (или частично верного) ответа.
+    var showMistake = !!(result && (result.verdict === 'incorrect' || result.verdict === 'partial') && task.typicalMistake);
+    var topic = OLY.getTopic(task.subject, task.topic);
+    var collapsed = !!(topic && topic.collapsedFeedback);
     dom.typicalMistake.hidden = !showMistake;
-    dom.typicalMistakeText.textContent = showMistake ? task.typicalMistake : '';
+    fillNote(dom.typicalMistake, dom.typicalMistakeText, showMistake ? task.typicalMistake : '', collapsed);
     dom.explanation.hidden = !(result && task.explanation);
-    dom.explanationText.textContent = result && task.explanation ? task.explanation : '';
+    fillNote(dom.explanation, dom.explanationText, result && task.explanation ? task.explanation : '', collapsed);
 
     renderActions();
     renderProgress();
     renderNav();
+  }
+
+  /**
+   * Текст блока «Типичная ошибка» / «Разбор». В темах с collapsedFeedback текст свёрнут
+   * в <details> с тем же заголовком: ученик раскрывает комментарий сам.
+   */
+  function fillNote(box, textEl, text, collapsed) {
+    var title = box.querySelector('.explanation__title');
+    var old = box.querySelector('details[data-note]');
+    if (old) box.removeChild(old);
+    if (title) title.hidden = collapsed;
+    textEl.hidden = collapsed;
+    textEl.textContent = collapsed ? '' : text;
+    if (!collapsed || !text) return;
+    var details = el('details', 'nrm-more');
+    details.setAttribute('data-note', '');
+    details.appendChild(el('summary', null, title ? title.textContent : ''));
+    details.appendChild(el('p', 'nrm-more__text', text));
+    box.appendChild(details);
   }
 
   function onResponse(response) {
@@ -869,12 +933,20 @@
     renderNav();
   }
 
+  var FEEDBACK_VERDICT = {
+    correct: { text: 'Верно', cls: 'full' },
+    partial: { text: 'Частично', cls: 'partial' },
+    incorrect: { text: 'Неверно', cls: 'none' }
+  };
+
   function renderFeedback(task, result) {
     var type = OLY.types.get(task.type);
+    var view = views.get(task.type);
     var correct = result.verdict === 'correct';
+    var shown = FEEDBACK_VERDICT[result.verdict] || FEEDBACK_VERDICT.incorrect;
     dom.verdict.textContent = '';
-    dom.verdict.className = 'points points--' + (correct ? 'full' : 'none');
-    dom.verdict.appendChild(el('span', 'points__value', correct ? 'Верно' : 'Неверно'));
+    dom.verdict.className = 'points points--' + shown.cls;
+    dom.verdict.appendChild(el('span', 'points__value', shown.text));
     var caption = '';
     if (!correct && result.details && Array.isArray(result.details.missed)) {
       var parts = [];
@@ -886,6 +958,26 @@
       caption = 'Ошибок в позициях: ' + result.details.mistakes + ' из ' + result.details.perItem.length;
     }
     if (caption) dom.verdict.appendChild(el('span', 'points__caption', caption));
+
+    // Новые типы практикума «Норма права» показывают свою сводку (баллы по компонентам)
+    // вместо строк «Правильный ответ / Ваш ответ».
+    var answers = dom.feedbackCorrect.closest('.feedback__answers');
+    var extra = dom.feedback.querySelector('.feedback__extra');
+    if (extra) extra.remove();
+    if (typeof view.feedbackSummary === 'function') {
+      // Компактный результат — над подробным разбором.
+      dom.answer.parentNode.insertBefore(dom.feedback, dom.answer);
+      dom.verdict.hidden = true;
+      answers.hidden = true;
+      extra = el('div', 'feedback__extra');
+      view.feedbackSummary(extra, task, result);
+      dom.feedback.appendChild(extra);
+      return;
+    }
+    // Прежнее место блока результата — перед «Типичной ошибкой».
+    dom.typicalMistake.parentNode.insertBefore(dom.feedback, dom.typicalMistake);
+    dom.verdict.hidden = false;
+    answers.hidden = false;
     dom.feedbackCorrect.textContent = type.formatResponse(task, result.correct);
     dom.feedbackUser.textContent = type.formatResponse(task, result.response);
     dom.feedbackPointsRow.hidden = !result.scored;
@@ -902,7 +994,7 @@
     dom.prevBtn.hidden = state.viewIndex === 0;
     dom.skipBtn.hidden = checked || !otherTarget;
     dom.checkBtn.hidden = checked;
-    dom.checkBtn.disabled = checked || OLY.types.get(task.type).isEmpty(task, A.getResponse(attempt, task.id));
+    dom.checkBtn.disabled = checked || !canCheck(task, A.getResponse(attempt, task.id));
     dom.nextBtn.hidden = !checked;
     dom.nextBtn.textContent = otherTarget ? 'Следующее задание' : 'Посмотреть итоги';
   }
@@ -921,6 +1013,7 @@
   var NAV_LABELS = {
     correct: 'проверено, верно',
     incorrect: 'проверено, неверно',
+    partial: 'проверено, частично',
     draft: 'ответ не проверен',
     empty: 'без ответа'
   };
@@ -934,6 +1027,7 @@
       btn.type = 'button';
       if (item.state === 'correct') btn.classList.add('is-done', 'points--full');
       else if (item.state === 'incorrect') btn.classList.add('is-done', 'points--none');
+      else if (item.state === 'partial') btn.classList.add('is-done', 'points--partial');
       else if (item.state === 'draft') btn.classList.add('is-draft');
       if (item.index === state.viewIndex) {
         btn.classList.add('is-viewed');
@@ -966,11 +1060,19 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  /** Можно ли проверять: ответ не пуст и (если отрисовка это задаёт) готов к проверке —
+   *  например, в составном задании открыты все части. */
+  function canCheck(task, response) {
+    if (OLY.types.get(task.type).isEmpty(task, response)) return false;
+    var view = views.get(task.type);
+    return !view.canCheck || view.canCheck(task, response);
+  }
+
   function checkAnswer() {
     var attempt = state.attempt;
     var task = currentTask();
     if (A.isChecked(attempt, task.id)) return;
-    if (OLY.types.get(task.type).isEmpty(task, A.getResponse(attempt, task.id))) return;
+    if (!canCheck(task, A.getResponse(attempt, task.id))) return;
     var result = A.check(attempt, task.id);
     persistAttempt();
     notifyStore('onCheck', [A.snapshot(result), A.snapshot(attempt)]);
@@ -1013,7 +1115,9 @@
       dom.confirmText.textContent = 'Не ' + fmt.plural(n, 'проверено', 'проверены', 'проверено') + ' ' +
         fmt.tasksCount(n) + ' — ' + fmt.plural(n, 'оно будет засчитано как пропущенное',
         'они будут засчитаны как пропущенные', 'они будут засчитаны как пропущенные') + '.' +
-        (policyOf(state.attemptRoute).allowRetake ? '' : ' Пройти тему заново будет нельзя — останется просмотр результатов.') +
+        (policyOf(state.attemptRoute).allowRetake ? ''
+          : restartAllowed(state.attemptRoute) ? ' Начать тему заново можно будет на экране итогов.'
+          : ' Пройти тему заново будет нельзя — останется просмотр результатов.') +
         ' Завершить тренировку?';
       dom.confirmOk.textContent = 'Завершить';
     } else {
@@ -1078,13 +1182,21 @@
     dom.resultScope.textContent = scopeDescription(route, attempt.settings.filters);
     dom.resultStats.textContent = '';
     dom.resultStats.appendChild(stat('stat--right', 'Верно', o.correct + ' из ' + o.total));
+    if (o.partial) dom.resultStats.appendChild(stat('stat--partial', 'Частично', String(o.partial)));
     dom.resultStats.appendChild(stat('stat--wrong', 'Неверно', String(o.incorrect)));
     dom.resultStats.appendChild(stat('stat--skip', 'Пропущено', String(o.skipped)));
 
     // Баллы — только по заданиям с официальными критериями, отдельно от счёта заданий.
     dom.resultPoints.textContent = '';
-    dom.resultPoints.hidden = !o.showPoints;
-    if (o.showPoints) {
+    dom.resultPoints.hidden = !o.showPoints && !o.components;
+    if (o.components) {
+      // Авторские баллы практикума «Норма права»: сумма и разбивка по компонентам.
+      var sum = el('p');
+      sum.appendChild(document.createTextNode('Баллы: '));
+      sum.appendChild(el('strong', null, fmtPoints(o.points) + ' из ' + fmtPoints(o.components.possible)));
+      dom.resultPoints.appendChild(sum);
+      dom.resultPoints.appendChild(el('p', null, componentLine(o.components)));
+    } else if (o.showPoints) {
       var line = el('p');
       line.appendChild(document.createTextNode('Баллы по критериям оценивания: '));
       line.appendChild(el('strong', null, o.points + ' из ' + o.maxPoints));
@@ -1102,12 +1214,17 @@
     dom.mistakesBtn.textContent = 'Повторить ошибки (' + o.incorrect + ')';
     dom.topicsBtn.classList.toggle('btn--primary', !policy.allowRetake);
     dom.topicsBtn.classList.toggle('btn--ghost', policy.allowRetake);
+    // «Начать заново» — только для тем с allowRestart и только после полного завершения попытки.
+    var restartable = P.canRestart(topicOfRoute(route), attempt);
+    dom.restartBtn.hidden = !restartable;
+    dom.restartBar.hidden = true;
     dom.resultNote.hidden = policy.allowRetake;
     dom.resultNote.textContent = policy.allowRetake ? ''
+      : restartable ? 'Ниже — все задания с вашими ответами, правильными ответами и разбором. Чтобы пройти практикум ещё раз, нажмите «Начать заново».'
       : 'Повторное прохождение темы пока недоступно. Ниже — все задания с вашими ответами, правильными ответами и разбором.';
 
     dom.reviewAllLabel.textContent = 'Все (' + o.total + ')';
-    dom.reviewMistakesLabel.textContent = 'С ошибками (' + o.incorrect + ')';
+    dom.reviewMistakesLabel.textContent = 'С ошибками (' + (o.incorrect + (o.partial || 0)) + ')';
     dom.reviewSkippedLabel.textContent = 'Пропущенные (' + o.skipped + ')';
     dom.reviewFilter.querySelectorAll('input').forEach(function (input) {
       input.checked = input.value === state.reviewFilter;
@@ -1115,7 +1232,23 @@
     renderReview();
   }
 
-  var VERDICT_TEXT = { correct: 'Верно', incorrect: 'Неверно' };
+  var VERDICT_TEXT = { correct: 'Верно', incorrect: 'Неверно', partial: 'Частично' };
+  var VERDICT_CLASS = { correct: 'full', incorrect: 'none', partial: 'partial' };
+
+  /** 1.5 → «1,5». */
+  function fmtPoints(n) {
+    return String(Math.round(n * 10) / 10).replace('.', ',');
+  }
+
+  var COMPONENT_TITLES = { K: 'квалификация', T: 'работа с текстом нормы', R: 'логика рассуждения' };
+
+  /** «квалификация 8 / 9 · доказательство 3 / 3 · логика рассуждения 4 / 6» (только непустые компоненты). */
+  function componentLine(components) {
+    return ['K', 'T', 'R'].filter(function (key) { return components[key] && components[key].max > 0; })
+      .map(function (key) {
+        return COMPONENT_TITLES[key] + ' ' + fmtPoints(components[key].earned) + ' / ' + fmtPoints(components[key].max);
+      }).join(' · ');
+  }
 
   function renderReview() {
     var attempt = state.attempt;
@@ -1134,7 +1267,7 @@
       var type = OLY.types.get(task.type);
       var result = A.getResult(attempt, id);
       var taskState = S.taskState(attempt, id);
-      var solved = taskState === 'correct' || taskState === 'incorrect';
+      var solved = taskState === 'correct' || taskState === 'incorrect' || taskState === 'partial';
 
       var li = el('li', 'review-item');
       var details = el('details', 'review-item__details');
@@ -1150,15 +1283,23 @@
         head.appendChild(level);
       }
       var mark = solved
-        ? el('span', 'mistake__points points--' + (taskState === 'correct' ? 'full' : 'none'), VERDICT_TEXT[taskState])
+        ? el('span', 'mistake__points points--' + VERDICT_CLASS[taskState], VERDICT_TEXT[taskState])
         : el('span', 'mistake__points is-skipped', 'Не решено');
-      if (solved && result.scored) mark.textContent += ' · ' + result.points + ' из ' + result.maxPoints;
+      if (solved && result.scored) mark.textContent += ' · ' + fmtPoints(result.points) + ' из ' + fmtPoints(result.maxPoints);
       head.appendChild(mark);
       summary.appendChild(head);
-      summary.appendChild(el('p', 'mistake__question', task.question));
+      // Тема с normAsHeading: текст нормы показывается в блоке нормы разбора, здесь — только ссылка на неё.
+      var reviewTopic = OLY.getTopic(task.subject, task.topic);
+      summary.appendChild(el('p', 'mistake__question',
+        reviewTopic && reviewTopic.normAsHeading ? normLabel(task) : task.question));
 
       var answers = el('p', 'mistake__answers');
-      if (solved) {
+      if (typeof views.get(task.type).feedbackSummary === 'function') {
+        // Новые типы: вместо строки ответа — баллы по компонентам.
+        var comp = solved && result.details && result.details.components;
+        answers.textContent = comp ? componentLine(comp) : 'Задание не решено — эталон в разборе.';
+        answers.appendChild(document.createTextNode(' · '));
+      } else if (solved) {
         answers.appendChild(el('span', null, 'Ваш ответ: '));
         answers.appendChild(el('strong', taskState === 'correct' ? 'text-right' : 'text-wrong',
           type.formatResponse(task, result.response)));
@@ -1261,6 +1402,30 @@
     if (!P.canRetry(policyOf(state.attemptRoute), 'mistakes')) return;
     startAttempt(state.attemptRoute, S.arrangeIds(state.attemptRoute.olympiad, S.subsetIds(state.attempt, 'mistakes')));
   });
+  /* «Начать заново»: подтверждение → удаление попытки только этой темы → стартовый экран темы. */
+  function hideRestartConfirm() {
+    dom.restartBar.hidden = true;
+  }
+  dom.restartBtn.addEventListener('click', function () {
+    if (!P.canRestart(topicOfRoute(state.attemptRoute), state.attempt)) return;
+    dom.restartBar.hidden = false;
+    dom.restartBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    dom.restartCancel.focus({ preventScroll: true });
+  });
+  dom.restartCancel.addEventListener('click', function () {
+    hideRestartConfirm();
+    dom.restartBtn.focus({ preventScroll: true });
+  });
+  dom.restartOk.addEventListener('click', function () {
+    var route = state.attemptRoute;
+    if (!route || !P.canRestart(topicOfRoute(route), state.attempt)) return;
+    hideRestartConfirm();
+    store.remove(scopeOf(route));
+    state.attempt = null;
+    state.attemptRoute = null;
+    go(router.withName(route, 'setup'));
+  });
+
   dom.topicsBtn.addEventListener('click', function () {
     var route = state.attemptRoute;
     go({ name: 'discipline', olympiad: route.olympiad, discipline: route.discipline });
@@ -1283,6 +1448,11 @@
   });
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !dom.restartBar.hidden) {
+      hideRestartConfirm();
+      dom.restartBtn.focus({ preventScroll: true });
+      return;
+    }
     if (!state.route || state.route.name !== 'train' || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Escape' && state.confirm) {
       hideConfirm();
@@ -1308,6 +1478,8 @@
       // Enter на обычной кнопке и так нажимает её; на вариантах ответа — «Проверить».
       if (tag === 'BUTTON' && !e.target.classList.contains('statement__btn')) return;
       if (tag === 'A') return;
+      // Раскрывающиеся пояснения и интерактивные фрагменты текста обрабатывают Enter сами.
+      if (tag === 'SUMMARY' || (e.target.getAttribute && e.target.getAttribute('role') === 'button')) return;
       e.preventDefault();
       if (checked) nextAfterCheck();
       else if (!dom.checkBtn.disabled) checkAnswer();

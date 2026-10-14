@@ -101,7 +101,9 @@
    *   discipline.sections — разделы дисциплины [{ id: 'theory', title: 'Теория права' }];
    *                         topic.section — id раздела, к которому относится тема;
    *   topic.blocks        — содержательные блоки темы в учебном порядке
-   *                         [{ id: 'concept', title: 'Понятие права' }]; задание указывает block.
+   *                         [{ id: 'concept', title: 'Понятие права' }]; задание указывает block;
+   *   topic.sequential    — true: задания темы показываются единым последовательным списком,
+   *                         без названия блока над заданием (блоки остаются в данных).
    */
   OLY.defineSubject = function (subject) {
     var errors = [];
@@ -128,6 +130,26 @@
           errors.push('тема ' + topic.id + ': неизвестный раздел ' + topic.section);
         }
         validateParts(topic.blocks, 'тема ' + topic.id + ': блок', errors);
+        if (topic.sequential !== undefined && typeof topic.sequential !== 'boolean') {
+          errors.push('тема ' + topic.id + ': sequential должно быть true или false');
+        }
+        // description — пояснение на стартовом экране темы практикума вместо общего;
+        // collapsedFeedback — после проверки комментарии к ответам свёрнуты, видны только результаты.
+        if (topic.description !== undefined && !isText(topic.description)) {
+          errors.push('тема ' + topic.id + ': description должно быть непустой строкой');
+        }
+        if (topic.collapsedFeedback !== undefined && typeof topic.collapsedFeedback !== 'boolean') {
+          errors.push('тема ' + topic.id + ': collapsedFeedback должно быть true или false');
+        }
+        // hideVerificationNotes — ученик не видит пометок о сверке нормативных текстов (данные о сверке
+        // в заданиях сохраняются); normAsHeading — вместо формулировки вопроса главным элементом задания
+        // служит текст нормы (формулировка остаётся в данных и в разборе на экране итогов).
+        // allowRestart — после полного завершения тему можно начать заново (только эта тема).
+        ['hideVerificationNotes', 'normAsHeading', 'allowRestart'].forEach(function (flag) {
+          if (topic[flag] !== undefined && typeof topic[flag] !== 'boolean') {
+            errors.push('тема ' + topic.id + ': ' + flag + ' должно быть true или false');
+          }
+        });
         topicsById[topic.id] = topic;
       });
     });

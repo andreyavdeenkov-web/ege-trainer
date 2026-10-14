@@ -211,6 +211,9 @@
   /**
    * Итоги попытки:
    *   total, correct, incorrect, skipped (без ответа или без проверки);
+ *   partial — частично верные (вердикт новых типов практикума «Норма права»);
+ *     поле есть, только если в попытке есть такие результаты, поэтому итоги
+ *     попыток со старыми типами заданий не меняются;
    *   points / maxPoints — только по заданиям с определёнными критериями;
    *   scoredCount — сколько результатов с баллами, unscoredCount — без критериев.
    */
@@ -225,6 +228,7 @@
       var result = attempt.results[id];
       if (!result || result.verdict === 'unanswered') s.skipped++;
       else if (result.verdict === 'correct') s.correct++;
+      else if (result.verdict === 'partial') s.partial = (s.partial || 0) + 1;
       else s.incorrect++;
       if (!result) return;
       if (result.scored) {

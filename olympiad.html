@@ -10,6 +10,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EАА%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/olymp.css">
+  <link rel="stylesheet" href="css/olymp-nrm.css">
 </head>
 <body class="olymp">
   <header class="topbar">
@@ -172,7 +173,7 @@
           <button type="button" class="btn btn--primary btn--lg" id="check-btn" disabled>Проверить</button>
           <button type="button" class="btn btn--primary btn--lg" id="next-btn" hidden>Следующее задание</button>
         </div>
-        <p class="kbd-hint" aria-hidden="true">Клавиши <kbd>1</kbd>–<kbd>9</kbd> выбирают варианты, <kbd>Enter</kbd> — проверить / дальше, <kbd>←</kbd> <kbd>→</kbd> — переход между заданиями</p>
+        <p class="kbd-hint" aria-hidden="true">Клавиши <span id="kbd-hint-digits"><kbd>1</kbd>–<kbd>9</kbd> выбирают варианты, </span><kbd>Enter</kbd> — проверить / дальше, <kbd>←</kbd> <kbd>→</kbd> — переход между заданиями</p>
       </article>
     </section>
 
@@ -187,9 +188,17 @@
         <p class="result__note muted" id="result-note" hidden></p>
         <div class="result__actions">
           <button type="button" class="btn btn--primary btn--lg" id="again-btn">Ещё раз по теме</button>
+          <button type="button" class="btn btn--ghost btn--lg" id="restart-btn" hidden>Начать заново</button>
           <button type="button" class="btn btn--ghost btn--lg" id="skipped-btn" hidden></button>
           <button type="button" class="btn btn--ghost btn--lg" id="mistakes-btn" hidden></button>
           <button type="button" class="btn btn--ghost btn--lg" id="topics-btn">К темам</button>
+        </div>
+        <div class="exit-bar" id="restart-bar" role="alertdialog" aria-labelledby="restart-text" hidden>
+          <p class="exit-bar__text" id="restart-text">Все ответы и баллы текущей попытки будут удалены. Начать заново?</p>
+          <div class="exit-bar__actions">
+            <button type="button" class="btn btn--ghost" id="restart-cancel">Отмена</button>
+            <button type="button" class="btn btn--primary" id="restart-ok">Начать заново</button>
+          </div>
         </div>
       </div>
 
@@ -230,6 +239,10 @@
   <script src="js/olymp/registry.js"></script>
   <script src="js/olymp/grade.js"></script>
   <script src="js/olymp/attempt.js"></script>
+  <!-- Классификационная карта (тренажёр «Классификация правовых норм», LAW-NKL) -->
+  <script src="js/olymp/types/nrm-rows.js"></script>
+  <script src="js/olymp/types/analysis-grid.js"></script>
+  <script src="js/olymp/rules/components.js"></script>
 
   <!-- Данные: предметы → олимпиады → задания → источники -->
   <script src="data/olympiads/subjects/social.js"></script>
@@ -244,6 +257,10 @@
   <script src="data/olympiads/hp/sources/author-pol-pow.js"></script>
   <script src="data/olympiads/practicum/practicum.js"></script>
   <script src="data/olympiads/practicum/social/law/concept.js"></script>
+  <script src="data/olympiads/practicum/social/law/nkl/classify.js"></script>
+  <script src="data/olympiads/practicum/social/law/nkl/common.js"></script>
+  <script src="data/olympiads/practicum/social/law/nkl/series-1.js"></script>
+  <script src="data/olympiads/practicum/social/law/nkl/series-2.js"></script>
 
   <!-- Интерфейс: помощники, фильтры, отрисовка типов заданий, экраны -->
   <script src="js/olymp/ui/common.js"></script>
@@ -251,6 +268,8 @@
   <script src="js/olymp/ui/views.js"></script>
   <script src="js/olymp/ui/views/choice.js"></script>
   <script src="js/olymp/ui/views/matching.js"></script>
+  <script src="js/olymp/ui/views/nrm-common.js"></script>
+  <script src="js/olymp/ui/views/grid.js"></script>
   <script src="js/olymp/ui/filters.js"></script>
   <script src="js/olymp/ui/session.js"></script>
   <script src="js/olymp/ui/progress.js"></script>
