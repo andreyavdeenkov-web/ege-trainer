@@ -357,7 +357,7 @@ for (const config of CONFIGS) {
       const explained = '.statement__explanation';
       assert.equal(await page.locator(`${parts} ${explained}`).count(), await page.locator(parts).count(), task.id);
       await assertNoHorizontalScroll(page, `${task.id}, разбор`);
-      if (['SOC-FAM-013', 'SOC-FAM-020', 'SOC-FAM-029'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
+      if (['SOC-FAM-033', 'SOC-FAM-038', 'SOC-FAM-040'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
       await page.click('#next-btn');
     }
     await page.waitForSelector('#screen-result:not([hidden])');

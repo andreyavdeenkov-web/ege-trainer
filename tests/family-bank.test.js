@@ -1,9 +1,10 @@
 'use strict';
 
 /**
- * Тема «Семья и брак»: 30 авторских заданий SOC-FAM-002…031
- * (15 multiple, 5 exclude-two, 10 matching) и их ключи.
+ * Тема «Семья и брак» (раздел «Социальные отношения»): 30 авторских заданий
+ * по социологии семьи (15 multiple, 5 exclude-two, 10 matching) и их ключи.
  * Ключи проверены содержательно; любое изменение ключа должно быть осознанным.
+ * Задания о нормах права перенесены в docs/drafts/law-family/tasks.js.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -11,23 +12,43 @@ const { loadBank } = require('./helpers/ege.js');
 
 const EGE = loadBank();
 const S = EGE.scoring;
-const ids = Array.from({ length: 30 }, (_, i) => 'SOC-FAM-' + String(i + 2).padStart(3, '0'));
-
 const KEYS = {
+  // multiple
   'SOC-FAM-002': '235', 'SOC-FAM-003': '45', 'SOC-FAM-004': '234', 'SOC-FAM-005': '125',
-  'SOC-FAM-006': '245', 'SOC-FAM-007': '235', 'SOC-FAM-008': '145', 'SOC-FAM-009': '23',
-  'SOC-FAM-010': '235', 'SOC-FAM-011': '1245', 'SOC-FAM-012': '1245', 'SOC-FAM-013': '2345',
-  'SOC-FAM-014': '1235', 'SOC-FAM-015': '345', 'SOC-FAM-016': '1245',
-  'SOC-FAM-017': '56', 'SOC-FAM-018': '14', 'SOC-FAM-019': '26', 'SOC-FAM-020': '25', 'SOC-FAM-021': '24',
+  'SOC-FAM-006': '245', 'SOC-FAM-007': '235', 'SOC-FAM-012': '1245', 'SOC-FAM-014': '1235',
+  'SOC-FAM-016': '1245', 'SOC-FAM-032': '125', 'SOC-FAM-033': '345', 'SOC-FAM-034': '245',
+  'SOC-FAM-035': '135', 'SOC-FAM-036': '135', 'SOC-FAM-037': '234',
+  // exclude-two
+  'SOC-FAM-017': '56', 'SOC-FAM-018': '14', 'SOC-FAM-019': '26', 'SOC-FAM-021': '24', 'SOC-FAM-038': '26',
+  // matching
   'SOC-FAM-022': '22113', 'SOC-FAM-023': '23213', 'SOC-FAM-024': '21121', 'SOC-FAM-025': '12112',
-  'SOC-FAM-026': '31212', 'SOC-FAM-027': '21121', 'SOC-FAM-028': '22211', 'SOC-FAM-029': '22211',
-  'SOC-FAM-030': '11221', 'SOC-FAM-031': '12122'
+  'SOC-FAM-026': '31212', 'SOC-FAM-031': '12122', 'SOC-FAM-039': '11221', 'SOC-FAM-040': '11122',
+  'SOC-FAM-041': '21213', 'SOC-FAM-042': '21211'
 };
+const ids = Object.keys(KEYS);
 
-test('тема «Семья и брак»: 31 задание, из них 30 новых', () => {
-  assert.equal(EGE.getTasksByTopic('SOC-FAM').length, 31);
-  for (const id of ids) assert.ok(EGE.getTask(id), `нет задания ${id}`);
-  assert.equal(EGE.getTask('SOC-FAM-032'), null);
+/** Признаки проверки норм права в тексте задания (не в объяснениях). */
+const LEGAL_MARKERS = [
+  /кодекс/i, /ЗАГС/, /записи актов/i, /брачн\S* договор/i, /алимент/i, /Конституци/i,
+  /брачн\S* возраст/i, /расторжени/i, /недееспособн/i, /опек/i, /попечител/i, /усыновл/i,
+  /законодательств/i, /по закону/i, /нотариал/i, /в суде|судебн/i
+];
+
+test('тема «Семья и брак»: 31 задание — SOC-FAM-001 и 30 новых', () => {
+  assert.equal(ids.length, 30);
+  assert.deepEqual(Array.from(EGE.getTasksByTopic('SOC-FAM'), (t) => t.id).sort(), ['SOC-FAM-001', ...ids].sort());
+});
+
+test('в теме только социология семьи: формулировки не проверяют нормы права', () => {
+  for (const task of EGE.getTasksByTopic('SOC-FAM')) {
+    const texts = [task.question, task.instruction, ...(task.statements || []).map((s) => s.text),
+      ...(task.items || []).map((i) => i.text), ...(task.options || [])].filter(Boolean);
+    for (const text of texts) {
+      for (const re of LEGAL_MARKERS) {
+        assert.ok(!re.test(text), `${task.id}: «${text}» — правовой материал (${re})`);
+      }
+    }
+  }
 });
 
 test('новые задания: 15 multiple, 5 exclude-two, 10 matching', () => {
