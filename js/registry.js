@@ -69,6 +69,30 @@
     }
   ];
 
+  /**
+   * Версия схемы банка заданий. 2 — добавлены необязательные поля source,
+   * difficulty, commonFeature и mistake (см. README). Задания схемы 1
+   * (без этих полей) остаются корректными.
+   */
+  EGE.BANK_SCHEMA_VERSION = 2;
+
+  /**
+   * Форматы для фильтра на стартовом экране. id совпадает с task.type
+   * (js/scoring.js); 'all' — все форматы. Все три формата экзаменационные.
+   */
+  EGE.FORMATS = [
+    { id: 'all', title: 'Все типы заданий' },
+    { id: 'multiple', title: 'Выбор нескольких ответов' },
+    { id: 'exclude-two', title: 'Два лишних термина' },
+    { id: 'matching', title: 'Установление соответствия' }
+  ];
+
+  /** Уровни сложности (поле difficulty): только для внутренней классификации, ученику не показываются. */
+  EGE.DIFFICULTY_LEVELS = [1, 2, 3];
+
+  /** Виды источника задания (поле source.kind). */
+  EGE.SOURCE_KINDS = ['original', 'author'];
+
   /** Формат постоянного ID задания: РАЗДЕЛ-ТЕМА-НОМЕР, например SOC-STR-001. */
   EGE.TASK_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-\d{3,4}$/;
   /** Формат id темы: РАЗДЕЛ-ТЕМА, например SOC-STR. */
@@ -119,6 +143,14 @@
    * а не суждения (меняет подсказку и подписи в разборе);
    * необязательные поля задания: version (номер редакции, по умолчанию 1)
    * и retired (true — задание больше не выдаётся, но его ID занят навсегда).
+   * Схема 2 (тоже необязательные поля):
+   *   source — { kind: 'original' | 'author', title, authors?, year?, ref?, adapted? }:
+   *     original — задание из опубликованного пособия (title обязателен),
+   *     author — авторское; adapted: true — формулировка изменена под интерфейс.
+   *     Поле указывается, только если источник достоверно установлен;
+   *   difficulty — 1, 2 или 3 (внутренняя классификация, ученику не показывается);
+   *   commonFeature — exclude-two: что объединяет позиции, оставшиеся в ряду;
+   *   mistake — у суждения или позиции matching: типичная ошибка.
    */
   EGE.addTasks = function (topicId, tasks) {
     var topic = EGE.getTopic(topicId);
@@ -157,13 +189,34 @@
     }, []);
   };
 
+  /** Формат задания: task.type или 'multiple' по умолчанию (как в js/scoring.js). */
+  function taskFormat(task) {
+    return task.type || 'multiple';
+  }
+
+  EGE.getFormat = function (formatId) {
+    for (var i = 0; i < EGE.FORMATS.length; i++) {
+      if (EGE.FORMATS[i].id === formatId) return EGE.FORMATS[i];
+    }
+    return null;
+  };
+
+  /** Оставляет задания нужного формата ('all' или пусто — все форматы). */
+  EGE.filterByFormat = function (tasks, formatId) {
+    if (!formatId || formatId === 'all') return tasks;
+    return tasks.filter(function (task) { return taskFormat(task) === formatId; });
+  };
+
   /**
    * Пул заданий для тренировки: одна тема, весь раздел или все разделы.
    * topicId = 'all' означает «весь раздел».
+   * formatId — необязательный фильтр по формату ('all' или пусто — все форматы).
    */
-  EGE.getPool = function (sectionId, topicId) {
-    if (topicId && topicId !== 'all') return EGE.getTasksByTopic(topicId);
-    return EGE.getTasksBySection(sectionId);
+  EGE.getPool = function (sectionId, topicId, formatId) {
+    var pool = topicId && topicId !== 'all'
+      ? EGE.getTasksByTopic(topicId)
+      : EGE.getTasksBySection(sectionId);
+    return EGE.filterByFormat(pool, formatId);
   };
 
   /** Темы раздела, в которых есть хотя бы одно активное задание. */

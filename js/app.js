@@ -37,6 +37,7 @@
     sectionOptions: $('section-options'),
     topicField: $('topic-field'),
     topicOptions: $('topic-options'),
+    formatOptions: $('format-options'),
     startBtn: $('start-btn'),
     brandHome: $('brand-home'),
     exitBar: $('exit-bar'),
@@ -55,6 +56,7 @@
     statements: $('statements'),
     matching: $('matching'),
     taskInstruction: $('task-instruction'),
+    taskNotes: $('task-notes'),
     feedback: $('feedback'),
     feedbackPoints: $('feedback-points'),
     feedbackCorrect: $('feedback-correct'),
@@ -118,14 +120,20 @@
     return EGE.getAvailableTopics(sectionId).some(function (t) { return t.id === topicId; });
   }
 
-  /** Настройки старта: раздел и тема. Тренировка всегда включает все задания выбора. */
+  function isValidFormat(id) {
+    return !!EGE.getFormat(id);
+  }
+
+  /** Настройки старта: раздел, тема и формат. Тренировка всегда включает все задания выбора. */
   function loadSettings() {
-    var result = { section: 'all', topic: 'all' };
+    var result = { section: 'all', topic: 'all', format: 'all' };
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && typeof saved === 'object') {
         if (isValidSection(saved.section)) result.section = saved.section;
         if (isValidTopic(result.section, saved.topic)) result.topic = saved.topic;
+        // Старые настройки без формата и неизвестный формат — «Все типы заданий».
+        if (isValidFormat(saved.format)) result.format = saved.format;
       }
     } catch (e) { /* хранилище недоступно — используем значения по умолчанию */ }
     return result;
@@ -165,7 +173,7 @@
 
   /* ---------- Стартовый экран ---------- */
 
-  function optionCard(name, value, title, count, color, checked) {
+  function optionCard(name, value, title, count, color, checked, disabled) {
     var label = el('label', 'topic-option');
     if (color) label.style.setProperty('--topic-color', color);
 
@@ -174,6 +182,7 @@
     input.name = name;
     input.value = value;
     input.checked = checked;
+    input.disabled = !!disabled;
 
     var body = el('span', 'topic-option__body');
     body.appendChild(el('span', 'topic-option__dot'));
@@ -186,19 +195,32 @@
   }
 
   function renderStart() {
-    ui.sectionOptions.textContent = '';
-    ui.sectionOptions.appendChild(optionCard('section', 'all', 'Все разделы',
-      EGE.getTasksBySection('all').length, null, settings.section === 'all'));
-    EGE.getAvailableSections().forEach(function (section) {
-      ui.sectionOptions.appendChild(optionCard('section', section.id, section.title,
-        EGE.getTasksBySection(section.id).length, section.color, settings.section === section.id));
-    });
-
+    renderSectionOptions();
     renderTopicOptions();
+    renderFormatOptions();
     updateStartButton();
   }
 
-  /** Темы выбранного раздела. Темы без заданий не показываются. */
+  /** Число заданий выбранного формата в пуле. */
+  function countWithFormat(tasks) {
+    return EGE.filterByFormat(tasks, settings.format).length;
+  }
+
+  /**
+   * Разделы. Набор разделов не зависит от формата (как и раньше, скрыты только
+   * разделы без заданий), а счётчики показывают задания выбранного формата.
+   */
+  function renderSectionOptions() {
+    ui.sectionOptions.textContent = '';
+    ui.sectionOptions.appendChild(optionCard('section', 'all', 'Все разделы',
+      countWithFormat(EGE.getTasksBySection('all')), null, settings.section === 'all'));
+    EGE.getAvailableSections().forEach(function (section) {
+      ui.sectionOptions.appendChild(optionCard('section', section.id, section.title,
+        countWithFormat(EGE.getTasksBySection(section.id)), section.color, settings.section === section.id));
+    });
+  }
+
+  /** Темы выбранного раздела. Темы без заданий не показываются; счётчики — по формату. */
   function renderTopicOptions() {
     ui.topicOptions.textContent = '';
     var section = EGE.getSection(settings.section);
@@ -206,35 +228,60 @@
     if (!section) return;
 
     ui.topicOptions.appendChild(optionCard('topic', 'all', 'Весь раздел',
-      EGE.getTasksBySection(section.id).length, section.color, settings.topic === 'all'));
+      countWithFormat(EGE.getTasksBySection(section.id)), section.color, settings.topic === 'all'));
     EGE.getAvailableTopics(section.id).forEach(function (topic) {
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
-        EGE.getTasksByTopic(topic.id).length, section.color, settings.topic === topic.id));
+        countWithFormat(EGE.getTasksByTopic(topic.id)), section.color, settings.topic === topic.id));
+    });
+  }
+
+  /**
+   * Форматы с числом заданий в выбранных разделе и теме. Формат без заданий
+   * недоступен, но остаётся видимым; выбранный формат не блокируется,
+   * чтобы с него можно было переключиться.
+   */
+  function renderFormatOptions() {
+    ui.formatOptions.textContent = '';
+    var base = EGE.getPool(settings.section, settings.topic);
+    EGE.FORMATS.forEach(function (format) {
+      var count = EGE.filterByFormat(base, format.id).length;
+      var checked = settings.format === format.id;
+      ui.formatOptions.appendChild(optionCard('format', format.id, format.title,
+        count, null, checked, count === 0 && !checked && format.id !== 'all'));
     });
   }
 
   function currentPool() {
-    return EGE.getPool(settings.section, settings.topic);
+    return EGE.getPool(settings.section, settings.topic, settings.format);
   }
 
   function updateStartButton() {
     var n = currentPool().length;
     ui.startBtn.disabled = n === 0;
-    ui.startBtn.textContent = n === 0
+    var empty = settings.format === 'all' || EGE.getPool(settings.section, settings.topic).length === 0
       ? 'Здесь пока нет заданий'
-      : 'Начать: ' + n + ' ' + tasksWord(n);
+      : 'Здесь нет заданий формата «' + EGE.getFormat(settings.format).title + '»';
+    ui.startBtn.textContent = n === 0 ? empty : 'Начать: ' + n + ' ' + tasksWord(n);
   }
 
+  /** Читает форму и перерисовывает зависящие от выбора группы (но не ту, в которой выбор). */
   function readStartForm() {
     var data = new FormData(ui.startForm);
     var section = data.get('section') || 'all';
+    var format = data.get('format') || 'all';
     if (section !== settings.section) {
       // При смене раздела выбор темы сбрасывается на «Весь раздел».
       settings.section = section;
       settings.topic = 'all';
       renderTopicOptions();
+      renderFormatOptions();
+    } else if (format !== settings.format) {
+      settings.format = isValidFormat(format) ? format : 'all';
+      renderSectionOptions();
+      renderTopicOptions();
     } else {
       settings.topic = data.get('topic') || 'all';
+      renderFormatOptions();
     }
   }
 
@@ -247,7 +294,7 @@
       return;
     }
     state.attempt = A.createAttempt({
-      settings: { section: settings.section, topic: settings.topic },
+      settings: { section: settings.section, topic: settings.topic, format: settings.format },
       taskIds: pool.map(function (t) { return t.id; })
     });
     state.viewIndex = 0;
@@ -294,6 +341,10 @@
   function hintFor(task) {
     var type = typeOf(task);
     var hint = HINTS[type === 'multiple' && task.choiceOf === 'items' ? 'multiple-items' : type];
+    if (type === 'exclude-two') {
+      // Счётчик показывает ограничение до попытки отметить третью позицию.
+      return hint + ' Выбрано: ' + currentDraft().length + ' из ' + scoring.EXCLUDE_COUNT + '.';
+    }
     return task.oneToOne ? hint + HINT_ONE_TO_ONE : hint;
   }
 
@@ -374,6 +425,9 @@
     ui.taskCard.classList.toggle('is-review', !!answer);
     ui.taskInstruction.textContent = task.instruction || '';
     ui.taskInstruction.hidden = !task.instruction;
+    // Общий признак ряда и источник — только после ответа, как и разбор.
+    ui.taskNotes.hidden = !(answer && view.renderTaskNotes(ui.taskNotes, task));
+    if (!answer) ui.taskNotes.textContent = '';
 
     ui.statements.hidden = isMatching;
     ui.matching.hidden = !isMatching;
@@ -596,6 +650,8 @@
         body.appendChild(list);
       }
       if (task.instruction) body.appendChild(el('p', 'task__instruction', task.instruction));
+      var notes = view.createTaskNotes(task);
+      if (notes) body.appendChild(notes);
       body.appendChild(view.createFeedback(answer, task));
 
       details.appendChild(summary);

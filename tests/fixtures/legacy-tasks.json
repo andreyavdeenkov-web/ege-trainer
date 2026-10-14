@@ -1,0 +1,377 @@
+{
+  "note": "Снимок 36 заданий банка до схемы 2 (коммит b2a7ed7). Не редактировать вручную: тест legacy-tasks.test.js проверяет, что эти задания не изменились.",
+  "tasks": {
+    "OBS-GEN-001": {
+      "type": "multiple",
+      "correct": [
+        1,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "9ef55a0c523c53fbd450542537631838fcd2225f0b4f60ce1a2e11b43ed46f4f"
+    },
+    "OBS-GEN-002": {
+      "type": "multiple",
+      "correct": [
+        2,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "20a468ad95a32939013ce14db6d79505ad0853a0f2c57aeab0e7b2e7e7b7166a"
+    },
+    "OBS-GEN-003": {
+      "type": "multiple",
+      "correct": [
+        2,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "b13d3eeca60396b2df1608eb654a1ccb51e1fe83547085a7e658fb62b7dec22b"
+    },
+    "OBS-ACT-001": {
+      "type": "exclude-two",
+      "correct": [
+        2,
+        5
+      ],
+      "maxPoints": 1,
+      "hash": "e91687f0eec8ea9512f6ceb72dc02b530f833967aa5a76adf5914f7bab74cb92"
+    },
+    "OBS-ACT-002": {
+      "type": "multiple",
+      "correct": [
+        2,
+        3,
+        4
+      ],
+      "maxPoints": 2,
+      "hash": "d0621e05e519c3b95d9d58584d21d3da10e1842dc2db705d27bc552d43c05fdc"
+    },
+    "OBS-ACT-003": {
+      "type": "matching",
+      "correct": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "21f5e713248b0ec499f7bf24dc9504f077924474c4a3f84c80564a0b3399a778"
+    },
+    "OBS-ACT-004": {
+      "type": "multiple",
+      "correct": [
+        1,
+        2,
+        3
+      ],
+      "maxPoints": 2,
+      "hash": "a97a8a4b50913b75be47975189be25a49d777374bf34dc989edb3b5bdd31681e"
+    },
+    "OBS-ACT-005": {
+      "type": "multiple",
+      "correct": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "maxPoints": 2,
+      "hash": "e596f20e8878bce8ead6573e4c0c3a7a3373ee909667c36235367386c65f6545"
+    },
+    "OBS-ACT-006": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        4
+      ],
+      "maxPoints": 2,
+      "hash": "8a48aa4745ee655d436f20f43728e3e2a090f7c89ecbddc430897372f84460f0"
+    },
+    "OBS-ACT-007": {
+      "type": "multiple",
+      "correct": [
+        1,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "afe385faebaba12432a1eddbdf841c40b7a94bd4f3294dd415e8ffcbee1260a9"
+    },
+    "OBS-ACT-008": {
+      "type": "multiple",
+      "correct": [
+        2,
+        3,
+        4
+      ],
+      "maxPoints": 2,
+      "hash": "34eed277914ce0df6c40ea03c51cbac10ee36cb872473be276857c24f4e011ed"
+    },
+    "OBS-ACT-009": {
+      "type": "matching",
+      "correct": [
+        2,
+        4,
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "38b50f6dfdf8692f759fb552a94f680f32979a968ec045f4e690a4b34ef2fbf7"
+    },
+    "OBS-ACT-010": {
+      "type": "multiple",
+      "correct": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "5ebf777035b97da908dc42cdcad33cb221415865c54e7ce14be870dad2f500a0"
+    },
+    "OBS-ACT-011": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "043c1501dacfb5abbda17790ac869f13db5e8edf072a09f287f8db08de936b14"
+    },
+    "OBS-ACT-012": {
+      "type": "matching",
+      "correct": [
+        3,
+        5,
+        2,
+        4,
+        1
+      ],
+      "maxPoints": 2,
+      "hash": "f0612a110ba148aeec3e688d876f41c25d0a53665242a076a166afd8724406a6"
+    },
+    "OBS-ACT-013": {
+      "type": "multiple",
+      "correct": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "eeeff3ba2921e37e32d888428c4e64291322ce1e769023567e999090160a6f78"
+    },
+    "OBS-ACT-014": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "656fdbbc8c0dfaaa9e6aa8710f5d899fb7e388d4a6793c8e954c464eba5c9258"
+    },
+    "OBS-ACT-015": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "0e705bbdb95a28443d412c2748d192e0bd8b51454016091f2e4a0518ae1f9702"
+    },
+    "OBS-ACT-016": {
+      "type": "multiple",
+      "correct": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "1dd8e3a615e47a37b9121389c586793358a2b76cf85d7b84905b3982f04f9183"
+    },
+    "ECO-GEN-001": {
+      "type": "multiple",
+      "correct": [
+        1,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "81330554d3d5c75a8d9b2d72e283160e2e1f70d5f7d3eed3d778e952a3a5045e"
+    },
+    "ECO-GEN-002": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "a8d92503b4518403f3691f563b9dd03753f1f36abc2863af4aeaa034b8b2a14f"
+    },
+    "ECO-GEN-003": {
+      "type": "multiple",
+      "correct": [
+        2,
+        4,
+        5,
+        6
+      ],
+      "maxPoints": 2,
+      "hash": "652be53377c1c03d22d71291fd793158aa79f2681570e7684c8a36bf4c78eccd"
+    },
+    "SOC-STR-001": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "b94390be320f1f5058e6e155af8b3046b4537011685675e3de269dce57236d03"
+    },
+    "SOC-STR-002": {
+      "type": "multiple",
+      "correct": [
+        2,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "2ad8ea7dfbd5d65cb5af310917cb0d201467a83897efa66270749034efd6f270"
+    },
+    "SOC-STR-003": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "9a1cd8997ff25587c79ae00e8b37297be87bb241e94dd1624e9d0e6a35ff1c81"
+    },
+    "SOC-STR-004": {
+      "type": "multiple",
+      "correct": [
+        2,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "4fc29cca11ea66f3eb3cec6ceb98b06a69fa716781e7ba6c02a983bd1a511a79"
+    },
+    "SOC-STR-005": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "ea12438d1dd2382003227e761d896ca3e9421ef81dfa4429d497048d0bdd14bd"
+    },
+    "SOC-STR-006": {
+      "type": "multiple",
+      "correct": [
+        1,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "24ac24d94322cac3294ed5a61f28f9b6449f02e0852d7a357fc865cab39c01a5"
+    },
+    "SOC-MOB-001": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "ca234a9f1999b92777e08307b434a65fc8f7d6e72ef57f74eb3bda6acfc654f4"
+    },
+    "SOC-FAM-001": {
+      "type": "multiple",
+      "correct": [
+        3,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "8e9fbafb5a9240ac425343fd291f685f55fe59f74704fc6034eaee010bb6a4f4"
+    },
+    "POL-GEN-001": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "2478c5bb6b9c2aec9d993d0651b1769c70a8f1911d392b64c5700b8f67b3add2"
+    },
+    "POL-GEN-002": {
+      "type": "multiple",
+      "correct": [
+        1,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "16ba8f4cac9a3048c6ca5d280f8d2928d0d5b4fd14c77d2283dd17ccb6736b47"
+    },
+    "POL-GEN-003": {
+      "type": "multiple",
+      "correct": [
+        2,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "6d31f8dfeb1063ff13bd4255fe44ba5f3db2978a15c78603ac90a366e7b1b701"
+    },
+    "LAW-GEN-001": {
+      "type": "multiple",
+      "correct": [
+        2,
+        4,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "d2429a820d97f715f07f09f172d5c5996ffff4e732b66d5537c280426796175f"
+    },
+    "LAW-GEN-002": {
+      "type": "multiple",
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "maxPoints": 2,
+      "hash": "8b6cf2fd1066f05ba5dcb9410e705fde4f80cda4c2c12bb1b5aecc5f71a8fab5"
+    },
+    "LAW-GEN-003": {
+      "type": "multiple",
+      "correct": [
+        1,
+        4,
+        5,
+        6
+      ],
+      "maxPoints": 2,
+      "hash": "3d0c33e9a00c9d97060627eb2c853e97e82581c7697b331f94bb6856a1b7184e"
+    }
+  }
+}

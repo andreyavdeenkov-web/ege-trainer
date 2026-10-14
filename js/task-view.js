@@ -8,28 +8,43 @@
   var EGE = window.EGE;
   var scoring = EGE.scoring;
 
+  // Подписи статусов в разборе. Ошибки и пропуски начинаются со слов «Ошибка» и «Пропущено»,
+  // чтобы их можно было отличить не только по цвету.
   var STATUS_LABELS = {
-    hit: 'Верное — вы выбрали',
-    missed: 'Верное — вы пропустили',
-    wrong: 'Неверное — выбрано лишнее',
-    skip: 'Неверное — вы не выбрали'
+    hit: 'Верно — вы выбрали верное суждение',
+    missed: 'Пропущено — это суждение верное',
+    wrong: 'Ошибка — это суждение неверное',
+    skip: 'Неверное — вы его не выбрали'
   };
 
   // exclude-two: «верная» позиция — та, что выпадает из ряда.
   var EXCLUDE_STATUS_LABELS = {
-    hit: 'Выпадает — вы выбрали',
-    missed: 'Выпадает — вы не выбрали',
-    wrong: 'Относится к ряду — выбрано ошибочно',
+    hit: 'Верно — выпадает, вы выбрали',
+    missed: 'Пропущено — этот термин выпадает',
+    wrong: 'Ошибка — термин относится к ряду',
     skip: 'Относится к ряду'
   };
 
   // multiple с choiceOf: 'items' — выбираются термины или другие элементы, а не суждения.
   var ITEM_STATUS_LABELS = {
-    hit: 'Подходит — вы выбрали',
-    missed: 'Подходит — вы пропустили',
-    wrong: 'Не подходит — выбрано лишнее',
+    hit: 'Верно — подходит, вы выбрали',
+    missed: 'Пропущено — этот вариант подходит',
+    wrong: 'Ошибка — этот вариант не подходит',
     skip: 'Не подходит'
   };
+
+  /** Значки статусов: дублируют цвет формой. Для экранных дикторов скрыты — статус есть в подписи. */
+  var STATUS_ICONS = { hit: '✓', missed: '!', wrong: '✕', skip: '–', right: '✓' };
+
+  /** Ярлык статуса со значком. */
+  function statusTag(status, label) {
+    var tag = el('span', 'statement__tag');
+    var icon = el('span', 'statement__icon', STATUS_ICONS[status]);
+    icon.setAttribute('aria-hidden', 'true');
+    tag.appendChild(icon);
+    tag.appendChild(document.createTextNode(label));
+    return tag;
+  }
 
   function statusLabels(task) {
     if (scoring.getTaskType(task) === 'exclude-two') return EXCLUDE_STATUS_LABELS;
@@ -102,11 +117,12 @@
         li.classList.add('status-' + status);
 
         var details = el('div', 'statement__details');
-        details.appendChild(el('span', 'statement__tag', labels[status]));
+        details.appendChild(statusTag(status, labels[status]));
         // Объяснение необязательно: если его нет, показывается только статус суждения.
         if (statement.explanation) {
           details.appendChild(el('p', 'statement__explanation', statement.explanation));
         }
+        appendMistake(details, statement.mistake);
         li.appendChild(details);
       } else {
         btn.setAttribute('role', 'checkbox');
@@ -119,6 +135,54 @@
 
       list.appendChild(li);
     });
+  }
+
+  /** «Типичная ошибка: …» под объяснением суждения или позиции (поле mistake). */
+  function appendMistake(parent, mistake) {
+    if (!mistake) return;
+    var p = el('p', 'statement__mistake');
+    p.appendChild(el('strong', null, 'Типичная ошибка: '));
+    p.appendChild(document.createTextNode(mistake));
+    parent.appendChild(p);
+  }
+
+  /**
+   * Подпись источника для разбора или null, если источник не указан.
+   * Поле source задаётся только для достоверно установленных источников.
+   */
+  function sourceLabel(task) {
+    var src = task.source;
+    if (!src) return null;
+    if (src.kind === 'author') return 'Авторское задание';
+    if (src.kind !== 'original' || !src.title) return null;
+    var parts = [src.title];
+    if (src.authors) parts.push(src.authors);
+    if (src.year) parts.push(String(src.year));
+    if (src.ref) parts.push(src.ref);
+    return 'Источник: ' + parts.join(', ') + (src.adapted ? ' (формулировка адаптирована)' : '');
+  }
+
+  /**
+   * Заполняет блок пояснений к заданию после ответа: общий признак ряда
+   * (exclude-two, поле commonFeature) и источник. Возвращает true, если блок не пуст.
+   */
+  function renderTaskNotes(box, task) {
+    box.textContent = '';
+    if (scoring.getTaskType(task) === 'exclude-two' && task.commonFeature) {
+      var feature = el('div', 'task-notes__feature');
+      feature.appendChild(el('span', 'statement__tag', 'Общий признак ряда'));
+      feature.appendChild(el('p', 'task-notes__text', task.commonFeature));
+      box.appendChild(feature);
+    }
+    var source = sourceLabel(task);
+    if (source) box.appendChild(el('p', 'task-notes__source', source));
+    return box.childNodes.length > 0;
+  }
+
+  /** Новый блок пояснений (для экрана итогов) или null, если пояснять нечего. */
+  function createTaskNotes(task) {
+    var box = el('div', 'task-notes');
+    return renderTaskNotes(box, task) ? box : null;
   }
 
   /** Отмечает или снимает отметку с суждения в режиме выбора. */
@@ -192,6 +256,7 @@
         var ok = value === item.match;
         li.classList.add(ok ? 'status-right' : 'status-wrong');
         var result = el('div', 'match-row__result');
+        result.appendChild(statusTag(ok ? 'right' : 'wrong', ok ? 'Верно — соответствие установлено правильно' : 'Ошибка — неверное соответствие'));
         var mine = el('p', 'match-row__line');
         mine.appendChild(el('span', 'muted', 'Ваш ответ: '));
         mine.appendChild(el('strong', ok ? 'text-right' : 'text-wrong', optionLabel(task, value)));
@@ -202,8 +267,8 @@
           right.appendChild(el('strong', 'text-right', optionLabel(task, item.match)));
           result.appendChild(right);
         }
-        result.appendChild(el('span', 'statement__tag', ok ? 'Соответствие верное' : 'Ошибка'));
         if (item.explanation) result.appendChild(el('p', 'statement__explanation', item.explanation));
+        appendMistake(result, item.mistake);
         li.appendChild(result);
       } else {
         li.classList.toggle('is-filled', value !== null);
@@ -301,6 +366,9 @@
     renderStatements: renderStatements,
     setStatementSelected: setStatementSelected,
     renderMatching: renderMatching,
+    sourceLabel: sourceLabel,
+    renderTaskNotes: renderTaskNotes,
+    createTaskNotes: createTaskNotes,
     renderFeedback: renderFeedback,
     createFeedback: createFeedback
   };
