@@ -293,6 +293,43 @@ button, input { font: inherit; color: inherit; }
 }
 .segmented__item input:focus-visible + span { outline: 3px solid var(--focus); }
 
+/* Свёрнутый блок «Настроить тренировку» (формат заданий) */
+.train-settings {
+  margin: 4px 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.train-settings__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 12px;
+}
+.train-settings__summary::-webkit-details-marker { display: none; }
+.train-settings__summary::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(-45deg);
+  transition: transform .15s;
+  margin-right: 2px;
+}
+.train-settings[open] .train-settings__summary::before { transform: rotate(45deg); }
+.train-settings__summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.train-settings__title { font-weight: 600; }
+.train-settings__value { margin-left: auto; font-size: 14px; color: var(--text-muted); }
+.train-settings.is-custom { border-color: var(--primary); }
+.train-settings.is-custom .train-settings__value { color: var(--primary); font-weight: 600; }
+.train-settings__body { margin: 0; padding: 0 14px 14px; }
+.train-settings__body .field__label { margin-bottom: 8px; }
+
 .rules summary { cursor: pointer; font-weight: 600; }
 .rules ul { margin: 12px 0; padding-left: 20px; }
 .rules li { margin: 4px 0; }

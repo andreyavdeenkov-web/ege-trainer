@@ -38,6 +38,8 @@
     topicField: $('topic-field'),
     topicOptions: $('topic-options'),
     formatOptions: $('format-options'),
+    trainSettings: $('train-settings'),
+    formatSummary: $('format-summary'),
     startBtn: $('start-btn'),
     brandHome: $('brand-home'),
     exitBar: $('exit-bar'),
@@ -124,7 +126,11 @@
     return !!EGE.getFormat(id);
   }
 
-  /** Настройки старта: раздел, тема и формат. Тренировка всегда включает все задания выбора. */
+  /**
+   * Настройки старта: раздел, тема и формат. Тренировка всегда включает все задания выбора.
+   * Запоминаются только раздел и тема. Формат при открытии тренажёра всегда «Все форматы
+   * заданий»: ученик проходит все экзаменационные форматы, пока сам не сузит выбор.
+   */
   function loadSettings() {
     var result = { section: 'all', topic: 'all', format: 'all' };
     try {
@@ -132,8 +138,6 @@
       if (saved && typeof saved === 'object') {
         if (isValidSection(saved.section)) result.section = saved.section;
         if (isValidTopic(result.section, saved.topic)) result.topic = saved.topic;
-        // Старые настройки без формата и неизвестный формат — «Все типы заданий».
-        if (isValidFormat(saved.format)) result.format = saved.format;
       }
     } catch (e) { /* хранилище недоступно — используем значения по умолчанию */ }
     return result;
@@ -141,7 +145,7 @@
 
   function saveSettings() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ section: settings.section, topic: settings.topic }));
     } catch (e) { /* не критично */ }
   }
 
@@ -249,6 +253,35 @@
       ui.formatOptions.appendChild(optionCard('format', format.id, format.title,
         count, null, checked, count === 0 && !checked && format.id !== 'all'));
     });
+    renderFormatSummary();
+  }
+
+  /** Подпись свёрнутого блока «Настроить тренировку»: выбранный формат; суженный выбор выделен. */
+  function renderFormatSummary() {
+    ui.formatSummary.textContent = EGE.getFormat(settings.format).title;
+    ui.trainSettings.classList.toggle('is-custom', settings.format !== 'all');
+  }
+
+  /**
+   * Сбрасывает формат на «Все форматы заданий» при смене раздела или темы, чтобы прежний
+   * формат не ограничивал выбор незаметно. Возвращает true, если формат был другим
+   * (тогда счётчики разделов и тем нужно пересчитать).
+   */
+  function resetFormat() {
+    if (settings.format === 'all') return false;
+    settings.format = 'all';
+    return true;
+  }
+
+  /** Перерисовывает группу карточек, сохраняя фокус клавиатуры на выбранной карточке. */
+  function rerenderKeepingFocus(name, render) {
+    var active = document.activeElement;
+    var hadFocus = active && active.name === name;
+    render();
+    if (hadFocus) {
+      var checked = ui.startForm.querySelector('input[name="' + name + '"]:checked');
+      if (checked) checked.focus({ preventScroll: true });
+    }
   }
 
   function currentPool() {
@@ -270,17 +303,26 @@
     var section = data.get('section') || 'all';
     var format = data.get('format') || 'all';
     if (section !== settings.section) {
-      // При смене раздела выбор темы сбрасывается на «Весь раздел».
+      // При смене раздела тема сбрасывается на «Весь раздел», формат — на «Все форматы».
       settings.section = section;
       settings.topic = 'all';
+      if (resetFormat()) rerenderKeepingFocus('section', renderSectionOptions);
       renderTopicOptions();
       renderFormatOptions();
     } else if (format !== settings.format) {
       settings.format = isValidFormat(format) ? format : 'all';
       renderSectionOptions();
       renderTopicOptions();
+      renderFormatSummary();
     } else {
-      settings.topic = data.get('topic') || 'all';
+      var topic = data.get('topic') || 'all';
+      if (topic === settings.topic) return;  // форма перечитывается и при отправке — ничего не меняем
+      // При смене темы формат сбрасывается на «Все форматы заданий».
+      settings.topic = topic;
+      if (resetFormat()) {
+        renderSectionOptions();
+        rerenderKeepingFocus('topic', renderTopicOptions);
+      }
       renderFormatOptions();
     }
   }

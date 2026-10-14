@@ -43,10 +43,16 @@
           <div class="topic-grid topic-grid--compact" id="topic-options"></div>
         </fieldset>
 
-        <fieldset class="field">
-          <legend class="field__label">Формат</legend>
-          <div class="topic-grid topic-grid--compact" id="format-options"></div>
-        </fieldset>
+        <details class="train-settings" id="train-settings">
+          <summary class="train-settings__summary">
+            <span class="train-settings__title">Настроить тренировку</span>
+            <span class="train-settings__value" id="format-summary">Все форматы заданий</span>
+          </summary>
+          <fieldset class="field train-settings__body">
+            <legend class="field__label">Формат заданий</legend>
+            <div class="topic-grid topic-grid--compact" id="format-options"></div>
+          </fieldset>
+        </details>
 
         <button type="submit" class="btn btn--primary btn--lg btn--block" id="start-btn">Начать тренировку</button>
       </form>

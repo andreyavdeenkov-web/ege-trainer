@@ -88,7 +88,13 @@ async function assertNoHorizontalScroll(page, where) {
 }
 
 const radio = (page, name, value) => page.locator(`input[name="${name}"][value="${value}"]`);
-const pick = (page, name, value) => page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"])`).click();
+/** Выбор карточки; формат спрятан в блоке «Настроить тренировку» — сначала раскрываем его. */
+async function pick(page, name, value) {
+  if (name === 'format' && !(await page.locator('#train-settings').evaluate((d) => d.open))) {
+    await page.click('#train-settings > summary');
+  }
+  await page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"])`).click();
+}
 
 /**
  * Ключ текущего задания: ищем задание банка по тексту вопроса и первой позиции
@@ -138,10 +144,14 @@ for (const config of CONFIGS) {
     const dark = (r + g + b) / 3 < 100;
     assert.equal(dark, config.colorScheme === 'dark', `фон ${bg}`);
 
-    // Четыре формата, по умолчанию — все.
-    assert.deepEqual(await page.locator('#format-options .topic-option__title').allTextContents(),
-      ['Все типы заданий', 'Выбор нескольких ответов', 'Два лишних термина', 'Установление соответствия']);
+    // На главном экране — раздел и тема; формат свёрнут в «Настроить тренировку».
+    assert.ok(!(await page.locator('#train-settings').evaluate((d) => d.open)), 'блок формата свёрнут');
+    assert.ok(await page.locator('#format-options').isHidden());
+    assert.equal((await page.textContent('#train-settings > summary')).replace(/\s+/g, ' ').trim(),
+      'Настроить тренировку Все форматы заданий');
     assert.ok(await radio(page, 'format', 'all').isChecked());
+    assert.deepEqual(await page.locator('#format-options .topic-option__title').allTextContents(),
+      ['Все форматы заданий', 'Выбор нескольких ответов', 'Два лишних термина', 'Установление соответствия']);
     await assertNoHorizontalScroll(page, 'старт');
     await shot(page, config, '1-start');
 
@@ -150,35 +160,46 @@ for (const config of CONFIGS) {
     await pick(page, 'topic', 'OBS-ACT');
     await pick(page, 'format', 'exclude-two');
     assert.equal(await page.textContent('#start-btn'), 'Начать: 1 задание');
+    assert.equal(await page.textContent('#format-summary'), 'Два лишних термина');
+    assert.ok(await page.locator('#train-settings.is-custom').count() === 1, 'суженный выбор выделен');
     // Счётчик темы показывает задания выбранного формата.
     assert.match(await page.locator('label.topic-option:has(input[value="OBS-ACT"]) .topic-option__count').textContent(), /^1 задание$/);
+    await shot(page, config, '2-format-open');
 
-    // Смена раздела: тема сбрасывается, формат сохраняется; в разделе нет заданий формата.
+    // Смена темы: формат сбрасывается на «Все форматы заданий», счётчики — снова по всем форматам.
+    await pick(page, 'topic', 'all');
+    assert.ok(await radio(page, 'format', 'all').isChecked());
+    assert.equal(await page.textContent('#format-summary'), 'Все форматы заданий');
+    assert.equal(await page.locator('#train-settings.is-custom').count(), 0);
+    assert.match(await page.locator('label.topic-option:has(input[value="OBS-ACT"]) .topic-option__count').textContent(), /^16 заданий$/);
+
+    // Смена раздела: тема — «Весь раздел», формат — «Все форматы заданий».
+    await pick(page, 'format', 'matching');
     await pick(page, 'section', 'ECO');
     assert.ok(await radio(page, 'topic', 'all').isChecked());
-    assert.ok(await radio(page, 'format', 'exclude-two').isChecked());
-    assert.ok(await page.locator('#start-btn').isDisabled());
-    assert.equal(await page.textContent('#start-btn'), 'Здесь нет заданий формата «Два лишних термина»');
-    // Пустой формат недоступен, выбранный — нет (с него можно уйти).
-    assert.ok(await radio(page, 'format', 'matching').isDisabled());
-    assert.ok(!(await radio(page, 'format', 'exclude-two').isDisabled()));
-    await shot(page, config, '2-filter-empty');
-
-    await pick(page, 'format', 'all');
+    assert.ok(await radio(page, 'format', 'all').isChecked());
     assert.ok(!(await page.locator('#start-btn').isDisabled()));
+    assert.equal(await page.textContent('#start-btn'), 'Начать: 3 задания');
+    // Форматы, которых нет в разделе, недоступны.
+    assert.ok(await radio(page, 'format', 'matching').isDisabled());
+    assert.ok(await radio(page, 'format', 'exclude-two').isDisabled());
 
-    // Выбор запоминается.
+    // Раздел и тема запоминаются, формат — нет: после перезагрузки снова все форматы.
     await pick(page, 'format', 'multiple');
+    assert.equal(await page.textContent('#format-summary'), 'Выбор нескольких ответов');
     await page.reload();
-    assert.ok(await radio(page, 'format', 'multiple').isChecked());
     assert.ok(await radio(page, 'section', 'ECO').isChecked());
+    assert.ok(await radio(page, 'format', 'all').isChecked());
+    assert.equal(await page.textContent('#format-summary'), 'Все форматы заданий');
+    assert.ok(!(await page.locator('#train-settings').evaluate((d) => d.open)));
 
     assert.deepEqual(errors, []);
     await context.close();
   });
 
-  test(`${config.name}: старые настройки без формата и неизвестный формат`, async () => {
-    for (const storage of [JSON.stringify({ section: 'OBS', topic: 'OBS-ACT' }), JSON.stringify({ section: 'OBS', topic: 'all', format: 'essay' })]) {
+  test(`${config.name}: сохранённые настройки не ограничивают формат при открытии`, async () => {
+    for (const storage of [JSON.stringify({ section: 'OBS', topic: 'OBS-ACT' }), JSON.stringify({ section: 'OBS', topic: 'all', format: 'essay' }),
+      JSON.stringify({ section: 'OBS', topic: 'all', format: 'matching' })]) {
       const { page, context, errors } = await open(config, { storage });
       assert.ok(await radio(page, 'format', 'all').isChecked());
       assert.ok(await radio(page, 'section', 'OBS').isChecked());
