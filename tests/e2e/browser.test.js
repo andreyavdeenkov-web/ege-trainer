@@ -389,3 +389,99 @@ for (const config of CONFIGS) {
     await context.close();
   });
 }
+
+/* ---------- Навигация ЕГЭ | Олимпиады в шапке ---------- */
+
+const navLink = (page, label) => page.locator('.site-nav__link', { hasText: label });
+
+/** Состояние попытки, которое не должно меняться после отмены выхода. */
+const attemptState = (page) => page.evaluate(() => ({
+  progress: document.getElementById('progress-label').textContent,
+  score: document.getElementById('score-pill').textContent,
+  question: document.getElementById('task-question').textContent,
+  feedbackShown: !document.getElementById('feedback').hidden
+}));
+
+for (const config of [CONFIGS[0], CONFIGS[2]]) {
+  test(`${config.name}: шапка — на стартовом экране переход без подтверждения`, async () => {
+    const { page, context, errors } = await open(config);
+    await navLink(page, 'Олимпиады').click();
+    await page.waitForURL(`${base}olympiad.html`);
+    assert.equal(await page.getAttribute('.site-nav__link[aria-current="page"]', 'href'), 'olympiad.html');
+    await navLink(page, 'ЕГЭ').click();
+    await page.waitForURL(base);
+    assert.ok(await page.locator('#screen-start').isVisible());
+    // Тренировка начата, но ответов ещё нет — терять нечего, подтверждение не нужно.
+    await pick(page, 'section', 'ECO');
+    await page.click('#start-btn');
+    await page.waitForSelector('#screen-quiz:not([hidden])');
+    await navLink(page, 'Олимпиады').click();
+    await page.waitForURL(`${base}olympiad.html`);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: шапка — при начатой тренировке переход только после подтверждения`, async () => {
+    const { page, context, errors } = await open(config);
+    await pick(page, 'section', 'ECO');
+    await page.click('#start-btn');
+    await answerWithKey(page, await currentKey(page));
+    const before = await attemptState(page);
+    assert.match(before.progress, /выполнено 1$/);
+
+    // «Олимпиады» → предупреждение; «Продолжить» оставляет попытку как была.
+    await navLink(page, 'Олимпиады').click();
+    await page.waitForSelector('#exit-bar:not([hidden])');
+    assert.equal(page.url(), base);
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'exit-cancel');
+    await page.click('#exit-cancel');
+    assert.ok(await page.locator('#exit-bar').isHidden());
+    assert.equal(page.url(), base);
+    assert.deepEqual(await attemptState(page), before);
+    // Попытка продолжается: следующее задание отвечается и засчитывается.
+    await page.click('#next-btn');
+    await answerWithKey(page, await currentKey(page));
+    assert.match(await page.textContent('#progress-label'), /выполнено 2$/);
+
+    // «ЕГЭ» (текущая страница) с клавиатуры → предупреждение; подтверждение перезагружает страницу.
+    await navLink(page, 'ЕГЭ').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('#exit-bar:not([hidden])');
+    assert.ok(await page.locator('#screen-quiz').isVisible());
+    await Promise.all([page.waitForEvent('load'), page.click('#exit-confirm')]);
+    assert.equal(page.url(), base);
+    assert.ok(await page.locator('#screen-start').isVisible());
+
+    // Подтверждение после «Олимпиады» ведёт на олимпиадную страницу.
+    await pick(page, 'section', 'ECO');
+    await page.click('#start-btn');
+    await answerWithKey(page, await currentKey(page));
+    await navLink(page, 'Олимпиады').click();
+    await page.waitForSelector('#exit-bar:not([hidden])');
+    await page.click('#exit-confirm');
+    await page.waitForURL(`${base}olympiad.html`);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: логотип — прежнее подтверждение выхода на стартовый экран`, async () => {
+    const { page, context, errors } = await open(config);
+    await pick(page, 'section', 'ECO');
+    await page.click('#start-btn');
+    await answerWithKey(page, await currentKey(page));
+    const before = await attemptState(page);
+    await page.click('#brand-home');
+    await page.waitForSelector('#exit-bar:not([hidden])');
+    await page.click('#exit-cancel');
+    assert.deepEqual(await attemptState(page), before);
+    // Отмена выхода по ссылке не подменяет действие логотипа: снова логотип → стартовый экран.
+    await navLink(page, 'Олимпиады').click();
+    await page.click('#exit-cancel');
+    await page.click('#brand-home');
+    await page.click('#exit-confirm');
+    await page.waitForSelector('#screen-start:not([hidden])');
+    assert.equal(page.url(), base);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+}
