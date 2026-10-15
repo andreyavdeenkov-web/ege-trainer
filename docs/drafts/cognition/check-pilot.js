@@ -2,6 +2,8 @@
  * Проверка пилотных заданий и сборка документа для экспертизы.
  *   node docs/drafts/cognition/check-pilot.js          — проверка, отчёт в консоль
  *   node docs/drafts/cognition/check-pilot.js --write  — то же + docs/drafts/cognition/pilot.md
+ *   node docs/drafts/cognition/check-pilot.js --set batch1 [--write] — партия (batch1.js → batch1.md);
+ *       дополнительно сверяется с утверждённым пилотом: ID и близкие суждения.
  *
  * Программная проверка подтверждает только форму: модель задания, число вариантов,
  * объяснения, ключи, отсутствие дублей. Содержательную правильность она не доказывает —
@@ -13,7 +15,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { loadBank } = require('../../../tests/helpers/ege.js');
 const { metadataErrors, newTaskErrors } = require('../../../tests/helpers/bank-rules.js');
-const { tasks, BASIS, REVIEW } = require('./pilot.js');
+const argSet = process.argv.indexOf('--set');
+const SET = argSet === -1 ? 'pilot' : process.argv[argSet + 1];
+const isPilot = SET === 'pilot';
+const pilot = require('./pilot.js');
+const { tasks, REVIEW } = require(`./${SET}.js`);
+const BASIS = require(`./${SET}.js`).BASIS || pilot.BASIS;
+// С чем сверяются дубли: банк сайта, а для партии — ещё и утверждённый пилот.
+const others = () => EGE.tasks.concat(isPilot ? [] : pilot.tasks);
+const STATUSES = isPilot ? ['принять', 'переработать', 'заменить'] : ['готово', 'требует согласования', 'требует уточнения'];
 
 const EGE = loadBank();
 const S = EGE.scoring;
@@ -50,6 +60,7 @@ for (const t of tasks) {
   ids.add(t.id);
   if (!/^OBS-(COG|SCI)-\d{3}$/.test(t.id)) err(t.id, 'ID вида OBS-COG-001 / OBS-SCI-001');
   if (EGE.tasks.some((b) => b.id === t.id)) err(t.id, 'ID уже занят в банке');
+  if (!isPilot && pilot.tasks.some((b) => b.id === t.id)) err(t.id, 'ID уже занят в утверждённом пилоте');
 
   // Схема 2 банка — те же правила, что и для новых заданий банка.
   metadataErrors(EGE, t).concat(newTaskErrors(EGE, t)).forEach((e) => err(t.id, e));
@@ -58,7 +69,7 @@ for (const t of tasks) {
   if (!model) { err(t.id, 'kimTask — 1, 2, 3 или 4'); continue; }
   if (S.getTaskType(t) !== model.type) err(t.id, `модель ${t.kimTask} требует тип ${model.type}`);
   if (!REVIEW[t.id]) err(t.id, 'нет экспертизы в REVIEW');
-  else if (!['принять', 'переработать', 'заменить'].includes(REVIEW[t.id][0])) err(t.id, 'статус — принять / переработать / заменить');
+  else if (!STATUSES.includes(REVIEW[t.id][0])) err(t.id, `статус — ${STATUSES.join(' / ')}`);
   if (!t.draft || !t.draft.code || !t.draft.theory || !t.draft.skill) err(t.id, 'нет draft.code / skill / theory');
 
   const correct = S.getCorrect(t);
@@ -89,7 +100,7 @@ for (const t of tasks) {
   parts.forEach((p, i) => { if (EMPTY_EXPLANATION.test(p.explanation)) err(t.id, `позиция ${i + 1}: шаблонное объяснение`); });
 
   // Дубли и близкие суждения в банке.
-  for (const b of EGE.tasks) {
+  for (const b of others()) {
     for (const x of textsOf(t)) {
       for (const y of textsOf(b)) {
         if (norm(x) === norm(y) && words(x).size >= 3) err(t.id, `суждение совпадает с ${b.id}: «${x}»`);
@@ -129,12 +140,18 @@ console.log(errors.length ? `Ошибок: ${errors.length}` : 'Ошибок н�
 function render() {
   const letter = (i) => 'АБВГДЕ'[i];
   const out = [];
-  out.push('# Пилот: 10 + 10 заданий — итоговая версия для утверждения', '');
-  out.push('Статус: **итоговая версия для утверждения автором**. Задания не подключены к сайту и не входят в банк.');
-  out.push('Источник данных: `docs/drafts/cognition/pilot.js`; этот файл собран скриптом `check-pilot.js --write` — правьте `pilot.js`.', '');
+  if (isPilot) {
+    out.push('# Пилот: 10 + 10 заданий — итоговая версия для утверждения', '');
+    out.push('Статус: **утверждён автором (редакция 6)**. Задания не подключены к сайту и не входят в банк.');
+  } else {
+    out.push(`# Партия ${SET.replace(/\D/g, '')}: ${tasks.length} заданий — редакционный черновик`, '');
+    out.push('Статус: **черновик для экспертизы автором**. Задания не подключены к сайту и не входят в банк.');
+  }
+  out.push(`Источник данных: \`docs/drafts/cognition/${SET}.js\`; этот файл собран скриптом \`check-pilot.js${isPilot ? '' : ' --set ' + SET} --write\` — правьте \`${SET}.js\`.`, '');
   out.push('Формулировки адаптированы к интерфейсу тренажёра (без «запишите цифры…»). В скобках «Ответ в бланке» — запись ответа по правилам ЕГЭ.', '');
   const count = (st) => tasks.filter((t) => REVIEW[t.id][0] === st).length;
-  out.push(`**Заключительная экспертиза** (сверка с полным корпусом № 1–4 из 30 вариантов Котовой — Лисковой 2026): принять — ${count('принять')}, переработать — ${count('переработать')}, заменить — ${count('заменить')}. Подробности — в отчёте \`stage-1-2.md\`, разделы «Редакция 5» и «Редакция 6».`, '');
+  if (!isPilot) out.push(`**Редакционная экспертиза партии:** готово — ${count('готово')}, требует согласования — ${count('требует согласования')}, требует уточнения — ${count('требует уточнения')}. Обоснование отбора и перепланировки — в отчёте \`stage-1-2.md\`, раздел «Партия 1».`, '');
+  else out.push(`**Заключительная экспертиза** (сверка с полным корпусом № 1–4 из 30 вариантов Котовой — Лисковой 2026): принять — ${count('принять')}, переработать — ${count('переработать')}, заменить — ${count('заменить')}. Подробности — в отчёте \`stage-1-2.md\`, разделы «Редакция 5» и «Редакция 6».`, '');
   out.push('| ID | Модель | Элемент | Ключ | Сл. | Статус |', '|---|---|---|---|---|---|');
   for (const t of tasks) {
     out.push(`| ${t.id} | ${t.kimTask} | ${t.draft.code} | ${keyString(t)} | ${t.difficulty} | ${REVIEW[t.id][0]} |`);
@@ -180,14 +197,14 @@ function render() {
     mistakes.forEach(([p, i]) => out.push(`- ${type === 'matching' ? letter(i) : i + 1}: ${p.mistake}`));
     out.push('', `**Теоретическая опора:** ${t.draft.theory}`, '');
     out.push(`**Основание соответствия ФИПИ:** ${BASIS[t.kimTask]} Элемент содержания — кодификатор ЕГЭ-2027 (проект), ${t.draft.code}. Задание авторское, не является заданием ФИПИ или сборника.`, '');
-    out.push(`**Заключительная экспертиза:** ${REVIEW[t.id][1]}`, '');
+    out.push(`**${isPilot ? 'Заключительная экспертиза' : 'Редакционная экспертиза'}:** ${REVIEW[t.id][1]}`, '');
     out.push(`**Редакционный статус:** ${REVIEW[t.id][0]}`, '');
   }
   return out.join('\n');
 }
 
 if (process.argv.includes('--write')) {
-  fs.writeFileSync(path.join(__dirname, 'pilot.md'), render());
-  console.log('Записан docs/drafts/cognition/pilot.md');
+  fs.writeFileSync(path.join(__dirname, `${SET}.md`), render());
+  console.log(`Записан docs/drafts/cognition/${SET}.md`);
 }
 process.exitCode = errors.length ? 1 : 0;
