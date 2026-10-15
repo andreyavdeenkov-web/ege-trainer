@@ -39,6 +39,7 @@
     topicOptions: $('topic-options'),
     startBtn: $('start-btn'),
     brandHome: $('brand-home'),
+    siteNavLinks: Array.prototype.slice.call(document.querySelectorAll('.site-nav__link')),
     exitBar: $('exit-bar'),
     exitCancel: $('exit-cancel'),
     exitConfirm: $('exit-confirm'),
@@ -85,7 +86,8 @@
     attempt: null,  // текущая попытка (см. js/attempt.js)
     viewIndex: 0,   // задание, которое показано на экране (с 0)
     draft: null,    // отметки в текущем, ещё не отвеченном задании (см. emptyDraft)
-    matchRow: 0     // matching: позиция, куда попадёт цифра с клавиатуры
+    matchRow: 0,    // matching: позиция, куда попадёт цифра с клавиатуры
+    onExit: null    // что сделать после подтверждения выхода (см. requestExit)
   };
 
   /* ---------- Утилиты ---------- */
@@ -684,18 +686,42 @@
 
   // Подтверждение выхода — в самой странице: window.confirm() блокируется
   // во встроенных просмотрщиках (iframe с sandbox).
-  ui.brandHome.addEventListener('click', function () {
-    var inProgress = !ui.screens.quiz.hidden && state.attempt && A.answeredCount(state.attempt) > 0;
-    if (!inProgress) {
-      showStart();
+  // Общее для логотипа и ссылок «ЕГЭ | Олимпиады» в шапке: при начатой тренировке
+  // (есть хотя бы один ответ) сначала спрашиваем, иначе выходим сразу.
+  function isInProgress() {
+    return !ui.screens.quiz.hidden && !!state.attempt && A.answeredCount(state.attempt) > 0;
+  }
+
+  function requestExit(onExit) {
+    if (!isInProgress()) {
+      onExit();
       return;
     }
+    state.onExit = onExit;
     ui.exitBar.hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     ui.exitCancel.focus({ preventScroll: true });
+  }
+
+  ui.brandHome.addEventListener('click', function () { requestExit(showStart); });
+  ui.siteNavLinks.forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      // Ctrl/Cmd/Shift/средняя кнопка открывают новую вкладку — попытка здесь не теряется.
+      if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      if (!isInProgress()) return;
+      e.preventDefault();
+      requestExit(function () { window.location.href = link.href; });
+    });
   });
-  ui.exitCancel.addEventListener('click', function () { ui.exitBar.hidden = true; });
-  ui.exitConfirm.addEventListener('click', showStart);
+  ui.exitCancel.addEventListener('click', function () {
+    state.onExit = null;
+    ui.exitBar.hidden = true;
+  });
+  ui.exitConfirm.addEventListener('click', function () {
+    var onExit = state.onExit || showStart;
+    state.onExit = null;
+    onExit();
+  });
 
   document.addEventListener('keydown', function (e) {
     if (ui.screens.quiz.hidden || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -721,8 +747,9 @@
       e.preventDefault();
       goTo(state.viewIndex + (e.key === 'ArrowLeft' ? -1 : 1));
     } else if (e.key === 'Enter') {
-      // Enter на кнопке и так вызывает click — не дублируем действие.
+      // Enter на кнопке и ссылке (навигация в шапке) и так вызывает click — не дублируем действие.
       // Исключение — суждения: там Enter означает «Ответить».
+      if (tag === 'A') return;
       if (tag === 'BUTTON' && !e.target.classList.contains('statement__btn') &&
           !e.target.classList.contains('match-choice')) return;
       e.preventDefault();
