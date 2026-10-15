@@ -58,6 +58,7 @@ for (const t of tasks) {
   if (!model) { err(t.id, 'kimTask — 1, 2, 3 или 4'); continue; }
   if (S.getTaskType(t) !== model.type) err(t.id, `модель ${t.kimTask} требует тип ${model.type}`);
   if (!REVIEW[t.id]) err(t.id, 'нет экспертизы в REVIEW');
+  else if (!['принять', 'переработать', 'заменить'].includes(REVIEW[t.id][0])) err(t.id, 'статус — принять / переработать / заменить');
   if (!t.draft || !t.draft.code || !t.draft.theory || !t.draft.skill) err(t.id, 'нет draft.code / skill / theory');
 
   const correct = S.getCorrect(t);
@@ -72,14 +73,15 @@ for (const t of tasks) {
   }
   if (t.kimTask === 1 && correct.length !== 2) err(t.id, 'позиция 1: ровно два лишних');
   if (t.kimTask === 3) {
-    if (t.options.length < 2 || t.options.length > 3) err(t.id, 'позиция 3: 2–3 варианта во втором столбце');
+    // Во втором столбце позиции 3 — от 2 до 4 вариантов (ключи Котовой — Лисковой 2026, в. 5, 14, 28, 30).
+    if (t.options.length < 2 || t.options.length > 4) err(t.id, 'позиция 3: 2–4 варианта во втором столбце');
     const used = new Set(correct);
     if (used.size !== t.options.length) err(t.id, 'позиция 3: каждый вариант второго столбца должен использоваться');
     if (t.oneToOne) err(t.id, 'позиция 3: номера повторяются, oneToOne не нужен');
   }
 
   // Ограничительные слова: не больше одного такого суждения в задании.
-  const restricted = textsOf(t).filter((x) => RESTRICTIVE.test(x));
+  const restricted = textsOf(t).filter((x) => RESTRICTIVE.test(x.replace(/не только/gi, '')));
   if (restricted.length > 1) err(t.id, `ограничительные слова в ${restricted.length} суждениях`);
 
   // Пустые объяснения-шаблоны.
@@ -131,6 +133,8 @@ function render() {
   out.push('Статус: **черновик для содержательной экспертизы**. Задания не подключены к сайту и не входят в банк.');
   out.push('Источник данных: `docs/drafts/cognition/pilot.js`; этот файл собран скриптом `check-pilot.js --write` — правьте `pilot.js`.', '');
   out.push('Формулировки адаптированы к интерфейсу тренажёра (без «запишите цифры…»). В скобках «Ответ в бланке» — запись ответа по правилам ЕГЭ.', '');
+  const count = (st) => tasks.filter((t) => REVIEW[t.id][0] === st).length;
+  out.push(`**Повторная экспертиза** (после сверки со сборником Котовой — Лисковой 2026): принять — ${count('принять')}, переработать — ${count('переработать')}, заменить — ${count('заменить')}. Подробности — в отчёте \`stage-1-2.md\`, раздел «Редакция 4».`, '');
   out.push('| ID | Модель | Элемент | Ключ | Сл. | Статус |', '|---|---|---|---|---|---|');
   for (const t of tasks) {
     out.push(`| ${t.id} | ${t.kimTask} | ${t.draft.code} | ${keyString(t)} | ${t.difficulty} | ${REVIEW[t.id][0]} |`);
@@ -176,7 +180,7 @@ function render() {
     mistakes.forEach(([p, i]) => out.push(`- ${type === 'matching' ? letter(i) : i + 1}: ${p.mistake}`));
     out.push('', `**Теоретическая опора:** ${t.draft.theory}`, '');
     out.push(`**Основание соответствия ФИПИ:** ${BASIS[t.kimTask]} Элемент содержания — кодификатор ЕГЭ-2027 (проект), ${t.draft.code}. Задание авторское, не является заданием ФИПИ или сборника.`, '');
-    out.push(`**Экспертиза:** ${REVIEW[t.id][1]}`, '');
+    out.push(`**Повторная экспертиза:** ${REVIEW[t.id][1]}`, '');
     out.push(`**Редакционный статус:** ${REVIEW[t.id][0]}`, '');
   }
   return out.join('\n');
