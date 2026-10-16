@@ -11,7 +11,7 @@ test('примеры из условия: правильный ответ 1, 3, 
   assert.equal(scoreAnswer([1, 3, 5], correct), 2);
   assert.equal(scoreAnswer([1, 3], correct), 1);
   assert.equal(scoreAnswer([1, 3, 5, 6], correct), 1);
-  assert.equal(scoreAnswer([1, 4, 5], correct), 0);
+  assert.equal(scoreAnswer([1, 4, 5], correct), 1);  // 3 заменена на 4 — одна ошибка (ФИПИ)
   assert.equal(scoreAnswer([1], correct), 0);
 });
 
@@ -19,12 +19,12 @@ test('порядок выбора не важен', () => {
   assert.equal(scoreAnswer([5, 1, 3], [1, 3, 5]), 2);
 });
 
-test('количество ошибок — размер симметрической разности', () => {
+test('количество ошибок — большее из числа лишних и числа недостающих цифр', () => {
   assert.equal(countMistakes([1, 3, 5], [1, 3, 5]), 0);
   assert.equal(countMistakes([1, 3], [1, 3, 5]), 1);
   assert.equal(countMistakes([1, 3, 5, 6], [1, 3, 5]), 1);
-  assert.equal(countMistakes([1, 4, 5], [1, 3, 5]), 2);
-  assert.equal(countMistakes([2, 4], [1, 3, 5]), 5);
+  assert.equal(countMistakes([1, 4, 5], [1, 3, 5]), 1);
+  assert.equal(countMistakes([2, 4], [1, 3, 5]), 3);
   assert.equal(countMistakes([], [1, 3]), 2);
 });
 

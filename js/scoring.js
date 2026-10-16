@@ -10,6 +10,9 @@
  *                   максимум — 1 балл, только за полностью верный ответ;
  *   'matching'    — соответствие: для каждой позиции А, Б, В… (task.items)
  *                   выбрать номер из второго столбца (task.options).
+ *                   Модель оценивания задаёт task.kimTask: 3 — 1 балл только
+ *                   за полностью верный ответ; без поля (модель заданий 6, 13, 15) —
+ *                   2 балла, 1 балл при одной неверной позиции.
  * Ответ на задания с выбором — отсортированный список номеров [1, 3, 5];
  * ответ на matching — номера вариантов по порядку позиций: [1, 2, 3, 4, 5]
  * означает А — 1, Б — 2 и т. д.
@@ -28,17 +31,23 @@
     return result;
   }
 
-  /** Количество ошибок = размер симметрической разности множеств. */
+  /**
+   * Количество ошибок в ответе с выбором нескольких цифр — по правилу ФИПИ:
+   * большее из числа лишних (неверных) и числа недостающих цифр.
+   * Одна ошибка: одна цифра заменена другой (ключ 135, ответ 145), одна лишняя
+   * (1356) или одна пропущена (13). Две и больше — всё остальное.
+   */
   function countMistakes(selected, correct) {
     var sel = new Set(selected);
     var cor = new Set(correct);
-    var mistakes = 0;
-    sel.forEach(function (n) { if (!cor.has(n)) mistakes++; });
-    cor.forEach(function (n) { if (!sel.has(n)) mistakes++; });
-    return mistakes;
+    var extra = 0;
+    var missed = 0;
+    sel.forEach(function (n) { if (!cor.has(n)) extra++; });
+    cor.forEach(function (n) { if (!sel.has(n)) missed++; });
+    return Math.max(extra, missed);
   }
 
-  /** 0 ошибок — 2 балла, 1 ошибка — 1 балл, 2 и более — 0 баллов. */
+  /** 0 ошибок — 2 балла, 1 ошибка — 1 балл, 2 и более — 0 баллов (ошибки — см. countMistakes). */
   function scoreAnswer(selected, correct) {
     return Math.max(0, MAX_SCORE - countMistakes(selected, correct));
   }
@@ -71,13 +80,7 @@
    * задание оценивается в 1 балл и засчитывается лишь при полностью верном ответе.
    */
   function countExcludeMistakes(selected, correct) {
-    var sel = new Set(selected);
-    var cor = new Set(correct);
-    var extra = 0;
-    var missed = 0;
-    sel.forEach(function (n) { if (!cor.has(n)) extra++; });
-    cor.forEach(function (n) { if (!sel.has(n)) missed++; });
-    return Math.max(extra, missed);
+    return countMistakes(selected, correct);
   }
 
   /** matching: ошибка — каждая позиция, у которой номер не совпал с ключом (или не выбран). */
@@ -98,49 +101,77 @@
   }
 
   /**
-   * Своя проверка для каждого типа: подсчёт ошибок и шкала баллов.
-   * Оценивание типов не смешивается: у multiple и matching одинакова только
-   * шкала, ошибки считаются по-разному. Новый тип — новая строка таблицы.
+   * Своя проверка для каждой модели оценивания: подсчёт ошибок и шкала баллов.
+   * Модель — это тип задания, а у matching ещё и позиция в КИМ (task.kimTask):
+   * соответствие на позиции 3 оценивается иначе, чем на позициях 6, 13, 15.
+   * Оценивание моделей не смешивается. Новая модель — новая строка таблицы.
    */
   var GRADERS = {
     'multiple': { maxPoints: MAX_SCORE, countMistakes: countMistakes, points: pointsByMistakes(MAX_SCORE) },
     'exclude-two': { maxPoints: 1, countMistakes: countExcludeMistakes, points: allOrNothing(1) },
-    'matching': { maxPoints: MAX_SCORE, countMistakes: countMatchingMistakes, points: pointsByMistakes(MAX_SCORE) }
+    'matching': { maxPoints: MAX_SCORE, countMistakes: countMatchingMistakes, points: pointsByMistakes(MAX_SCORE) },
+    'matching-1': { maxPoints: 1, countMistakes: countMatchingMistakes, points: allOrNothing(1) }
   };
+
+  /** Модели оценивания (ключи GRADERS и SCORING_RULES). */
+  var SCORING_MODELS = Object.keys(GRADERS);
+
+  /**
+   * Позиции КИМ, при которых соответствие оценивается в 1 балл.
+   * Остальные соответствия (task.kimTask не задан или 6, 13, 15) — 2 балла.
+   */
+  var ONE_POINT_MATCHING_KIM_TASKS = [3];
+
+  /** Модель оценивания задания: тип, а для matching — с учётом task.kimTask. */
+  function getScoringModel(task) {
+    var type = getTaskType(task);
+    if (type === 'matching' && ONE_POINT_MATCHING_KIM_TASKS.indexOf(task.kimTask) !== -1) return 'matching-1';
+    return type;
+  }
+
+  /** Источник, по которому сверены правила оценивания. */
+  var FIPI_REFERENCE = 'Демонстрационный вариант КИМ ЕГЭ-2026 по обществознанию (ФИПИ), ' +
+    '«Система оценивания экзаменационной работы», часть 1; совпадает с п. 10 ' +
+    'спецификации КИМ ЕГЭ-2027 (проект). Спецификация 2026 г. при сверке не использовалась.';
 
   /**
    * Правила оценивания, на которых построены GRADERS, и статус их сверки
-   * с официальными документами ФИПИ. Пока verified: false, правило —
-   * рабочее правило тренажёра, а не подтверждённый критерий ФИПИ;
-   * после сверки — verified: true и reference (документ, год, раздел).
-   * kimTask — номер задания КИМ, если он подтверждён (иначе null).
+   * с официальными документами ФИПИ. verified: true — правило совпадает
+   * с документом из reference. kimTasks — позиции КИМ с этой моделью.
    */
   var SCORING_RULES = {
     'multiple': {
       title: 'Выбор нескольких верных ответов',
-      rule: 'Полное совпадение — 2 балла; один лишний или один пропущенный номер — 1 балл; две ошибки и более — 0.',
-      kimTask: null,
-      verified: false,
-      reference: null
+      rule: 'Полное совпадение — 2 балла; одна цифра заменена другой, одна лишняя или одна пропущена — 1 балл; иначе 0.',
+      kimTasks: [2, 4, 5, 7, 8, 10, 11, 14, 16],
+      verified: true,
+      reference: FIPI_REFERENCE
     },
     'exclude-two': {
       title: 'Два термина, «выпадающих» из общего ряда',
       rule: 'Ровно две позиции; 1 балл только за полностью верный ответ, иначе 0.',
-      kimTask: 1,  // формат задания № 1 демоверсии ФИПИ-2026 (по сведениям автора тренажёра)
-      verified: false,
-      reference: null
+      kimTasks: [1],
+      verified: true,
+      reference: FIPI_REFERENCE
     },
     'matching': {
-      title: 'Установление соответствия',
+      title: 'Установление соответствия (2 балла)',
       rule: 'Ошибка — каждая позиция с неверным номером; 0 ошибок — 2 балла, 1 — 1 балл, 2 и более — 0.',
-      kimTask: null,
-      verified: false,
-      reference: null
+      kimTasks: [6, 13, 15],
+      verified: true,
+      reference: FIPI_REFERENCE
+    },
+    'matching-1': {
+      title: 'Установление соответствия (1 балл)',
+      rule: '1 балл только при полном совпадении всех позиций с ключом, иначе 0.',
+      kimTasks: [3],
+      verified: true,
+      reference: FIPI_REFERENCE
     }
   };
 
   function graderFor(task) {
-    var grader = GRADERS[getTaskType(task)];
+    var grader = GRADERS[getScoringModel(task)];
     if (!grader) throw new Error('Неизвестный тип задания: ' + getTaskType(task));
     return grader;
   }
@@ -150,7 +181,7 @@
     return graderFor(task).countMistakes(selected, correct || getCorrect(task));
   }
 
-  /** Максимальный балл за задание: exclude-two — 1, остальные типы — 2. */
+  /** Максимальный балл за задание: exclude-two и matching на позиции 3 — 1, остальные — 2. */
   function getMaxPoints(task) {
     return graderFor(task).maxPoints;
   }
@@ -158,7 +189,7 @@
   /**
    * Балл за задание любого типа.
    * multiple и matching: 0 ошибок — 2, 1 ошибка — 1, 2 и более — 0.
-   * exclude-two: 1 балл только за полностью верный ответ, иначе 0.
+   * exclude-two и matching на позиции 3: 1 балл только за полностью верный ответ.
    */
   function scoreTask(task, selected, correct) {
     return graderFor(task).points(countTaskMistakes(task, selected, correct));
@@ -237,6 +268,9 @@
     countMatchingMistakes: countMatchingMistakes,
     countTaskMistakes: countTaskMistakes,
     GRADERS: GRADERS,
+    SCORING_MODELS: SCORING_MODELS,
+    ONE_POINT_MATCHING_KIM_TASKS: ONE_POINT_MATCHING_KIM_TASKS,
+    getScoringModel: getScoringModel,
     SCORING_RULES: SCORING_RULES,
     getMaxPoints: getMaxPoints,
     scoreTask: scoreTask,

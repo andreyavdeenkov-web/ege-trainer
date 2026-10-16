@@ -57,8 +57,10 @@ test('неизвестный формат: пустой пул, getFormat — nu
 /* ---------- Оценивание по типам ---------- */
 
 test('у каждого типа своя проверка и своё правило', () => {
-  assert.deepEqual(Object.keys(S.GRADERS).sort(), [...S.TYPES].sort());
-  assert.deepEqual(Object.keys(S.SCORING_RULES).sort(), [...S.TYPES].sort());
+  // Модели оценивания: каждый тип задания плюс соответствие за 1 балл (позиция 3 КИМ).
+  assert.deepEqual([...S.SCORING_MODELS].sort(), [...S.TYPES, 'matching-1'].sort());
+  assert.deepEqual(Object.keys(S.GRADERS).sort(), [...S.SCORING_MODELS].sort());
+  assert.deepEqual(Object.keys(S.SCORING_RULES).sort(), [...S.SCORING_MODELS].sort());
   assert.notEqual(S.GRADERS.multiple.countMistakes, S.GRADERS.matching.countMistakes,
     'multiple и matching считают ошибки по-разному');
   assert.equal(S.GRADERS.multiple.maxPoints, 2);
@@ -67,13 +69,21 @@ test('у каждого типа своя проверка и своё прав�
 });
 
 test('правила оценивания не выдаются за подтверждённые ФИПИ без ссылки на документ', () => {
-  for (const [type, rule] of Object.entries(S.SCORING_RULES)) {
-    assert.equal(typeof rule.verified, 'boolean', type);
-    if (rule.verified) assert.ok(rule.reference, `${type}: verified без ссылки на документ ФИПИ`);
-    else assert.equal(rule.reference, null, `${type}: ссылка есть, а verified: false`);
-    assert.equal(rule.verified, false, `${type}: правило ещё не сверено с официальной спецификацией`);
+  for (const [model, rule] of Object.entries(S.SCORING_RULES)) {
+    assert.equal(typeof rule.verified, 'boolean', model);
+    if (rule.verified) assert.ok(rule.reference, `${model}: verified без ссылки на документ ФИПИ`);
+    else assert.equal(rule.reference, null, `${model}: ссылка есть, а verified: false`);
+    assert.ok(Array.isArray(rule.kimTasks) && rule.kimTasks.length > 0, `${model}: позиции КИМ`);
   }
-  assert.equal(S.SCORING_RULES['exclude-two'].kimTask, 1, 'два лишних термина — формат задания № 1');
+  assert.deepEqual(Array.from(S.SCORING_RULES['exclude-two'].kimTasks), [1], 'два лишних термина — формат задания № 1');
+  assert.deepEqual(Array.from(S.SCORING_RULES['matching-1'].kimTasks), [3]);
+  assert.deepEqual(Array.from(S.SCORING_RULES.matching.kimTasks), [6, 13, 15]);
+});
+
+test('позиции КИМ не пересекаются между моделями; 9 и 12 (выбор из списка за 1 балл) не моделируются', () => {
+  const all = Object.values(S.SCORING_RULES).flatMap((r) => r.kimTasks).sort((a, b) => a - b);
+  assert.equal(new Set(all).size, all.length);
+  assert.deepEqual(all, [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 14, 15, 16]);
 });
 
 test('образцы из пособия (тип A): ключи 234 и 2345', () => {
