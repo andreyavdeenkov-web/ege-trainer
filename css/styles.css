@@ -862,6 +862,21 @@ kbd {
   .brand__subtitle { display: none; }
 }
 
+/* ===== Продолжение сохранённой попытки ===== */
+.resume { border-color: var(--primary); background: var(--primary-soft); margin-bottom: 16px; }
+.resume__title { font-weight: 700; }
+.resume__text { margin-top: 4px; color: var(--text-muted); }
+.resume__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.resume__actions .btn { flex: 1 1 160px; }
+.resume-notice {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--warn-border);
+  border-radius: 14px;
+  background: var(--warn-bg);
+  font-size: 15px;
+}
+
 /* ===== Подтверждение выхода ===== */
 .exit-bar {
   display: flex;

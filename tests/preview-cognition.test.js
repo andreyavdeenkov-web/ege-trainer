@@ -45,7 +45,7 @@ const tasksOf = (EGE) => EGE.preview.taskIds.map((id) => EGE.getTask(id));
 
 test('страница предпросмотра: тот же движок, только набор предпросмотра, без основного банка', () => {
   const scripts = previewScripts();
-  assert.deepEqual(scripts, ['js/registry.js', 'js/scoring.js', 'js/attempt.js', PREVIEW_DATA, 'js/task-view.js', 'js/app.js']);
+  assert.deepEqual(scripts, ['js/registry.js', 'js/scoring.js', 'js/attempt.js', 'js/attempt-save.js', PREVIEW_DATA, 'js/task-view.js', 'js/app.js']);
   const html = fs.readFileSync(path.join(root, PREVIEW_HTML), 'utf8');
   assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
 });

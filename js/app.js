@@ -1,7 +1,7 @@
 /**
  * Интерфейс тренажёра: стартовый экран, решение заданий, итоги.
- * Зависит от js/registry.js, js/scoring.js, js/attempt.js, js/task-view.js
- * и файлов data/tasks/**.js.
+ * Зависит от js/registry.js, js/scoring.js, js/attempt.js, js/attempt-save.js,
+ * js/task-view.js и файлов data/tasks/**.js.
  */
 (function () {
   'use strict';
@@ -22,6 +22,18 @@
    * и не перезаписываются. На index.html EGE.preview не задан.
    */
   var preview = EGE.preview || null;
+
+  /**
+   * Сохранение незавершённой попытки (js/attempt-save.js): после старта, каждого
+   * ответа, перехода между заданиями, отметки в текущем задании и при уходе со
+   * страницы. Область сохранения — режим страницы, раздел и тема, поэтому
+   * предпросмотр и разные темы основного тренажёра друг другу не мешают.
+   */
+  var saver = EGE.attemptSave;
+  var SAVE_MODE = preview ? 'preview' : 'ege';
+  var storage = (function () {
+    try { return window.localStorage; } catch (e) { return null; }
+  })();
 
   var HINTS = {
     'multiple': 'Отметьте все верные суждения. Можно выбрать несколько вариантов.',
@@ -47,6 +59,11 @@
     topicField: $('topic-field'),
     topicOptions: $('topic-options'),
     startBtn: $('start-btn'),
+    resumePanel: $('resume-panel'),
+    resumeText: $('resume-text'),
+    resumeContinue: $('resume-continue'),
+    resumeRestart: $('resume-restart'),
+    resumeNotice: $('resume-notice'),
     brandHome: $('brand-home'),
     siteNavLinks: Array.prototype.slice.call(document.querySelectorAll('.site-nav__link')),
     exitBar: $('exit-bar'),
@@ -96,7 +113,8 @@
     viewIndex: 0,   // задание, которое показано на экране (с 0)
     draft: null,    // отметки в текущем, ещё не отвеченном задании (см. emptyDraft)
     matchRow: 0,    // matching: позиция, куда попадёт цифра с клавиатуры
-    onExit: null    // что сделать после подтверждения выхода (см. requestExit)
+    onExit: null,   // что сделать после подтверждения выхода (см. requestExit)
+    resume: null    // проверенное сохранение для выбранных раздела и темы (см. renderResume)
   };
 
   /* ---------- Утилиты ---------- */
@@ -209,11 +227,13 @@
       ui.sectionOptions.closest('fieldset').hidden = true;
       ui.topicField.hidden = true;
       updateStartButton();
+      renderResume();
       return;
     }
     renderSectionOptions();
     renderTopicOptions();
     updateStartButton();
+    renderResume();
   }
 
   /** Разделы со счётчиками всех заданий (во всех форматах). Разделы без заданий скрыты. */
@@ -286,8 +306,92 @@
     });
     state.viewIndex = 0;
     state.draft = null;
+    persist(true);
     showScreen('quiz');
     renderView();
+  }
+
+  /* ---------- Сохранение и продолжение попытки ---------- */
+
+  /** Область сохранения выбранных на старте раздела и темы (или набора предпросмотра). */
+  function startScope() {
+    return saver.scopeId(SAVE_MODE, preview
+      ? { section: 'preview', topic: preview.id }
+      : { section: settings.section, topic: settings.topic });
+  }
+
+  function attemptScope(attempt) {
+    return saver.scopeId(SAVE_MODE, attempt.settings);
+  }
+
+  /**
+   * Сохраняет текущую незавершённую попытку. Ошибка хранилища не мешает тренировке.
+   * force — после старта и продолжения; иначе запись не затирает более свежее
+   * состояние, сохранённое этой же попыткой в другой вкладке, или другую попытку.
+   */
+  function persist(force) {
+    var attempt = state.attempt;
+    if (!attempt || attempt.finishedAt) return;
+    saver.write(storage, saver.buildRecord({
+      scope: attemptScope(attempt),
+      attempt: attempt,
+      viewIndex: state.viewIndex,
+      draft: state.draft,
+      getTask: EGE.getTask
+    }), { force: force === true });
+  }
+
+  function formatSavedAt(iso) {
+    var d = new Date(iso);
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + ' в ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  /**
+   * Стартовый экран: предложение продолжить сохранённую попытку выбранных раздела
+   * и темы. Запись, которую нельзя восстановить, удаляется, и ученик видит
+   * причину — без прежних баллов.
+   */
+  function renderResume() {
+    var result = saver.load(storage, startScope(), {
+      getTask: EGE.getTask, attempt: A, scoring: scoring
+    });
+    state.resume = result.status === 'ok' ? result.state : null;
+    ui.resumePanel.hidden = !state.resume;
+    if (result.status === 'invalid') {
+      ui.resumeNotice.textContent = 'Сохранённую тренировку нельзя продолжить: ' + result.message + ' Начните её заново.';
+      ui.resumeNotice.hidden = false;
+    }
+    if (!state.resume) return;
+
+    var attempt = state.resume.attempt;
+    var total = attempt.taskIds.length;
+    var done = A.answeredCount(attempt);
+    ui.resumeText.textContent = 'Выполнено ' + done + ' из ' + total + ' · баллы ' +
+      A.totalScore(attempt) + ' из ' + A.answeredMaxScore(attempt) +
+      ' · сохранено ' + formatSavedAt(state.resume.savedAt);
+  }
+
+  /** Продолжение: попытка, порядок заданий, ответы, баллы и позиция — из проверенного сохранения. */
+  function resumeSession() {
+    var saved = state.resume;
+    if (!saved) return;
+    state.resume = null;
+    state.attempt = saved.attempt;
+    state.viewIndex = saved.viewIndex;
+    state.draft = saved.draft;
+    state.matchRow = 0;
+    ui.resumeNotice.hidden = true;
+    persist(true);
+    showScreen('quiz');
+    renderView();
+  }
+
+  function restartSession() {
+    saver.remove(storage, startScope());
+    state.resume = null;
+    ui.resumeNotice.hidden = true;
+    startSession();
   }
 
   function taskAt(index) {
@@ -463,6 +567,7 @@
   function goTo(index) {
     if (!A.canView(state.attempt, index) || index === state.viewIndex) return;
     state.viewIndex = index;
+    persist();
     renderView();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -486,6 +591,7 @@
 
     view.setStatementSelected(ui.statements, number, pos === -1);
     ui.submitBtn.disabled = !isDraftReady(task, draft);
+    persist();
   }
 
   function renderMatchingDraft(task, answer) {
@@ -518,6 +624,7 @@
     }
     renderMatchingDraft(task, null);
     ui.submitBtn.disabled = !isDraftReady(task, draft);
+    persist();
   }
 
   /** Следующая незаполненная позиция после row (по кругу); если всё заполнено — row. */
@@ -538,6 +645,7 @@
 
     var answer = A.recordAnswer(attempt, task, state.draft);
     state.draft = null;
+    persist();
     notifyStore('onAnswer', [A.snapshot(answer), A.snapshot(attempt)]);
 
     renderView();
@@ -560,6 +668,8 @@
     var attempt = state.attempt;
     if (!attempt.finishedAt) {
       A.finishAttempt(attempt);
+      // Завершённая попытка больше не предлагается к продолжению.
+      saver.remove(storage, attemptScope(attempt));
       notifyStore('onFinish', [A.snapshot(attempt)]);
     }
 
@@ -680,12 +790,23 @@
     readStartForm();
     saveSettings();
     updateStartButton();
+    ui.resumeNotice.hidden = true;
+    renderResume();
+  });
+
+  ui.resumeContinue.addEventListener('click', resumeSession);
+  ui.resumeRestart.addEventListener('click', restartSession);
+  // Закрытие вкладки, переход в другое приложение на телефоне: сохраняем последнее состояние.
+  window.addEventListener('pagehide', function () { persist(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') persist();
   });
 
   ui.startForm.addEventListener('submit', function (e) {
     e.preventDefault();
     readStartForm();
     saveSettings();
+    ui.resumeNotice.hidden = true;
     startSession();
   });
 
