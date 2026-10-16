@@ -14,6 +14,15 @@
 
   var STORAGE_KEY = 'ege-trainer:settings';
 
+  /**
+   * Режим предпросмотра: страница подключает набор заданий, который задаёт
+   * EGE.preview = { id, title, taskIds } (см. data/preview/). Тот же движок,
+   * но без выбора раздела и темы: в тренировку входит весь набор в заданном
+   * порядке, без перемешивания. Настройки основного тренажёра не читаются
+   * и не перезаписываются. На index.html EGE.preview не задан.
+   */
+  var preview = EGE.preview || null;
+
   var HINTS = {
     'multiple': 'Отметьте все верные суждения. Можно выбрать несколько вариантов.',
     // multiple с choiceOf: 'items' — выбираются термины или другие элементы, а не суждения.
@@ -128,6 +137,7 @@
    */
   function loadSettings() {
     var result = { section: 'all', topic: 'all' };
+    if (preview) return result;
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (saved && typeof saved === 'object') {
@@ -139,6 +149,7 @@
   }
 
   function saveSettings() {
+    if (preview) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ section: settings.section, topic: settings.topic }));
     } catch (e) { /* не критично */ }
@@ -193,6 +204,13 @@
   }
 
   function renderStart() {
+    if (preview) {
+      // Разделы и темы не выбираются: набор задан страницей предпросмотра.
+      ui.sectionOptions.closest('fieldset').hidden = true;
+      ui.topicField.hidden = true;
+      updateStartButton();
+      return;
+    }
     renderSectionOptions();
     renderTopicOptions();
     updateStartButton();
@@ -226,6 +244,7 @@
 
   /** Все задания выбранных раздела и темы — во всех трёх форматах. */
   function currentPool() {
+    if (preview) return preview.taskIds.map(EGE.getTask);
     return EGE.getPool(settings.section, settings.topic);
   }
 
@@ -254,12 +273,15 @@
 
   function startSession() {
     var pool = shuffle(currentPool());
+    if (preview) pool = currentPool(); // предпросмотр — в заданном порядке
     if (pool.length === 0) {
       showStart();
       return;
     }
     state.attempt = A.createAttempt({
-      settings: { section: settings.section, topic: settings.topic },
+      settings: preview
+        ? { section: 'preview', topic: preview.id }
+        : { section: settings.section, topic: settings.topic },
       taskIds: pool.map(function (t) { return t.id; })
     });
     state.viewIndex = 0;
