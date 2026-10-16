@@ -71,6 +71,13 @@ for (const t of tasks) {
   if (!REVIEW[t.id]) err(t.id, 'нет экспертизы в REVIEW');
   else if (!STATUSES.includes(REVIEW[t.id][0])) err(t.id, `статус — ${STATUSES.join(' / ')}`);
   if (!t.draft || !t.draft.code || !t.draft.theory || !t.draft.skill) err(t.id, 'нет draft.code / skill / theory');
+  // Задание по официальному документу (например, Стратегии НТР): у каждой верной позиции —
+  // ссылка на пункт документа (поле ref), у задания — draft.officialSource.
+  if (t.draft && t.draft.officialSource) {
+    (t.statements || []).filter((x) => x.correct).forEach((x, i) => {
+      if (!x.ref) err(t.id, `верная позиция ${i + 1}: нет ссылки ref на пункт документа`);
+    });
+  }
 
   const correct = S.getCorrect(t);
   if (t.kimTask === 2) {
@@ -115,7 +122,8 @@ for (const k of [1, 2, 3, 4]) {
   const group = tasks.filter((t) => t.kimTask === k);
   const keys = group.map(keyString);
   const dup = keys.filter((x, i) => keys.indexOf(x) !== i);
-  if (dup.length) err(`модель ${k}`, `повторяющиеся ключи ${dup.join(', ')}`);
+  // Повтор набора ключей — только сведение для редактора: порядок суждений не меняют ради уникальности.
+  if (dup.length) warnings.push(`модель ${k}: повторяющиеся ключи ${dup.join(', ')} (сведение, не ошибка)`);
 }
 const m1 = tasks.filter((t) => t.kimTask === 2);
 const firstTrue = m1.filter((t) => t.statements[0].correct).length;
