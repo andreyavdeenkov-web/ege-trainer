@@ -23,7 +23,9 @@ function load(extra) {
   return context.EGE;
 }
 const loadMain = () => load(dataScripts);
-const loadPreview = () => load(['data/preview/cognition-batch1.js']);
+const COGNITION = 'data/tasks/society/cognition.js';
+const SCIENCE = 'data/tasks/society/science.js';
+const loadPreview = () => load([COGNITION, SCIENCE, 'data/preview/cognition-batch1.js']);
 
 /** Хранилище в памяти с интерфейсом localStorage. */
 function memoryStorage() {
@@ -280,7 +282,8 @@ test('две вкладки: устаревшее состояние не зат
 
 test('попытка, сохранённая в прежней редакции заданий предпросмотра, не восстанавливается', () => {
   const { toRevision1, EDITED_IDS } = require('./helpers/cognition-r2.js');
-  const source = fs.readFileSync(path.join(root, 'data/preview/cognition-batch1.js'), 'utf8');
+  // Задания редакции 1 — в файле заданий «Познания» (до переноса в основной банк — в cognition-batch1.js).
+  const source = fs.readFileSync(path.join(root, COGNITION), 'utf8');
   const revision1 = toRevision1(source);
   assert.notEqual(revision1, source);
 
@@ -289,6 +292,7 @@ test('попытка, сохранённая в прежней редакции 
   context.globalThis = context;
   for (const src of CORE) vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context);
   vm.runInContext(revision1, context);
+  for (const src of [SCIENCE, 'data/preview/cognition-batch1.js']) vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context);
   const OLD = context.EGE;
   assert.equal(OLD.getTask('OBS-COG-008').version, undefined);
   const storage = memoryStorage();
@@ -319,7 +323,7 @@ test('попытка, сохранённая в прежней редакции 
 });
 
 test('набор с фиксированным составом: попытка другого состава или порядка не восстанавливается', () => {
-  const EGE = load(['data/preview/cognition-batch1.js', 'data/preview/cognition-poznanie.js']);
+  const EGE = load([COGNITION, 'data/preview/cognition-poznanie.js']);
   const S = EGE.attemptSave;
   const ids = Array.from(EGE.preview.taskIds);
   const settings = { section: 'preview', topic: EGE.preview.id };

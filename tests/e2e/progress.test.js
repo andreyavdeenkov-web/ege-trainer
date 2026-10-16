@@ -2,7 +2,8 @@
 
 /**
  * Браузерные тесты сохранения и продолжения попытки (js/attempt-save.js)
- * в основном тренажёре ЕГЭ и на странице предпросмотра: компьютер и смартфон.
+ * в практикумах главной страницы и на странице предпросмотра: независимые записи
+ * практикумов, перенос попыток, сохранённых до практикумов, компьютер и смартфон.
  *
  * Запуск: npm run test:e2e
  * Снимки экрана: E2E_SCREENSHOTS=путь/к/папке npm run test:e2e
@@ -125,15 +126,31 @@ async function answerByKeyboard(page, task) {
   await page.keyboard.press('Enter');
 }
 
+const card = (page, id) => page.locator(`.practicum-card[data-practicum="${id}"]`);
+const progressOf = (page, id) => card(page, id).locator('.practicum-card__progress').textContent();
+const SCOPES = {
+  'OBS-ACT-P01': 'ege/OBS/OBS-ACT/OBS-ACT-P01',
+  'OBS-COG-P01': 'ege/OBS/OBS-COG/OBS-COG-P01',
+  'SOC-FAM-P01': 'ege/SOC/SOC-FAM/SOC-FAM-P01'
+};
+
+/** Раздел → тема → «Начать практикум». */
+async function startPracticum(page, section, topic, id) {
+  await pick(page, 'section', section);
+  await pick(page, 'topic', topic);
+  await card(page, id).locator('.practicum-card__start').click();
+  await page.waitForSelector('#screen-quiz:not([hidden])');
+}
+
 for (const config of CONFIGS) {
-  test(`${config.name}: основной тренажёр — продолжение после обновления страницы`, async () => {
+  test(`${config.name}: практикум — продолжение после обновления страницы`, async () => {
     const context = await newContext(config);
     const { page, errors } = await newPage(context, base);
-    const scope = 'ege/SOC/SOC-FAM';
+    const scope = SCOPES['SOC-FAM-P01'];
     await pick(page, 'section', 'SOC');
     await pick(page, 'topic', 'SOC-FAM');
-    assert.equal(await page.isVisible('#resume-panel'), false, 'до старта сохранения нет');
-    await page.click('#start-btn');
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').count(), 0, 'до старта сохранения нет');
+    await card(page, 'SOC-FAM-P01').locator('.practicum-card__start').click();
 
     // Три ответа (второй — с ошибкой), третий — с клавиатуры.
     for (let i = 0; i < 3; i++) {
@@ -153,19 +170,22 @@ for (const config of CONFIGS) {
     const before = await savedRecord(page, scope);
     const pillBefore = await page.textContent('#score-pill');
     assert.equal(before.attempt.answers.length, 3);
+    assert.equal(before.attempt.settings.practicum, 'SOC-FAM-P01');
     assert.equal(before.viewIndex, 3);
 
     await page.reload();
-    assert.ok(await page.isVisible('#resume-panel'), 'после обновления — предложение продолжить');
     assert.ok(await page.locator('input[name="topic"][value="SOC-FAM"]').isChecked());
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__status').textContent(), 'Не завершён');
     const scoreText = pillBefore.replace('Баллы: ', 'баллы ');
-    assert.match(await page.textContent('#resume-text'), new RegExp(`^Выполнено 3 из 31 · ${scoreText} · сохранено `));
-    assert.equal(await page.textContent('#resume-continue'), 'Продолжить');
-    assert.equal(await page.textContent('#resume-restart'), 'Начать заново');
+    assert.match(await progressOf(page, 'SOC-FAM-P01'), new RegExp(`^Выполнено 3 из 31 · ${scoreText} · сохранено `));
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').textContent(), 'Продолжить');
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__restart').textContent(), 'Начать заново');
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__start').count(), 0);
+    assert.match(await page.locator('label.topic-option:has(input[value="SOC-FAM"]) .topic-option__count').textContent(), /есть незавершённый/);
     await assertNoHorizontalScroll(page, 'предложение продолжить');
     await shot(page, config, '1-resume');
 
-    await page.click('#resume-continue');
+    await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').click();
     assert.match(await page.textContent('#progress-label'), /^Задание 4 из 31 · выполнено 3$/);
     assert.equal(await page.textContent('#score-pill'), pillBefore);
     const after = await savedRecord(page, scope);
@@ -180,7 +200,7 @@ for (const config of CONFIGS) {
     // Позиция: просмотр выполненного задания тоже сохраняется.
     await page.click('#task-nav li:nth-child(2) button');
     await page.reload();
-    await page.click('#resume-continue');
+    await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').click();
     assert.match(await page.textContent('#progress-label'), /^Задание 2 из 31/);
     assert.ok(await page.isVisible('#feedback'), 'выполненное задание — с разбором');
     assert.equal(await page.isVisible('#submit-btn'), false, 'засчитанный ответ не меняется');
@@ -195,22 +215,70 @@ for (const config of CONFIGS) {
     assert.deepEqual(errors, []);
     await context.close();
   });
+
+  test(`${config.name}: разные практикумы сохраняются независимо (познание → деятельность → познание)`, async () => {
+    const context = await newContext(config);
+    const { page, errors } = await newPage(context, base);
+    const cog = SCOPES['OBS-COG-P01'];
+    const act = SCOPES['OBS-ACT-P01'];
+
+    // Познание: пять заданий, выход на главную через логотип.
+    await startPracticum(page, 'OBS', 'OBS-COG', 'OBS-COG-P01');
+    for (let i = 0; i < 5; i++) {
+      await answer(page, await shownTask(page, cog), false);
+      await page.click('#next-btn');
+    }
+    assert.match(await page.textContent('#progress-label'), /^Задание 6 из 19 · выполнено 5$/);
+    await page.click('#brand-home');
+    assert.equal(await page.textContent('#exit-bar-text'), 'Прервать практикум? Ответы сохранены — продолжить можно со стартового экрана.');
+    await page.click('#exit-confirm');
+    await page.waitForSelector('#screen-start:not([hidden])');
+    assert.match(await progressOf(page, 'OBS-COG-P01'), /^Выполнено 5 из 19 · баллы 8 из 8 · сохранено /);
+
+    // Деятельность: два ответа, затем закрытие вкладки.
+    await pick(page, 'topic', 'OBS-ACT');
+    await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').click();
+    for (let i = 0; i < 2; i++) {
+      await answer(page, await shownTask(page, act), false);
+      await page.click('#next-btn');
+    }
+    assert.deepEqual(await savedKeys(page), [PREFIX + act, PREFIX + cog]);
+    await page.reload();
+
+    // Возврат к познанию: продолжение с шестого задания.
+    await pick(page, 'topic', 'OBS-COG');
+    assert.match(await progressOf(page, 'OBS-COG-P01'), /^Выполнено 5 из 19 · баллы 8 из 8/);
+    await shot(page, config, '3-two-practicums');
+    await card(page, 'OBS-COG-P01').locator('.practicum-card__continue').click();
+    assert.match(await page.textContent('#progress-label'), /^Задание 6 из 19 · выполнено 5$/);
+    assert.equal(await page.textContent('#quiz-title'), 'Познание · Практикум № 1');
+    await answer(page, await shownTask(page, cog), false);
+    assert.equal((await savedRecord(page, cog)).attempt.answers.length, 6);
+    // Деятельность не тронута.
+    assert.equal((await savedRecord(page, act)).attempt.answers.length, 2);
+
+    // На главной у обеих тем — отметка о незавершённом практикуме.
+    await page.click('#brand-home');
+    await page.click('#exit-confirm');
+    for (const topic of ['OBS-ACT', 'OBS-COG']) {
+      assert.match(await page.locator(`label.topic-option:has(input[value="${topic}"]) .topic-option__count`).textContent(), /есть незавершённый/, topic);
+    }
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
 }
 
-test('случайное закрытие вкладки: попытку можно продолжить в новой вкладке', async () => {
+test('случайное закрытие вкладки: практикум можно продолжить в новой вкладке', async () => {
   const context = await newContext(CONFIGS[0]);
   const first = await newPage(context, base);
-  await pick(first.page, 'section', 'OBS');
-  await pick(first.page, 'topic', 'OBS-ACT');
-  await first.page.click('#start-btn');
-  const task = await shownTask(first.page, 'ege/OBS/OBS-ACT');
+  await startPracticum(first.page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  const task = await shownTask(first.page, SCOPES['OBS-ACT-P01']);
   await answer(first.page, task, false);
   await first.page.close({ runBeforeUnload: true });
 
   const second = await newPage(context, base);
-  assert.ok(await second.page.isVisible('#resume-panel'));
-  assert.match(await second.page.textContent('#resume-text'), /^Выполнено 1 из 16 · баллы \d из \d/);
-  await second.page.click('#resume-continue');
+  assert.match(await progressOf(second.page, 'OBS-ACT-P01'), /^Выполнено 1 из 16 · баллы \d из \d/);
+  await card(second.page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
   // Ответ засчитан, на экране — выполненное задание с разбором (как перед закрытием).
   assert.match(await second.page.textContent('#progress-label'), /^Задание 1 из 16 · выполнено 1$/);
   assert.ok(await second.page.isVisible('#feedback'));
@@ -220,15 +288,13 @@ test('случайное закрытие вкладки: попытку мож�
 
 test('две вкладки: закрытие старой вкладки не затирает прогресс из новой', async () => {
   const context = await newContext(CONFIGS[0]);
-  const scope = 'ege/OBS/OBS-ACT';
+  const scope = SCOPES['OBS-ACT-P01'];
   const a = await newPage(context, base);
-  await pick(a.page, 'section', 'OBS');
-  await pick(a.page, 'topic', 'OBS-ACT');
-  await a.page.click('#start-btn');
+  await startPracticum(a.page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
   await answer(a.page, await shownTask(a.page, scope), false);
 
   const b = await newPage(context, base);
-  await b.page.click('#resume-continue');
+  await card(b.page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
   await b.page.click('#next-btn');
   await answer(b.page, await shownTask(b.page, scope), false);
   await b.page.click('#next-btn');
@@ -241,56 +307,81 @@ test('две вкладки: закрытие старой вкладки не �
   await context.close();
 });
 
-test('«Начать заново» удаляет сохранение и начинает новую попытку', async () => {
+test('«Начать заново» удаляет сохранение практикума и начинает новую попытку', async () => {
   const context = await newContext(CONFIGS[0]);
   const { page, errors } = await newPage(context, base);
-  await pick(page, 'section', 'OBS');
-  await pick(page, 'topic', 'OBS-ACT');
-  await page.click('#start-btn');
-  await answer(page, await shownTask(page, 'ege/OBS/OBS-ACT'), false);
-  const oldId = (await savedRecord(page, 'ege/OBS/OBS-ACT')).attempt.id;
+  const scope = SCOPES['OBS-ACT-P01'];
+  await startPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  await answer(page, await shownTask(page, scope), false);
+  const oldId = (await savedRecord(page, scope)).attempt.id;
   await page.reload();
-  await page.click('#resume-restart');
+  await card(page, 'OBS-ACT-P01').locator('.practicum-card__restart').click();
   assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 · выполнено 0$/);
   assert.equal(await page.textContent('#score-pill'), 'Баллы: 0 из 0');
-  const record = await savedRecord(page, 'ege/OBS/OBS-ACT');
+  const record = await savedRecord(page, scope);
   assert.notEqual(record.attempt.id, oldId);
   assert.equal(record.attempt.answers.length, 0);
   assert.deepEqual(errors, []);
   await context.close();
 });
 
-test('сохранения разных тем и предпросмотра не смешиваются', async () => {
+test('сохранения практикумов и предпросмотра не смешиваются', async () => {
   const context = await newContext(CONFIGS[0]);
   const { page, errors } = await newPage(context, base);
-  await pick(page, 'section', 'OBS');
-  await pick(page, 'topic', 'OBS-ACT');
-  await page.click('#start-btn');
-  await answer(page, await shownTask(page, 'ege/OBS/OBS-ACT'), false);
+  const act = SCOPES['OBS-ACT-P01'];
+  await startPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  await answer(page, await shownTask(page, act), false);
   await page.reload();
-  assert.ok(await page.isVisible('#resume-panel'));
+  assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').isVisible());
 
-  // Другая тема того же раздела, весь раздел, все разделы — своего сохранения нет.
-  for (const [section, topic] of [['OBS', 'OBS-GEN'], ['OBS', 'all'], ['all', null]]) {
-    await pick(page, 'section', section);
-    if (topic) await pick(page, 'topic', topic);
-    assert.equal(await page.isVisible('#resume-panel'), false, `${section}/${topic}`);
-  }
-  await pick(page, 'section', 'OBS');
-  await pick(page, 'topic', 'OBS-ACT');
-  assert.ok(await page.isVisible('#resume-panel'), 'своя тема — сохранение на месте');
+  // Другие практикумы — своего сохранения нет.
+  await pick(page, 'topic', 'OBS-COG');
+  assert.equal(await card(page, 'OBS-COG-P01').locator('.practicum-card__continue').count(), 0);
+  await pick(page, 'section', 'SOC');
+  await pick(page, 'topic', 'SOC-FAM');
+  assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').count(), 0);
 
-  // Предпросмотр не видит сохранение основного тренажёра и пишет своё.
+  // Предпросмотр «Познания» не видит сохранение практикума «Познание» и пишет своё.
   await page.goto(previewUrl);
   assert.equal(await page.isVisible('#resume-panel'), false);
   await page.click('#start-btn');
   await answer(page, await shownTask(page, 'preview/preview/cognition-batch1'), false);
-  assert.deepEqual(await savedKeys(page), [PREFIX + 'ege/OBS/OBS-ACT', PREFIX + 'preview/preview/cognition-batch1']);
-  assert.equal((await savedRecord(page, 'ege/OBS/OBS-ACT')).attempt.answers.length, 1, 'основное сохранение не тронуто');
+  assert.deepEqual(await savedKeys(page), [PREFIX + act, PREFIX + 'preview/preview/cognition-batch1']);
+  assert.equal((await savedRecord(page, act)).attempt.answers.length, 1, 'основное сохранение не тронуто');
 
   await page.goto(base);
-  assert.ok(await page.isVisible('#resume-panel'));
-  assert.match(await page.textContent('#resume-text'), /^Выполнено 1 из 16/);
+  await pick(page, 'section', 'OBS');
+  await pick(page, 'topic', 'OBS-ACT');
+  assert.match(await progressOf(page, 'OBS-ACT-P01'), /^Выполнено 1 из 16/);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('незавершённая попытка темы, сохранённая до практикумов, продолжается в практикуме', async () => {
+  const legacy = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/legacy-attempts.json'), 'utf8')).records;
+  const context = await newContext(CONFIGS[1]);
+  const { page, errors } = await newPage(context, base + 'olympiad.html');
+  // Записи прежней версии: тема «Деятельность» целиком, «Весь раздел», прежние настройки старта.
+  const savedAt = new Date(Date.now() - 3600 * 1000).toISOString();
+  await page.evaluate(([records, at]) => {
+    for (const scope of ['ege/OBS/OBS-ACT', 'ege/OBS/all']) {
+      localStorage.setItem('ege-trainer:attempt:' + scope, JSON.stringify(Object.assign(records[scope], { savedAt: at })));
+    }
+    localStorage.setItem('ege-trainer:settings', JSON.stringify({ section: 'OBS', topic: 'OBS-ACT' }));
+  }, [legacy, savedAt]);
+
+  await page.goto(base);
+  assert.ok(await page.locator('input[name="topic"][value="OBS-ACT"]').isChecked());
+  assert.match(await progressOf(page, 'OBS-ACT-P01'), /^Выполнено 5 из 16 · баллы 8 из 9 · сохранено /);
+  // Запись перенесена в практикум; запись «Весь раздел» не удалена.
+  assert.deepEqual(await savedKeys(page), [PREFIX + 'ege/OBS/OBS-ACT/OBS-ACT-P01', PREFIX + 'ege/OBS/all']);
+  await shot(page, CONFIGS[1], '4-legacy-migrated');
+  await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
+  assert.match(await page.textContent('#progress-label'), /^Задание 6 из 16 · выполнено 5$/);
+  assert.equal(await page.textContent('#score-pill'), 'Баллы: 8 из 9');
+  const record = await savedRecord(page, SCOPES['OBS-ACT-P01']);
+  assert.deepEqual(record.attempt.taskIds, legacy['ege/OBS/OBS-ACT'].attempt.taskIds, 'порядок заданий прежний');
+  assert.equal(record.attempt.id, legacy['ege/OBS/OBS-ACT'].attempt.id);
   assert.deepEqual(errors, []);
   await context.close();
 });
@@ -298,10 +389,9 @@ test('сохранения разных тем и предпросмотра н�
 test('несовместимое сохранение: объяснение вместо прежних баллов, запись удалена', async () => {
   const context = await newContext(CONFIGS[0]);
   const { page, errors } = await newPage(context, base);
-  await pick(page, 'section', 'OBS');
-  await pick(page, 'topic', 'OBS-ACT');
-  await page.click('#start-btn');
-  await answer(page, await shownTask(page, 'ege/OBS/OBS-ACT'), true);
+  const scope = SCOPES['OBS-ACT-P01'];
+  await startPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  await answer(page, await shownTask(page, scope), true);
   // Имитация: в сохранении баллы, которых текущий движок за этот ответ не даёт.
   // Запись меняется, когда страница тренажёра закрыта (уходя, она сохраняет попытку сама).
   await page.goto(base + 'olympiad.html');
@@ -310,15 +400,14 @@ test('несовместимое сохранение: объяснение вм
     const a = r.attempt.answers[0];
     a.points = (a.points + 1) % (a.maxPoints + 1);
     localStorage.setItem(k, JSON.stringify(r));
-  }, PREFIX + 'ege/OBS/OBS-ACT');
+  }, PREFIX + scope);
   await page.goto(base);
-  assert.equal(await page.isVisible('#resume-panel'), false);
-  assert.ok(await page.isVisible('#resume-notice'));
-  assert.equal(await page.textContent('#resume-notice'),
-    'Сохранённую тренировку нельзя продолжить: правила оценивания или ключи заданий с тех пор изменились. Начните её заново.');
+  assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').count(), 0);
+  assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__notice').textContent(),
+    'Сохранённый практикум нельзя продолжить: правила оценивания или ключи заданий с тех пор изменились. Начните его заново.');
   assert.deepEqual(await savedKeys(page), []);
-  await shot(page, CONFIGS[0], '3-invalid');
-  await page.click('#start-btn');
+  await shot(page, CONFIGS[0], '5-invalid');
+  await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').click();
   assert.match(await page.textContent('#progress-label'), /выполнено 0$/);
   assert.deepEqual(errors, []);
   await context.close();
@@ -327,39 +416,38 @@ test('несовместимое сохранение: объяснение вм
 test('выход через логотип: подтверждение, затем можно продолжить', async () => {
   const context = await newContext(CONFIGS[0]);
   const { page, errors } = await newPage(context, base);
-  await pick(page, 'section', 'OBS');
-  await pick(page, 'topic', 'OBS-ACT');
-  await page.click('#start-btn');
-  await answer(page, await shownTask(page, 'ege/OBS/OBS-ACT'), false);
+  await startPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  await answer(page, await shownTask(page, SCOPES['OBS-ACT-P01']), false);
   await page.click('#brand-home');
-  assert.equal(await page.textContent('#exit-bar-text'), 'Прервать тренировку? Ответы сохранены — продолжить можно со стартового экрана.');
+  assert.equal(await page.textContent('#exit-bar-text'), 'Прервать практикум? Ответы сохранены — продолжить можно со стартового экрана.');
   await page.click('#exit-confirm');
-  assert.ok(await page.isVisible('#resume-panel'));
-  await page.click('#resume-continue');
+  await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
   assert.match(await page.textContent('#progress-label'), /выполнено 1$/);
   assert.deepEqual(errors, []);
   await context.close();
 });
 
-test('завершённая попытка не предлагается к продолжению', async () => {
+test('завершённый практикум не предлагается к продолжению', async () => {
   const context = await newContext(CONFIGS[0]);
   const { page, errors } = await newPage(context, base);
-  await pick(page, 'section', 'SOC');
-  await pick(page, 'topic', 'SOC-STR');
-  await page.click('#start-btn');
-  for (let i = 0; i < 6; i++) {
-    await answer(page, await shownTask(page, 'ege/SOC/SOC-STR'), false);
+  const scope = SCOPES['OBS-ACT-P01'];
+  await startPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  for (let i = 0; i < 16; i++) {
+    await answer(page, await shownTask(page, scope), false);
     await page.click('#next-btn');
   }
   await page.waitForSelector('#screen-result:not([hidden])');
   assert.deepEqual(await savedKeys(page), []);
+  await page.click('#home-btn');
+  assert.equal(await page.textContent('#home-btn'), 'К выбору практикума');
+  assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').isVisible());
   await page.reload();
-  assert.equal(await page.isVisible('#resume-panel'), false);
+  assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').count(), 0);
   assert.deepEqual(errors, []);
   await context.close();
 });
 
-test('хранилище недоступно: тренировка работает, предложения продолжить нет', async () => {
+test('хранилище недоступно: практикум работает, предложения продолжить нет', async () => {
   const context = await newContext(CONFIGS[0]);
   await context.addInitScript(() => {
     Object.defineProperty(window, 'localStorage', { get() { throw new Error('SecurityError'); } });
@@ -368,14 +456,14 @@ test('хранилище недоступно: тренировка работа
   const errors = [];
   page.on('pageerror', (err) => errors.push(String(err)));
   await page.goto(base);
-  await pick(page, 'section', 'OBS');
-  await pick(page, 'topic', 'OBS-GEN');
-  await page.click('#start-btn');
-  await page.click('#statements .statement[data-number="1"] .statement__btn');
-  await page.click('#submit-btn');
-  await page.waitForSelector('#feedback:not([hidden])');
+  await startPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 · выполнено 0$/);
+  await page.click('#statements:not([hidden]) .statement[data-number="1"] .statement__btn, .match-choice[data-row="0"][data-n="1"]');
   await page.reload();
-  assert.equal(await page.isVisible('#resume-panel'), false);
+  await pick(page, 'section', 'OBS');
+  await pick(page, 'topic', 'OBS-ACT');
+  assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').count(), 0);
+  assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').isVisible());
   assert.deepEqual(errors, []);
   await context.close();
 });
@@ -385,8 +473,9 @@ test('предпросмотр: попытка прежней редакции �
   const scope = 'preview/preview/cognition-batch1';
   const context = await newContext(CONFIGS[1]);
   // Сначала страница получает данные редакции 1 (как до публикации правки).
-  const dataUrl = previewUrl.replace('preview-cognition.html', 'data/preview/cognition-batch1.js');
-  const oldData = toRevision1(fs.readFileSync(path.join(root, 'data/preview/cognition-batch1.js'), 'utf8'));
+  // Задания редакции 1 — в файле заданий «Познания», который подключает страница предпросмотра.
+  const dataUrl = base + 'data/tasks/society/cognition.js';
+  const oldData = toRevision1(fs.readFileSync(path.join(root, 'data/tasks/society/cognition.js'), 'utf8'));
   await context.route(dataUrl, (route) => route.fulfill({ contentType: 'text/javascript; charset=utf-8', body: oldData }));
   const first = await newPage(context, previewUrl);
   await first.page.click('#start-btn');

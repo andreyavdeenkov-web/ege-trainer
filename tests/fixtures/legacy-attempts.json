@@ -1,0 +1,649 @@
+{
+ "note": "Незавершённые попытки, сохранённые кодом main до появления практикумов (js/attempt-save.js, saveVersion 1). Создано скриптом один раз; не редактировать.",
+ "records": {
+  "ege/OBS/OBS-ACT": {
+   "format": "ege-attempt-save",
+   "saveVersion": 1,
+   "scope": "ege/OBS/OBS-ACT",
+   "savedAt": "2026-10-10T09:06:00.000Z",
+   "attempt": {
+    "schemaVersion": 1,
+    "id": "legacy-obs-act",
+    "startedAt": "2026-10-10T09:00:00.000Z",
+    "finishedAt": null,
+    "settings": {
+     "section": "OBS",
+     "topic": "OBS-ACT"
+    },
+    "taskIds": [
+     "OBS-ACT-006",
+     "OBS-ACT-001",
+     "OBS-ACT-013",
+     "OBS-ACT-004",
+     "OBS-ACT-010",
+     "OBS-ACT-002",
+     "OBS-ACT-016",
+     "OBS-ACT-008",
+     "OBS-ACT-003",
+     "OBS-ACT-012",
+     "OBS-ACT-005",
+     "OBS-ACT-015",
+     "OBS-ACT-007",
+     "OBS-ACT-011",
+     "OBS-ACT-009",
+     "OBS-ACT-014"
+    ],
+    "answers": [
+     {
+      "taskId": "OBS-ACT-006",
+      "taskVersion": 1,
+      "position": 1,
+      "selected": [
+       1,
+       3,
+       4
+      ],
+      "correct": [
+       1,
+       3,
+       4
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-10T09:01:00.000Z"
+     },
+     {
+      "taskId": "OBS-ACT-001",
+      "taskVersion": 1,
+      "position": 2,
+      "selected": [
+       1,
+       2
+      ],
+      "correct": [
+       2,
+       5
+      ],
+      "points": 0,
+      "maxPoints": 1,
+      "answeredAt": "2026-10-10T09:02:00.000Z"
+     },
+     {
+      "taskId": "OBS-ACT-013",
+      "taskVersion": 1,
+      "position": 3,
+      "selected": [
+       1,
+       2,
+       3,
+       5
+      ],
+      "correct": [
+       1,
+       2,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-10T09:03:00.000Z"
+     },
+     {
+      "taskId": "OBS-ACT-004",
+      "taskVersion": 1,
+      "position": 4,
+      "selected": [
+       1,
+       2,
+       3
+      ],
+      "correct": [
+       1,
+       2,
+       3
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-10T09:04:00.000Z"
+     },
+     {
+      "taskId": "OBS-ACT-010",
+      "taskVersion": 1,
+      "position": 5,
+      "selected": [
+       1,
+       2,
+       3,
+       5
+      ],
+      "correct": [
+       1,
+       2,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-10T09:05:00.000Z"
+     }
+    ]
+   },
+   "viewIndex": 5,
+   "draft": null,
+   "tasks": {
+    "OBS-ACT-006": "5c23878d",
+    "OBS-ACT-001": "8ce9fe2e",
+    "OBS-ACT-013": "33e02ba7",
+    "OBS-ACT-004": "af0664ef",
+    "OBS-ACT-010": "0f16b1bf",
+    "OBS-ACT-002": "32cee1e7",
+    "OBS-ACT-016": "6e8352f5",
+    "OBS-ACT-008": "2c6c3bba",
+    "OBS-ACT-003": "52b4d6cc",
+    "OBS-ACT-012": "97850fa1",
+    "OBS-ACT-005": "18063beb",
+    "OBS-ACT-015": "6a3e6229",
+    "OBS-ACT-007": "2be9c1e2",
+    "OBS-ACT-011": "0e89a6b2",
+    "OBS-ACT-009": "22194e07",
+    "OBS-ACT-014": "839a45a9"
+   }
+  },
+  "ege/SOC/SOC-FAM": {
+   "format": "ege-attempt-save",
+   "saveVersion": 1,
+   "scope": "ege/SOC/SOC-FAM",
+   "savedAt": "2026-10-11T09:04:00.000Z",
+   "attempt": {
+    "schemaVersion": 1,
+    "id": "legacy-soc-fam",
+    "startedAt": "2026-10-11T09:00:00.000Z",
+    "finishedAt": null,
+    "settings": {
+     "section": "SOC",
+     "topic": "SOC-FAM"
+    },
+    "taskIds": [
+     "SOC-FAM-042",
+     "SOC-FAM-041",
+     "SOC-FAM-040",
+     "SOC-FAM-039",
+     "SOC-FAM-031",
+     "SOC-FAM-026",
+     "SOC-FAM-025",
+     "SOC-FAM-024",
+     "SOC-FAM-023",
+     "SOC-FAM-022",
+     "SOC-FAM-038",
+     "SOC-FAM-021",
+     "SOC-FAM-019",
+     "SOC-FAM-018",
+     "SOC-FAM-017",
+     "SOC-FAM-037",
+     "SOC-FAM-036",
+     "SOC-FAM-035",
+     "SOC-FAM-034",
+     "SOC-FAM-033",
+     "SOC-FAM-032",
+     "SOC-FAM-016",
+     "SOC-FAM-014",
+     "SOC-FAM-012",
+     "SOC-FAM-007",
+     "SOC-FAM-006",
+     "SOC-FAM-005",
+     "SOC-FAM-004",
+     "SOC-FAM-003",
+     "SOC-FAM-002",
+     "SOC-FAM-001"
+    ],
+    "answers": [
+     {
+      "taskId": "SOC-FAM-042",
+      "taskVersion": 1,
+      "position": 1,
+      "selected": [
+       2,
+       1,
+       2,
+       1,
+       1
+      ],
+      "correct": [
+       2,
+       1,
+       2,
+       1,
+       1
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-11T09:01:00.000Z"
+     },
+     {
+      "taskId": "SOC-FAM-041",
+      "taskVersion": 1,
+      "position": 2,
+      "selected": [
+       2,
+       1,
+       2,
+       1,
+       3
+      ],
+      "correct": [
+       2,
+       1,
+       2,
+       1,
+       3
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-11T09:02:00.000Z"
+     },
+     {
+      "taskId": "SOC-FAM-040",
+      "taskVersion": 1,
+      "position": 3,
+      "selected": [
+       2,
+       1,
+       1,
+       1,
+       2
+      ],
+      "correct": [
+       1,
+       1,
+       1,
+       2,
+       2
+      ],
+      "points": 0,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-11T09:03:00.000Z"
+     }
+    ]
+   },
+   "viewIndex": 3,
+   "draft": null,
+   "tasks": {
+    "SOC-FAM-042": "e766448e",
+    "SOC-FAM-041": "60d683b9",
+    "SOC-FAM-040": "9011d224",
+    "SOC-FAM-039": "9f19c793",
+    "SOC-FAM-031": "b3a8738a",
+    "SOC-FAM-026": "5007f540",
+    "SOC-FAM-025": "5d8c16c7",
+    "SOC-FAM-024": "4ef50954",
+    "SOC-FAM-023": "8d96f9c5",
+    "SOC-FAM-022": "a860cfbb",
+    "SOC-FAM-038": "86aee496",
+    "SOC-FAM-021": "b6075c04",
+    "SOC-FAM-019": "9bff5667",
+    "SOC-FAM-018": "bbfb2c80",
+    "SOC-FAM-017": "8aa0313d",
+    "SOC-FAM-037": "14fa1a14",
+    "SOC-FAM-036": "eed9887c",
+    "SOC-FAM-035": "d36286e7",
+    "SOC-FAM-034": "a0e96895",
+    "SOC-FAM-033": "2b1c612f",
+    "SOC-FAM-032": "abea0b9b",
+    "SOC-FAM-016": "9ecb1d57",
+    "SOC-FAM-014": "5796a836",
+    "SOC-FAM-012": "2225fb03",
+    "SOC-FAM-007": "1732117f",
+    "SOC-FAM-006": "1491a508",
+    "SOC-FAM-005": "6ee382af",
+    "SOC-FAM-004": "197c473b",
+    "SOC-FAM-003": "1793c2a2",
+    "SOC-FAM-002": "2d26c1fb",
+    "SOC-FAM-001": "c1585e08"
+   }
+  },
+  "ege/OBS/all": {
+   "format": "ege-attempt-save",
+   "saveVersion": 1,
+   "scope": "ege/OBS/all",
+   "savedAt": "2026-10-12T09:03:00.000Z",
+   "attempt": {
+    "schemaVersion": 1,
+    "id": "legacy-all",
+    "startedAt": "2026-10-12T09:00:00.000Z",
+    "finishedAt": null,
+    "settings": {
+     "section": "OBS",
+     "topic": "all"
+    },
+    "taskIds": [
+     "OBS-GEN-001",
+     "OBS-GEN-002",
+     "OBS-GEN-003",
+     "OBS-ACT-001",
+     "OBS-ACT-002",
+     "OBS-ACT-003",
+     "OBS-ACT-004",
+     "OBS-ACT-005",
+     "OBS-ACT-006",
+     "OBS-ACT-007",
+     "OBS-ACT-008",
+     "OBS-ACT-009",
+     "OBS-ACT-010",
+     "OBS-ACT-011",
+     "OBS-ACT-012",
+     "OBS-ACT-013",
+     "OBS-ACT-014",
+     "OBS-ACT-015",
+     "OBS-ACT-016"
+    ],
+    "answers": [
+     {
+      "taskId": "OBS-GEN-001",
+      "taskVersion": 1,
+      "position": 1,
+      "selected": [
+       1,
+       4,
+       5
+      ],
+      "correct": [
+       1,
+       4,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-12T09:01:00.000Z"
+     },
+     {
+      "taskId": "OBS-GEN-002",
+      "taskVersion": 1,
+      "position": 2,
+      "selected": [
+       2,
+       3,
+       5
+      ],
+      "correct": [
+       2,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-12T09:02:00.000Z"
+     }
+    ]
+   },
+   "viewIndex": 2,
+   "draft": null,
+   "tasks": {
+    "OBS-GEN-001": "1d75c5f5",
+    "OBS-GEN-002": "3e70a68a",
+    "OBS-GEN-003": "e3ad9bae",
+    "OBS-ACT-001": "8ce9fe2e",
+    "OBS-ACT-002": "32cee1e7",
+    "OBS-ACT-003": "52b4d6cc",
+    "OBS-ACT-004": "af0664ef",
+    "OBS-ACT-005": "18063beb",
+    "OBS-ACT-006": "5c23878d",
+    "OBS-ACT-007": "2be9c1e2",
+    "OBS-ACT-008": "2c6c3bba",
+    "OBS-ACT-009": "22194e07",
+    "OBS-ACT-010": "0f16b1bf",
+    "OBS-ACT-011": "0e89a6b2",
+    "OBS-ACT-012": "97850fa1",
+    "OBS-ACT-013": "33e02ba7",
+    "OBS-ACT-014": "839a45a9",
+    "OBS-ACT-015": "6a3e6229",
+    "OBS-ACT-016": "6e8352f5"
+   }
+  },
+  "ege/all/all": {
+   "format": "ege-attempt-save",
+   "saveVersion": 1,
+   "scope": "ege/all/all",
+   "savedAt": "2026-10-12T10:02:00.000Z",
+   "attempt": {
+    "schemaVersion": 1,
+    "id": "legacy-all",
+    "startedAt": "2026-10-12T10:00:00.000Z",
+    "finishedAt": null,
+    "settings": {
+     "section": "all",
+     "topic": "all"
+    },
+    "taskIds": [
+     "OBS-GEN-001",
+     "OBS-GEN-002",
+     "OBS-GEN-003",
+     "OBS-ACT-001",
+     "OBS-ACT-002",
+     "OBS-ACT-003",
+     "OBS-ACT-004",
+     "OBS-ACT-005",
+     "OBS-ACT-006",
+     "OBS-ACT-007",
+     "OBS-ACT-008",
+     "OBS-ACT-009",
+     "OBS-ACT-010",
+     "OBS-ACT-011",
+     "OBS-ACT-012",
+     "OBS-ACT-013",
+     "OBS-ACT-014",
+     "OBS-ACT-015",
+     "OBS-ACT-016",
+     "ECO-GEN-001",
+     "ECO-GEN-002",
+     "ECO-GEN-003",
+     "SOC-STR-001",
+     "SOC-STR-002",
+     "SOC-STR-003",
+     "SOC-STR-004",
+     "SOC-STR-005",
+     "SOC-STR-006",
+     "SOC-MOB-001",
+     "SOC-FAM-001",
+     "SOC-FAM-002",
+     "SOC-FAM-003",
+     "SOC-FAM-004",
+     "SOC-FAM-005",
+     "SOC-FAM-006",
+     "SOC-FAM-007",
+     "SOC-FAM-012",
+     "SOC-FAM-014",
+     "SOC-FAM-016",
+     "SOC-FAM-032",
+     "SOC-FAM-033",
+     "SOC-FAM-034",
+     "SOC-FAM-035",
+     "SOC-FAM-036",
+     "SOC-FAM-037",
+     "SOC-FAM-017",
+     "SOC-FAM-018",
+     "SOC-FAM-019",
+     "SOC-FAM-021",
+     "SOC-FAM-038",
+     "SOC-FAM-022",
+     "SOC-FAM-023",
+     "SOC-FAM-024",
+     "SOC-FAM-025",
+     "SOC-FAM-026",
+     "SOC-FAM-031",
+     "SOC-FAM-039",
+     "SOC-FAM-040",
+     "SOC-FAM-041",
+     "SOC-FAM-042",
+     "POL-GEN-001",
+     "POL-GEN-002",
+     "POL-GEN-003",
+     "LAW-GEN-001",
+     "LAW-GEN-002",
+     "LAW-GEN-003"
+    ],
+    "answers": [
+     {
+      "taskId": "OBS-GEN-001",
+      "taskVersion": 1,
+      "position": 1,
+      "selected": [
+       1,
+       4,
+       5
+      ],
+      "correct": [
+       1,
+       4,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-12T10:01:00.000Z"
+     }
+    ]
+   },
+   "viewIndex": 1,
+   "draft": null,
+   "tasks": {
+    "OBS-GEN-001": "1d75c5f5",
+    "OBS-GEN-002": "3e70a68a",
+    "OBS-GEN-003": "e3ad9bae",
+    "OBS-ACT-001": "8ce9fe2e",
+    "OBS-ACT-002": "32cee1e7",
+    "OBS-ACT-003": "52b4d6cc",
+    "OBS-ACT-004": "af0664ef",
+    "OBS-ACT-005": "18063beb",
+    "OBS-ACT-006": "5c23878d",
+    "OBS-ACT-007": "2be9c1e2",
+    "OBS-ACT-008": "2c6c3bba",
+    "OBS-ACT-009": "22194e07",
+    "OBS-ACT-010": "0f16b1bf",
+    "OBS-ACT-011": "0e89a6b2",
+    "OBS-ACT-012": "97850fa1",
+    "OBS-ACT-013": "33e02ba7",
+    "OBS-ACT-014": "839a45a9",
+    "OBS-ACT-015": "6a3e6229",
+    "OBS-ACT-016": "6e8352f5",
+    "ECO-GEN-001": "5c1e03cd",
+    "ECO-GEN-002": "1eaedd9f",
+    "ECO-GEN-003": "64dea450",
+    "SOC-STR-001": "9cacca05",
+    "SOC-STR-002": "cbe8a8d1",
+    "SOC-STR-003": "6c9fb52f",
+    "SOC-STR-004": "58f5b8ea",
+    "SOC-STR-005": "ad4f64ae",
+    "SOC-STR-006": "2d7eeef2",
+    "SOC-MOB-001": "16675b8d",
+    "SOC-FAM-001": "c1585e08",
+    "SOC-FAM-002": "2d26c1fb",
+    "SOC-FAM-003": "1793c2a2",
+    "SOC-FAM-004": "197c473b",
+    "SOC-FAM-005": "6ee382af",
+    "SOC-FAM-006": "1491a508",
+    "SOC-FAM-007": "1732117f",
+    "SOC-FAM-012": "2225fb03",
+    "SOC-FAM-014": "5796a836",
+    "SOC-FAM-016": "9ecb1d57",
+    "SOC-FAM-032": "abea0b9b",
+    "SOC-FAM-033": "2b1c612f",
+    "SOC-FAM-034": "a0e96895",
+    "SOC-FAM-035": "d36286e7",
+    "SOC-FAM-036": "eed9887c",
+    "SOC-FAM-037": "14fa1a14",
+    "SOC-FAM-017": "8aa0313d",
+    "SOC-FAM-018": "bbfb2c80",
+    "SOC-FAM-019": "9bff5667",
+    "SOC-FAM-021": "b6075c04",
+    "SOC-FAM-038": "86aee496",
+    "SOC-FAM-022": "a860cfbb",
+    "SOC-FAM-023": "8d96f9c5",
+    "SOC-FAM-024": "4ef50954",
+    "SOC-FAM-025": "5d8c16c7",
+    "SOC-FAM-026": "5007f540",
+    "SOC-FAM-031": "b3a8738a",
+    "SOC-FAM-039": "9f19c793",
+    "SOC-FAM-040": "9011d224",
+    "SOC-FAM-041": "60d683b9",
+    "SOC-FAM-042": "e766448e",
+    "POL-GEN-001": "f0a39ba0",
+    "POL-GEN-002": "826c3c13",
+    "POL-GEN-003": "e3e0e668",
+    "LAW-GEN-001": "0cac1afc",
+    "LAW-GEN-002": "b580cba8",
+    "LAW-GEN-003": "33a31463"
+   }
+  },
+  "ege/SOC/SOC-STR": {
+   "format": "ege-attempt-save",
+   "saveVersion": 1,
+   "scope": "ege/SOC/SOC-STR",
+   "savedAt": "2026-10-12T11:03:00.000Z",
+   "attempt": {
+    "schemaVersion": 1,
+    "id": "legacy-soc-str",
+    "startedAt": "2026-10-12T11:00:00.000Z",
+    "finishedAt": null,
+    "settings": {
+     "section": "SOC",
+     "topic": "SOC-STR"
+    },
+    "taskIds": [
+     "SOC-STR-001",
+     "SOC-STR-002",
+     "SOC-STR-003",
+     "SOC-STR-004",
+     "SOC-STR-005",
+     "SOC-STR-006"
+    ],
+    "answers": [
+     {
+      "taskId": "SOC-STR-001",
+      "taskVersion": 1,
+      "position": 1,
+      "selected": [
+       1,
+       3,
+       5
+      ],
+      "correct": [
+       1,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-12T11:01:00.000Z"
+     },
+     {
+      "taskId": "SOC-STR-002",
+      "taskVersion": 1,
+      "position": 2,
+      "selected": [
+       2,
+       4,
+       5
+      ],
+      "correct": [
+       2,
+       4,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-12T11:02:00.000Z"
+     }
+    ]
+   },
+   "viewIndex": 2,
+   "draft": null,
+   "tasks": {
+    "SOC-STR-001": "9cacca05",
+    "SOC-STR-002": "cbe8a8d1",
+    "SOC-STR-003": "6c9fb52f",
+    "SOC-STR-004": "58f5b8ea",
+    "SOC-STR-005": "ad4f64ae",
+    "SOC-STR-006": "2d7eeef2"
+   }
+  }
+ }
+}

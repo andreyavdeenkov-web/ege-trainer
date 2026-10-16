@@ -1,9 +1,11 @@
 /**
- * Реестр разделов, тем и заданий.
+ * Реестр разделов, тем, заданий и практикумов.
  *
- * Структура банка: раздел → тема → задания.
- * Файлы с заданиями (data/tasks/**.js) подключаются после этого файла
- * и регистрируют задания через EGE.addTasks(topicId, [...]).
+ * Хранение заданий: раздел → тема → задания. Файлы с заданиями (data/tasks/**.js)
+ * подключаются после этого файла и регистрируют задания через EGE.addTasks(topicId, [...]).
+ * Навигация ученика: раздел → тема → практикум. Практикум — фиксированный набор
+ * заданий одной темы («Практикум № 1», «Практикум № 2»…); реестр практикумов —
+ * data/practicums.js (EGE.addPracticums), подключается после заданий.
  * Файл работает и в браузере, и в Node.js (для тестов).
  */
 (function (root) {
@@ -14,22 +16,38 @@
   /**
    * Разделы кодификатора ЕГЭ по обществознанию и их темы.
    *
-   * id раздела и темы постоянные: они попадают в ID заданий и в сохранённые
-   * попытки. Название можно менять, id — нет. Новую тему достаточно дописать
-   * в массив topics нужного раздела. Темы без заданий ученику не показываются.
+   * id раздела и темы постоянные: они попадают в ID заданий, практикумов и в
+   * сохранённые попытки. Название можно менять, id — нет. Новую тему достаточно
+   * дописать в массив topics нужного раздела. Ученик видит только темы, в которых
+   * есть хотя бы один опубликованный практикум (см. EGE.getAvailableTopics).
+   *
+   * Темы «Общие вопросы» (*-GEN) в интерфейсе не показываются: в них нет практикумов.
+   * Они остаются в реестре, потому что их задания хранятся под этими темами
+   * (ID заданий не меняются).
    */
   EGE.sections = [
     {
       id: 'OBS',
       title: 'Человек и общество',
       color: '#6366f1',
+      // Темы по пунктам кодификатора ЕГЭ (1.4 и 1.5 объединены в «Познание»;
+      // отдельной темы «Истина» нет — эти задания относятся к «Познанию»).
       topics: [
-        { id: 'OBS-GEN', title: 'Общие вопросы' },
+        { id: 'OBS-PER', title: 'Человек и личность' },
+        { id: 'OBS-WVW', title: 'Мировоззрение и сознание' },
         { id: 'OBS-ACT', title: 'Деятельность' },
-        // Задания этих тем пока есть только на странице предпросмотра
-        // (preview-cognition.html); в основном каталоге темы без заданий не показываются.
         { id: 'OBS-COG', title: 'Познание' },
-        { id: 'OBS-SCI', title: 'Научное познание' }
+        { id: 'OBS-SYS', title: 'Общество как система' },
+        { id: 'OBS-INS', title: 'Социальные институты' },
+        { id: 'OBS-TYP', title: 'Типы обществ' },
+        { id: 'OBS-DEV', title: 'Общественное развитие и глобализация' },
+        { id: 'OBS-CUL', title: 'Культура' },
+        { id: 'OBS-MOR', title: 'Мораль' },
+        { id: 'OBS-SCI', title: 'Наука и научное познание' },
+        { id: 'OBS-EDU', title: 'Образование' },
+        { id: 'OBS-REL', title: 'Религия' },
+        { id: 'OBS-ART', title: 'Искусство' },
+        { id: 'OBS-GEN', title: 'Общие вопросы' }
       ]
     },
     {
@@ -212,7 +230,8 @@
   };
 
   /**
-   * Пул заданий для тренировки: одна тема, весь раздел или все разделы.
+   * Все активные задания темы, раздела или всего банка — для тестов и проверок банка.
+   * Ученику задания выдаются только практикумами (см. ниже).
    * topicId = 'all' означает «весь раздел».
    * formatId — необязательный фильтр по формату ('all' или пусто — все форматы).
    */
@@ -223,19 +242,129 @@
     return EGE.filterByFormat(pool, formatId);
   };
 
-  /** Темы раздела, в которых есть хотя бы одно активное задание. */
+  /* ---------- Практикумы ---------- */
+
+  /**
+   * Статусы практикума: published — готов и виден ученику; draft — состав
+   * готовится, ученик его не видит.
+   */
+  EGE.PRACTICUM_STATUSES = ['published', 'draft'];
+
+  /** Формат постоянного ID практикума: ТЕМА-PНОМЕР, например OBS-COG-P01. */
+  EGE.PRACTICUM_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-P\d{2}$/;
+
+  /** Все практикумы в порядке регистрации. */
+  EGE.practicums = [];
+
+  var practicumsById = Object.create(null);
+
+  function pad2(n) {
+    return (n < 10 ? '0' : '') + n;
+  }
+
+  /**
+   * Регистрирует практикумы. Подключается после файлов с заданиями: каждое задание
+   * практикума должно быть уже зарегистрировано. Практикум:
+   *   id       — постоянный уникальный ID: id темы + '-P' + номер из двух цифр;
+   *   topic    — id темы; все задания практикума — из этой темы;
+   *   number   — порядковый номер в теме (1 → «Практикум № 1»), совпадает с номером в id;
+   *   status   — 'published' или 'draft' (см. EGE.PRACTICUM_STATUSES);
+   *   taskIds  — ID заданий: состав задаётся явно и не меняется от попытки к попытке;
+   *   shuffle  — необязательно: true — задания показываются в случайном порядке,
+   *              иначе — в порядке taskIds;
+   *   legacyTopicAttempts — необязательно: true — незавершённая попытка, сохранённая
+   *              до появления практикумов для темы целиком, продолжается в этом практикуме
+   *              (если её задания совпадают с его составом). Не больше одного на тему.
+   */
+  EGE.addPracticums = function (list) {
+    list.forEach(function (p) {
+      var where = 'практикум ' + p.id;
+      if (!EGE.PRACTICUM_ID_PATTERN.test(p.id || '')) throw new Error('Некорректный id практикума: ' + p.id);
+      if (practicumsById[p.id]) throw new Error('Повторяющийся id практикума: ' + p.id);
+      var topic = EGE.getTopic(p.topic);
+      if (!topic) throw new Error('Неизвестная тема: ' + p.topic + ' (' + where + ')');
+      if (!Number.isInteger(p.number) || p.number < 1 || p.id !== p.topic + '-P' + pad2(p.number)) {
+        throw new Error('Номер практикума не совпадает с id: ' + where);
+      }
+      if (EGE.PRACTICUM_STATUSES.indexOf(p.status) === -1) throw new Error('Неизвестный статус: ' + where);
+      if (!Array.isArray(p.taskIds) || p.taskIds.length === 0) throw new Error('В практикуме нет заданий: ' + where);
+      if (new Set(p.taskIds).size !== p.taskIds.length) throw new Error('Задания повторяются: ' + where);
+      p.taskIds.forEach(function (id) {
+        var task = EGE.getTask(id);
+        if (!task) throw new Error('Неизвестное задание ' + id + ' (' + where + ')');
+        if (task.topic !== p.topic) throw new Error('Задание ' + id + ' не из темы ' + p.topic + ' (' + where + ')');
+      });
+      EGE.practicums.forEach(function (other) {
+        if (other.topic !== p.topic) return;
+        if (other.number === p.number) throw new Error('Повторяющийся номер практикума: ' + where);
+        if (other.legacyTopicAttempts && p.legacyTopicAttempts) {
+          throw new Error('legacyTopicAttempts — только у одного практикума темы: ' + where);
+        }
+      });
+      p.section = topic.section;
+      practicumsById[p.id] = p;
+      EGE.practicums.push(p);
+    });
+  };
+
+  EGE.getPracticum = function (practicumId) {
+    return practicumsById[practicumId] || null;
+  };
+
+  /** Задания практикума в порядке taskIds. */
+  EGE.getPracticumTasks = function (practicum) {
+    return practicum.taskIds.map(EGE.getTask);
+  };
+
+  /**
+   * Готов ли практикум для ученика: опубликован, и все его задания на месте
+   * и выдаются (снятое с выдачи задание делает практикум недоступным, а не
+   * молча меняет его состав).
+   */
+  EGE.isPracticumReady = function (practicum) {
+    return practicum.status === 'published' && practicum.taskIds.every(function (id) {
+      var task = EGE.getTask(id);
+      return !!task && isActive(task);
+    });
+  };
+
+  /** Все практикумы темы (в том числе черновики) по порядковому номеру. */
+  EGE.getPracticumsByTopic = function (topicId) {
+    return EGE.practicums
+      .filter(function (p) { return p.topic === topicId; })
+      .sort(function (a, b) { return a.number - b.number; });
+  };
+
+  /** Практикумы темы, которые видит ученик. */
+  EGE.getPublishedPracticums = function (topicId) {
+    return EGE.getPracticumsByTopic(topicId).filter(EGE.isPracticumReady);
+  };
+
+  /** Максимальный балл за практикум по системе оценивания (js/scoring.js). */
+  EGE.getPracticumMaxScore = function (practicum) {
+    return EGE.getPracticumTasks(practicum).reduce(function (sum, task) {
+      return sum + EGE.scoring.getMaxPoints(task);
+    }, 0);
+  };
+
+  /** Название для ученика: «Практикум № 1». */
+  EGE.practicumTitle = function (practicum) {
+    return 'Практикум № ' + practicum.number;
+  };
+
+  /** Темы раздела, в которых есть хотя бы один опубликованный практикум. */
   EGE.getAvailableTopics = function (sectionId) {
     var section = EGE.getSection(sectionId);
     if (!section) return [];
     return section.topics.filter(function (topic) {
-      return EGE.getTasksByTopic(topic.id).length > 0;
+      return EGE.getPublishedPracticums(topic.id).length > 0;
     });
   };
 
-  /** Разделы, в которых есть хотя бы одно активное задание. */
+  /** Разделы, в которых есть хотя бы одна тема с опубликованным практикумом. */
   EGE.getAvailableSections = function () {
     return EGE.sections.filter(function (section) {
-      return EGE.getTasksBySection(section.id).length > 0;
+      return EGE.getAvailableTopics(section.id).length > 0;
     });
   };
 })(typeof window !== 'undefined' ? window : globalThis);

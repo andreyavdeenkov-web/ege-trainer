@@ -1,9 +1,10 @@
 'use strict';
 
 /**
- * Главный экран: только «Раздел» и «Тема». Формат заданий ученик не выбирает —
- * в тренировку входят все задания выбора во всех форматах; сохранённый ранее
- * формат не ограничивает набор.
+ * Главный экран: раздел → тема → практикум. Формат заданий ученик не выбирает —
+ * в практикум входят задания всех форматов его состава; сохранённый ранее формат
+ * не ограничивает набор. Обобщённых пунктов («Все разделы», «Весь раздел»,
+ * «Общие вопросы») в интерфейсе нет.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -19,6 +20,7 @@ test('на главном экране нет выбора формата', () =
   assert.doesNotMatch(html, /<legend class="field__label">Формат/);
   assert.match(html, /<legend class="field__label">Раздел<\/legend>/);
   assert.match(html, /<legend class="field__label">Тема<\/legend>/);
+  assert.match(html, /<h2 class="field__label" id="practicum-title">Практикумы<\/h2>/);
   assert.doesNotMatch(html.match(/<p class="hero__lead">[\s\S]*?<\/p>/)[0], /формат/i, 'подзаголовок без упоминания формата');
 });
 
@@ -28,10 +30,33 @@ test('интерфейс не фильтрует по формату и не х�
   assert.doesNotMatch(load, /saved\.format/);
 });
 
-test('пул тренировки — все форматы выбранной темы', () => {
+test('нет обобщённых пунктов «Все разделы», «Весь раздел», «Общие вопросы»', () => {
+  for (const text of ['Все разделы', 'Весь раздел']) {
+    assert.ok(!html.includes(text), `index.html: ${text}`);
+    assert.ok(!appCode.includes(text), `js/app.js: ${text}`);
+  }
+  // Разделы и темы — без значения 'all'.
+  const start = appCode.slice(appCode.indexOf('/* ---------- Стартовый экран'), appCode.indexOf('/* ---------- Практикум ----------'));
+  assert.doesNotMatch(start, /optionCard\([^)]*'all'/);
   const EGE = loadBank();
-  const pool = EGE.getPool('SOC', 'SOC-FAM');
-  const types = new Set(pool.map((t) => EGE.scoring.getTaskType(t)));
+  for (const section of EGE.sections) {
+    for (const topic of EGE.getAvailableTopics(section.id)) {
+      assert.notEqual(topic.title, 'Общие вопросы', topic.id);
+      assert.ok(!topic.id.endsWith('-GEN'), topic.id);
+    }
+  }
+});
+
+test('стартовый экран не начинает попытку без практикума: кнопки «Начать» на главной нет', () => {
+  assert.ok(!html.includes('id="start-btn"'));
+  assert.ok(!html.includes('id="resume-panel"'));
+  assert.match(appCode, /'Начать практикум'/);
+});
+
+test('практикум «Семья и брак» — все форматы темы', () => {
+  const EGE = loadBank();
+  const tasks = EGE.getPracticumTasks(EGE.getPracticum('SOC-FAM-P01'));
+  const types = new Set(tasks.map((t) => EGE.scoring.getTaskType(t)));
   assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple']);
-  assert.equal(pool.length, 31);
+  assert.equal(tasks.length, 31);
 });

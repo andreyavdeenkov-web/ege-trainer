@@ -1,7 +1,10 @@
 /**
  * Интерфейс тренажёра: стартовый экран, решение заданий, итоги.
  * Зависит от js/registry.js, js/scoring.js, js/attempt.js, js/attempt-save.js,
- * js/task-view.js и файлов data/tasks/**.js.
+ * js/task-view.js, файлов data/tasks/**.js и data/practicums.js.
+ *
+ * Главная страница: раздел → тема → практикум. Ученик видит только темы
+ * с опубликованными практикумами; у каждого практикума своя незавершённая попытка.
  */
 (function () {
   'use strict';
@@ -26,8 +29,8 @@
   /**
    * Сохранение незавершённой попытки (js/attempt-save.js): после старта, каждого
    * ответа, перехода между заданиями, отметки в текущем задании и при уходе со
-   * страницы. Область сохранения — режим страницы, раздел и тема, поэтому
-   * предпросмотр и разные темы основного тренажёра друг другу не мешают.
+   * страницы. Область сохранения — режим страницы, раздел, тема и практикум, поэтому
+   * предпросмотр и разные практикумы основного тренажёра друг другу не мешают.
    */
   var saver = EGE.attemptSave;
   var SAVE_MODE = preview ? 'preview' : 'ege';
@@ -56,8 +59,14 @@
     },
     startForm: $('start-form'),
     sectionOptions: $('section-options'),
+    sectionEmpty: $('section-empty'),
     topicField: $('topic-field'),
     topicOptions: $('topic-options'),
+    practicumField: $('practicum-field'),
+    practicumTitle: $('practicum-title'),
+    practicumOptions: $('practicum-options'),
+    // Кнопка «Начать» и панель продолжения — только на страницах предпросмотра;
+    // на главной они у каждого практикума свои (см. practicumCard).
     startBtn: $('start-btn'),
     resumePanel: $('resume-panel'),
     resumeText: $('resume-text'),
@@ -70,6 +79,7 @@
     exitCancel: $('exit-cancel'),
     exitConfirm: $('exit-confirm'),
 
+    quizTitle: $('quiz-title'),
     progressLabel: $('progress-label'),
     progressBar: $('progress-bar'),
     progressFill: $('progress-fill'),
@@ -96,6 +106,7 @@
     resultPercent: $('result-percent'),
     resultScore: $('result-score'),
     resultMessage: $('result-message'),
+    resultContext: $('result-context'),
     reviewTitle: $('review-title'),
     reviewFilter: $('review-filter'),
     filterAllLabel: $('filter-all-label'),
@@ -110,11 +121,13 @@
 
   var state = {
     attempt: null,  // текущая попытка (см. js/attempt.js)
+    practicum: null, // практикум текущей попытки (на страницах предпросмотра — null)
     viewIndex: 0,   // задание, которое показано на экране (с 0)
     draft: null,    // отметки в текущем, ещё не отвеченном задании (см. emptyDraft)
     matchRow: 0,    // matching: позиция, куда попадёт цифра с клавиатуры
     onExit: null,   // что сделать после подтверждения выхода (см. requestExit)
-    resume: null    // проверенное сохранение для выбранных раздела и темы (см. renderResume)
+    resume: null,   // предпросмотр: проверенное сохранение набора (см. renderResume)
+    resumes: {}     // главная: проверенные сохранения практикумов выбранной темы по id
   };
 
   /* ---------- Утилиты ---------- */
@@ -138,23 +151,30 @@
     return 'заданий';
   }
 
-  function isValidSection(id) {
-    return id === 'all' || EGE.getAvailableSections().some(function (s) { return s.id === id; });
+  function plural(n, one, few, many) {
+    var mod10 = n % 10;
+    var mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
   }
 
+  function isValidSection(id) {
+    return !!id && EGE.getSection(id) !== null;
+  }
+
+  /** Тему можно выбрать, только если в ней есть опубликованный практикум. */
   function isValidTopic(sectionId, topicId) {
-    if (topicId === 'all') return true;
-    if (sectionId === 'all') return false;
-    return EGE.getAvailableTopics(sectionId).some(function (t) { return t.id === topicId; });
+    return !!topicId && EGE.getAvailableTopics(sectionId).some(function (t) { return t.id === topicId; });
   }
 
   /**
-   * Настройки старта: раздел и тема. Тренировка всегда включает все задания выбора
-   * во всех форматах; формат ученик не выбирает. Сохранённое ранее поле format
-   * (из прежних версий) игнорируется и не ограничивает набор заданий.
+   * Настройки старта: выбранные раздел и тема (null — ещё не выбраны).
+   * Значения из прежних версий ('all' — прежние пункты «все разделы» и «весь раздел», тема без
+   * практикумов, поле format) не подходят и просто не восстанавливаются.
    */
   function loadSettings() {
-    var result = { section: 'all', topic: 'all' };
+    var result = { section: null, topic: null };
     if (preview) return result;
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -201,7 +221,7 @@
 
   /* ---------- Стартовый экран ---------- */
 
-  function optionCard(name, value, title, count, color, checked) {
+  function optionCard(name, value, title, note, color, checked, badge) {
     var label = el('label', 'topic-option');
     if (color) label.style.setProperty('--topic-color', color);
 
@@ -214,7 +234,9 @@
     var body = el('span', 'topic-option__body');
     body.appendChild(el('span', 'topic-option__dot'));
     body.appendChild(el('span', 'topic-option__title', title));
-    body.appendChild(el('span', 'topic-option__count', count + ' ' + tasksWord(count)));
+    var count = el('span', 'topic-option__count', note);
+    if (badge) count.appendChild(el('span', 'topic-option__badge', badge));
+    body.appendChild(count);
 
     label.appendChild(input);
     label.appendChild(body);
@@ -232,40 +254,146 @@
     }
     renderSectionOptions();
     renderTopicOptions();
-    updateStartButton();
-    renderResume();
+    renderPracticums();
   }
 
-  /** Разделы со счётчиками всех заданий (во всех форматах). Разделы без заданий скрыты. */
+  /** Карточки разделов. У раздела без готовых практикумов — пометка «Практикумы готовятся». */
   function renderSectionOptions() {
     ui.sectionOptions.textContent = '';
-    ui.sectionOptions.appendChild(optionCard('section', 'all', 'Все разделы',
-      EGE.getTasksBySection('all').length, null, settings.section === 'all'));
-    EGE.getAvailableSections().forEach(function (section) {
-      ui.sectionOptions.appendChild(optionCard('section', section.id, section.title,
-        EGE.getTasksBySection(section.id).length, section.color, settings.section === section.id));
+    EGE.sections.forEach(function (section) {
+      var n = EGE.getAvailableTopics(section.id).length;
+      var note = n > 0 ? n + ' ' + plural(n, 'тема', 'темы', 'тем') : 'Практикумы готовятся';
+      ui.sectionOptions.appendChild(optionCard('section', section.id, section.title, note,
+        section.color, settings.section === section.id));
     });
   }
 
-  /** Темы выбранного раздела. Темы без заданий не показываются. */
+  /** Есть ли у практикума незавершённая попытка в хранилище (без проверки — её делает карточка). */
+  function hasSavedAttempt(practicum) {
+    if (!storage) return false;
+    try {
+      return storage.getItem(saver.storageKey(practicumScope(practicum))) !== null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** Темы выбранного раздела: только темы с опубликованными практикумами. */
   function renderTopicOptions() {
     ui.topicOptions.textContent = '';
     var section = EGE.getSection(settings.section);
-    ui.topicField.hidden = !section;
-    if (!section) return;
-
-    ui.topicOptions.appendChild(optionCard('topic', 'all', 'Весь раздел',
-      EGE.getTasksBySection(section.id).length, section.color, settings.topic === 'all'));
-    EGE.getAvailableTopics(section.id).forEach(function (topic) {
+    var topics = section ? EGE.getAvailableTopics(section.id) : [];
+    ui.topicField.hidden = topics.length === 0;
+    ui.sectionEmpty.hidden = !section || topics.length > 0;
+    if (section && topics.length === 0) {
+      ui.sectionEmpty.textContent = 'Практикумы по разделу «' + section.title +
+        '» готовятся. Когда они будут готовы, они появятся здесь.';
+    }
+    topics.forEach(function (topic) {
+      var practicums = EGE.getPublishedPracticums(topic.id);
+      var n = practicums.length;
+      var unfinished = practicums.some(hasSavedAttempt);
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
-        EGE.getTasksByTopic(topic.id).length, section.color, settings.topic === topic.id));
+        n + ' ' + plural(n, 'практикум', 'практикума', 'практикумов'),
+        section.color, settings.topic === topic.id, unfinished ? 'есть незавершённый' : null));
     });
   }
 
-  /** Все задания выбранных раздела и темы — во всех трёх форматах. */
+  /** Практикумы выбранной темы: карточка на каждый опубликованный практикум. */
+  function renderPracticums() {
+    ui.practicumOptions.textContent = '';
+    state.resumes = {};
+    var topic = isValidTopic(settings.section, settings.topic) ? EGE.getTopic(settings.topic) : null;
+    ui.practicumField.hidden = !topic;
+    if (!topic) return;
+    ui.practicumTitle.textContent = 'Практикумы по теме «' + topic.title + '»';
+    var section = EGE.getSection(topic.section);
+    EGE.getPublishedPracticums(topic.id).forEach(function (practicum) {
+      ui.practicumOptions.appendChild(practicumCard(practicum, section));
+    });
+  }
+
+  /** Тексты причин, по которым сохранённый практикум нельзя продолжить. */
+  var PRACTICUM_REASONS = {
+    corrupt: 'запись повреждена.',
+    format: 'она записана в старом формате.',
+    expired: 'она старше 30 дней.',
+    tasks: 'задания этого практикума с тех пор обновились.',
+    scoring: 'правила оценивания или ключи заданий с тех пор изменились.',
+    composition: 'состав заданий этого практикума с тех пор изменился.'
+  };
+
+  function button(className, text, onClick) {
+    var btn = el('button', 'btn ' + className, text);
+    btn.type = 'button';
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  /**
+   * Карточка практикума: название, число заданий, максимум баллов и кнопка
+   * «Начать практикум» — или, если есть незавершённая попытка, её прогресс
+   * и кнопки «Продолжить» / «Начать заново». Сохранение проверяется при показе:
+   * запись, которую нельзя продолжить, удаляется, а ученик видит причину.
+   */
+  function practicumCard(practicum, section) {
+    var tasks = practicum.taskIds.length;
+    var max = EGE.getPracticumMaxScore(practicum);
+    var titleId = 'practicum-' + practicum.id + '-title';
+
+    var card = el('article', 'practicum-card');
+    card.setAttribute('data-practicum', practicum.id);
+    card.setAttribute('aria-labelledby', titleId);
+    card.style.setProperty('--topic-color', section.color);
+
+    var head = el('div', 'practicum-card__head');
+    var title = el('h3', 'practicum-card__title', EGE.practicumTitle(practicum));
+    title.id = titleId;
+    head.appendChild(title);
+    card.appendChild(head);
+    card.appendChild(el('p', 'practicum-card__meta',
+      tasks + ' ' + tasksWord(tasks) + ' · максимум ' + max + ' ' + scoring.pluralPoints(max)));
+
+    var result = saver.load(storage, practicumScope(practicum), practicumDeps(practicum));
+    var saved = result.status === 'ok' ? result.state : null;
+    var actions = el('div', 'practicum-card__actions');
+
+    if (saved) {
+      state.resumes[practicum.id] = saved;
+      head.appendChild(el('span', 'practicum-card__status', 'Не завершён'));
+      var attempt = saved.attempt;
+      card.appendChild(el('p', 'practicum-card__progress',
+        'Выполнено ' + A.answeredCount(attempt) + ' из ' + attempt.taskIds.length +
+        ' · баллы ' + A.totalScore(attempt) + ' из ' + A.answeredMaxScore(attempt) +
+        ' · сохранено ' + formatSavedAt(saved.savedAt)));
+      actions.appendChild(button('btn--primary practicum-card__continue', 'Продолжить', function () {
+        resumePracticum(practicum);
+      }));
+      actions.appendChild(button('btn--ghost practicum-card__restart', 'Начать заново', function () {
+        saver.remove(storage, practicumScope(practicum));
+        startPracticum(practicum);
+      }));
+    } else {
+      if (result.status === 'invalid') {
+        var notice = el('p', 'practicum-card__notice', 'Сохранённый практикум нельзя продолжить: ' +
+          PRACTICUM_REASONS[result.reason] + ' Начните его заново.');
+        notice.setAttribute('role', 'status');
+        card.appendChild(notice);
+      }
+      actions.appendChild(button('btn--primary practicum-card__start', 'Начать практикум', function () {
+        startPracticum(practicum);
+      }));
+    }
+    actions.querySelectorAll('button').forEach(function (btn) {
+      btn.setAttribute('aria-describedby', titleId);
+    });
+    card.appendChild(actions);
+    return card;
+  }
+
+  /** Предпросмотр: все задания набора. */
   function currentPool() {
-    if (preview) return preview.taskIds.map(EGE.getTask);
-    return EGE.getPool(settings.section, settings.topic);
+    return preview.taskIds.map(EGE.getTask);
   }
 
   function updateStartButton() {
@@ -276,48 +404,99 @@
       : 'Начать: ' + n + ' ' + tasksWord(n);
   }
 
+  /** Выбор раздела или темы. Смена раздела сбрасывает тему. */
   function readStartForm() {
     var data = new FormData(ui.startForm);
-    var section = data.get('section') || 'all';
+    var section = data.get('section');
     if (section !== settings.section) {
-      // При смене раздела выбор темы сбрасывается на «Весь раздел».
       settings.section = section;
-      settings.topic = 'all';
-      renderTopicOptions();
+      settings.topic = null;
     } else {
-      settings.topic = data.get('topic') || 'all';
+      settings.topic = data.get('topic');
     }
   }
 
-  /* ---------- Тренировка ---------- */
+  /* ---------- Практикум ---------- */
 
-  function startSession() {
-    var pool = shuffle(currentPool());
-    if (preview) pool = currentPool(); // предпросмотр — в заданном порядке
-    if (pool.length === 0) {
-      showStart();
-      return;
-    }
-    state.attempt = A.createAttempt({
-      settings: preview
-        ? { section: 'preview', topic: preview.id }
-        : { section: settings.section, topic: settings.topic },
-      taskIds: pool.map(function (t) { return t.id; })
-    });
+  /** Попытка с заданным порядком заданий: начало практикума или набора предпросмотра. */
+  function beginAttempt(attemptSettings, taskIds) {
+    state.attempt = A.createAttempt({ settings: attemptSettings, taskIds: taskIds });
     state.viewIndex = 0;
     state.draft = null;
+    state.matchRow = 0;
     persist(true);
     showScreen('quiz');
     renderView();
   }
 
+  /** Новая попытка практикума: состав фиксирован, порядок — по practicum.shuffle. */
+  function startPracticum(practicum) {
+    if (!EGE.isPracticumReady(practicum)) {
+      showStart();
+      return;
+    }
+    ui.resumeNotice.hidden = true;
+    state.practicum = practicum;
+    beginAttempt(practicumSettings(practicum),
+      practicum.shuffle ? shuffle(practicum.taskIds) : practicum.taskIds.slice());
+  }
+
+  /** Повторное прохождение: тот же практикум или набор предпросмотра заново. */
+  function startSession() {
+    if (!preview) {
+      if (state.practicum) startPracticum(state.practicum);
+      else showStart();
+      return;
+    }
+    var pool = currentPool(); // предпросмотр — в заданном порядке
+    if (pool.length === 0) {
+      showStart();
+      return;
+    }
+    beginAttempt({ section: 'preview', topic: preview.id }, pool.map(function (t) { return t.id; }));
+  }
+
   /* ---------- Сохранение и продолжение попытки ---------- */
 
-  /** Область сохранения выбранных на старте раздела и темы (или набора предпросмотра). */
+  /** Предпросмотр: область сохранения набора. */
   function startScope() {
-    return saver.scopeId(SAVE_MODE, preview
-      ? { section: 'preview', topic: preview.id }
-      : { section: settings.section, topic: settings.topic });
+    return saver.scopeId(SAVE_MODE, { section: 'preview', topic: preview.id });
+  }
+
+  /** Настройки попытки практикума: раздел, тема и id практикума. */
+  function practicumSettings(practicum) {
+    return { section: practicum.section, topic: practicum.topic, practicum: practicum.id };
+  }
+
+  /** Область сохранения практикума: у каждого практикума своя запись. */
+  function practicumScope(practicum) {
+    return saver.scopeId(SAVE_MODE, practicumSettings(practicum));
+  }
+
+  /** Проверка сохранения практикума: состав фиксирован, порядок важен, если задания не перемешиваются. */
+  function practicumDeps(practicum) {
+    return {
+      getTask: EGE.getTask, attempt: A, scoring: scoring,
+      taskIds: practicum.taskIds,
+      anyOrder: !!practicum.shuffle
+    };
+  }
+
+  /**
+   * Попытки, сохранённые до появления практикумов для темы целиком (ege/OBS/OBS-ACT),
+   * переносятся в практикум с legacyTopicAttempts, если их задания совпадают с его
+   * составом. Остальные старые записи не трогаются (см. saver.migrate).
+   */
+  function migrateLegacyAttempts() {
+    EGE.practicums.forEach(function (practicum) {
+      if (!practicum.legacyTopicAttempts || !EGE.isPracticumReady(practicum)) return;
+      saver.migrate(storage, {
+        from: saver.scopeId(SAVE_MODE, { section: practicum.section, topic: practicum.topic }),
+        to: practicumScope(practicum),
+        settings: { practicum: practicum.id },
+        deps: practicumDeps(practicum)
+      });
+    });
   }
 
   function attemptScope(attempt) {
@@ -348,15 +527,14 @@
   }
 
   /**
-   * Стартовый экран: предложение продолжить сохранённую попытку выбранных раздела
-   * и темы. Запись, которую нельзя восстановить, удаляется, и ученик видит
-   * причину — без прежних баллов.
+   * Предпросмотр: предложение продолжить сохранённую попытку набора. Запись,
+   * которую нельзя восстановить, удаляется, и ученик видит причину — без прежних баллов.
    */
   function renderResume() {
     var result = saver.load(storage, startScope(), {
       getTask: EGE.getTask, attempt: A, scoring: scoring,
-      // Предпросмотр: состав набора фиксирован — попытка другого состава не продолжается.
-      taskIds: preview ? preview.taskIds : null
+      // Состав набора фиксирован — попытка другого состава не продолжается.
+      taskIds: preview.taskIds
     });
     state.resume = result.status === 'ok' ? result.state : null;
     ui.resumePanel.hidden = !state.resume;
@@ -379,6 +557,19 @@
     var saved = state.resume;
     if (!saved) return;
     state.resume = null;
+    continueAttempt(saved);
+  }
+
+  /** Главная: продолжение практикума из сохранения, проверенного при показе карточки. */
+  function resumePracticum(practicum) {
+    var saved = state.resumes[practicum.id];
+    if (!saved) return;
+    state.resumes = {};
+    state.practicum = practicum;
+    continueAttempt(saved);
+  }
+
+  function continueAttempt(saved) {
     state.attempt = saved.attempt;
     state.viewIndex = saved.viewIndex;
     state.draft = saved.draft;
@@ -389,6 +580,7 @@
     renderView();
   }
 
+  /** Предпросмотр: «Начать заново». */
   function restartSession() {
     saver.remove(storage, startScope());
     state.resume = null;
@@ -504,12 +696,20 @@
   }
 
   /** Показывает задание state.viewIndex: для выбора ответа или с разбором. */
+  /** «Познание · Практикум № 1» — над прогрессом и в итогах. */
+  function practicumLabel(practicum) {
+    return EGE.getTopic(practicum.topic).title + ' · ' + EGE.practicumTitle(practicum);
+  }
+
   function renderView() {
     var attempt = state.attempt;
     var task = taskAt(state.viewIndex);
     var answer = viewedAnswer();
     var isMatching = typeOf(task) === 'matching';
     releaseFocus();
+
+    ui.quizTitle.hidden = !state.practicum;
+    ui.quizTitle.textContent = state.practicum ? practicumLabel(state.practicum) : '';
 
     ui.taskTopic.textContent = view.topicLabel(task);
     ui.taskTopic.style.setProperty('--topic-color', EGE.getSection(task.section).color);
@@ -684,6 +884,10 @@
     ui.resultRing.className = 'result__ring ' + (pct >= 80 ? 'is-high' : pct >= 50 ? 'is-mid' : 'is-low');
     ui.resultScore.textContent = scoring.formatPointsOutOf(score, max);
     ui.resultMessage.textContent = resultMessage(pct);
+    if (ui.resultContext) {
+      ui.resultContext.hidden = !state.practicum;
+      ui.resultContext.textContent = state.practicum ? practicumLabel(state.practicum) : '';
+    }
 
     var mistakes = A.mistakeIndexes(attempt).length;
     ui.filterAllLabel.textContent = 'Все задания (' + attempt.taskIds.length + ')';
@@ -788,16 +992,24 @@
 
   /* ---------- События ---------- */
 
-  ui.startForm.addEventListener('change', function () {
+  ui.startForm.addEventListener('change', function (e) {
+    if (preview) return;
+    var sectionChanged = e.target.name === 'section';
     readStartForm();
     saveSettings();
-    updateStartButton();
     ui.resumeNotice.hidden = true;
-    renderResume();
+    if (sectionChanged) renderTopicOptions();
+    renderPracticums();
+    // После выбора темы на телефоне список практикумов может оказаться ниже экрана.
+    if (!sectionChanged && !ui.practicumField.hidden && typeof ui.practicumField.scrollIntoView === 'function') {
+      ui.practicumField.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   });
 
-  ui.resumeContinue.addEventListener('click', resumeSession);
-  ui.resumeRestart.addEventListener('click', restartSession);
+  if (preview) {
+    ui.resumeContinue.addEventListener('click', resumeSession);
+    ui.resumeRestart.addEventListener('click', restartSession);
+  }
   // Закрытие вкладки, переход в другое приложение на телефоне: сохраняем последнее состояние.
   window.addEventListener('pagehide', function () { persist(); });
   document.addEventListener('visibilitychange', function () {
@@ -806,8 +1018,7 @@
 
   ui.startForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    readStartForm();
-    saveSettings();
+    if (!preview) return; // на главной практикум начинается кнопкой в его карточке
     ui.resumeNotice.hidden = true;
     startSession();
   });
@@ -903,5 +1114,6 @@
     }
   });
 
+  if (!preview) migrateLegacyAttempts();
   showStart();
 })();

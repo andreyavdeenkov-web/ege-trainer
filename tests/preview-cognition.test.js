@@ -1,20 +1,23 @@
 'use strict';
 
 /**
- * Предпросмотр партии 1 «Познание» и «Научное познание» (preview-cognition.html).
- * Проверяет, что набор перенесён полностью и без изменений ключей, что задания
- * оцениваются существующим движком и что основной каталог (index.html) не затронут.
+ * Предпросмотр партии 1 «Познание» и «Наука и научное познание» (preview-cognition.html).
+ * Проверяет, что набор перенесён полностью и без изменений ключей и что задания
+ * оцениваются существующим движком. Сами задания с переходом на практикумы хранятся
+ * в основном банке (data/tasks/society/cognition.js и science.js) — страница
+ * подключает эти файлы и свой набор, без остального банка.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { root, dataScripts, loadBank } = require('./helpers/ege.js');
+const { root, dataScripts, loadBank, contentHash } = require('./helpers/ege.js');
 const { metadataErrors, newTaskErrors } = require('./helpers/bank-rules.js');
 
 const PREVIEW_HTML = 'preview-cognition.html';
 const PREVIEW_DATA = 'data/preview/cognition-batch1.js';
+const TASK_FILES = ['data/tasks/society/cognition.js', 'data/tasks/society/science.js'];
 
 /** Ключи партии 1, утверждённые автором (docs/drafts/cognition/stage-1-2.md, редакция 8). */
 const APPROVED_KEYS = {
@@ -43,9 +46,11 @@ function loadPreview() {
 
 const tasksOf = (EGE) => EGE.preview.taskIds.map((id) => EGE.getTask(id));
 
-test('страница предпросмотра: тот же движок, только набор предпросмотра, без основного банка', () => {
+test('страница предпросмотра: тот же движок, только задания набора и сам набор, без остального банка', () => {
   const scripts = previewScripts();
-  assert.deepEqual(scripts, ['js/registry.js', 'js/scoring.js', 'js/attempt.js', 'js/attempt-save.js', PREVIEW_DATA, 'js/task-view.js', 'js/app.js']);
+  assert.deepEqual(scripts, ['js/registry.js', 'js/scoring.js', 'js/attempt.js', 'js/attempt-save.js',
+    ...TASK_FILES, PREVIEW_DATA, 'js/task-view.js', 'js/app.js']);
+  assert.ok(!scripts.includes('data/practicums.js'), 'реестр практикумов на странице предпросмотра не нужен');
   const html = fs.readFileSync(path.join(root, PREVIEW_HTML), 'utf8');
   assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
 });
@@ -60,24 +65,28 @@ test('разметка предпросмотра не отстаёт от index
   }
 });
 
-test('основной каталог не затронут: index.html не подключает предпросмотр, темы без заданий скрыты', () => {
+test('главная страница: наборы предпросмотра не подключены, «Наука» без практикума скрыта', () => {
   const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.ok(!indexHtml.includes('data/preview/'), 'index.html не должен подключать data/preview/');
   assert.ok(!indexHtml.includes(PREVIEW_HTML), 'на index.html не должно быть ссылки на предпросмотр');
   assert.ok(!dataScripts.some((s) => s.includes('preview')));
+  for (const file of TASK_FILES) assert.ok(dataScripts.includes(file), file);
 
   const EGE = loadBank();
   assert.equal(EGE.preview, undefined);
-  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 0);
-  assert.equal(EGE.getTasksByTopic('OBS-SCI').length, 0);
-  assert.deepEqual(Array.from(EGE.getAvailableTopics('OBS'), (t) => t.id), ['OBS-GEN', 'OBS-ACT']);
-  assert.ok(EGE.tasks.every((t) => !t.id.startsWith('OBS-COG') && !t.id.startsWith('OBS-SCI')));
+  assert.equal(EGE.getTasksByTopic('OBS-COG').length, 19);
+  // Задания «Науки и научного познания» сохранены, но неполный набор не публикуется.
+  assert.equal(EGE.getTasksByTopic('OBS-SCI').length, 10);
+  assert.equal(EGE.getPracticumsByTopic('OBS-SCI').length, 0);
+  assert.deepEqual(Array.from(EGE.getAvailableTopics('OBS'), (t) => t.id), ['OBS-ACT', 'OBS-COG']);
 });
 
 test('набор: ровно 20 утверждённых заданий в постоянном порядке, ключи не изменились', () => {
   const EGE = loadPreview();
   assert.deepEqual(Array.from(EGE.preview.taskIds), Object.keys(APPROVED_KEYS));
-  assert.equal(EGE.tasks.length, 20, 'на странице предпросмотра нет других заданий');
+  // На странице — только задания тем «Познание» и «Наука»: 20 из набора и 9 заданий OBS-COG-031…039.
+  assert.equal(EGE.tasks.length, 29);
+  assert.ok(EGE.tasks.every((t) => t.topic === 'OBS-COG' || t.topic === 'OBS-SCI'));
   for (const task of tasksOf(EGE)) {
     assert.equal(EGE.scoring.getCorrect(task).join(''), APPROVED_KEYS[task.id], task.id);
     assert.ok(task.topic === 'OBS-COG' || task.topic === 'OBS-SCI', task.id);
@@ -85,9 +94,13 @@ test('набор: ровно 20 утверждённых заданий в по�
   }
 });
 
-test('ID набора не пересекаются с основным банком', () => {
-  const bank = new Set(loadBank().tasks.map((t) => t.id));
-  for (const id of Object.keys(APPROVED_KEYS)) assert.ok(!bank.has(id), id);
+test('задания набора — те же объекты основного банка: без дублей и без расхождений', () => {
+  const bank = loadBank();
+  const page = loadPreview();
+  for (const id of Object.keys(APPROVED_KEYS)) {
+    assert.equal(bank.tasks.filter((t) => t.id === id).length, 1, `${id} в основном банке ровно один раз`);
+    assert.equal(contentHash(page.getTask(id)), contentHash(bank.getTask(id)), id);
+  }
 });
 
 test('все четыре модели КИМ представлены и отображаются существующими типами', () => {

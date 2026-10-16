@@ -9,7 +9,8 @@
  *   schemaVersion: 1,
  *   id: 'uuid',
  *   startedAt: ISO-строка UTC, finishedAt: ISO-строка | null,
- *   settings: { section, topic, format? }, // в попытку входят все задания выбора;
+ *   settings: { section, topic, practicum?, format? }, // practicum — id практикума
+ *                                          // (data/practicums.js); у попыток до практикумов его нет;
  *                                          // format — фильтр по формату, если был задан
  *   taskIds: ['SOC-STR-004', ...],          // порядок показа, фиксируется при старте
  *   answers: [{ taskId, taskVersion, position, selected, correct,
@@ -51,6 +52,8 @@
     if (new Set(taskIds).size !== taskIds.length) throw new Error('Задания в попытке повторяются');
     var s = options.settings || {};
     var settings = { section: s.section || 'all', topic: s.topic || 'all' };
+    // practicum необязателен: попытки, начатые до появления практикумов, его не содержат.
+    if (s.practicum) settings.practicum = s.practicum;
     // format необязателен: попытки без него (в том числе старые) означают «все форматы».
     if (s.format !== undefined) settings.format = s.format || 'all';
     return {

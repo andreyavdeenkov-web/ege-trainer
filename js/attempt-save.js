@@ -3,11 +3,14 @@
  * Чистые функции без DOM: хранилище передаётся аргументом, поэтому модуль
  * работает и в браузере, и в Node.js (для тестов).
  *
- * Одна запись на «область» (scope): режим страницы + раздел + тема.
- *   ege/SOC/SOC-FAM              — основной тренажёр, тема «Семья и брак»;
- *   ege/all/all                  — основной тренажёр, все разделы;
+ * Одна запись на «область» (scope): режим страницы + раздел + тема [+ практикум].
+ *   ege/OBS/OBS-COG/OBS-COG-P01  — основной тренажёр, «Познание», Практикум № 1;
+ *   ege/SOC/SOC-FAM              — до практикумов: тема «Семья и брак» целиком
+ *                                  (такие записи переносятся в практикум, см. migrate);
+ *   ege/all/all                  — до практикумов: все разделы;
  *   preview/preview/<id набора>  — страница предпросмотра.
- * Записи разных областей не пересекаются: у каждой свой ключ хранилища.
+ * Записи разных областей не пересекаются: у каждой свой ключ хранилища, поэтому
+ * разные практикумы не перезаписывают прогресс друг друга.
  *
  * Запись:
  * {
@@ -46,10 +49,15 @@
     composition: 'состав заданий этой тренировки с тех пор изменился.'
   };
 
-  /** Область сохранения: mode — 'ege' (основной тренажёр) или 'preview'. */
+  /**
+   * Область сохранения: mode — 'ege' (основной тренажёр) или 'preview'.
+   * settings.practicum — id практикума: у каждого практикума своя запись.
+   */
   function scopeId(mode, settings) {
     var s = settings || {};
-    return [mode, s.section || 'all', s.topic || 'all'].join('/');
+    var parts = [mode, s.section || 'all', s.topic || 'all'];
+    if (s.practicum) parts.push(s.practicum);
+    return parts.join('/');
   }
 
   function storageKey(scope) {
@@ -142,6 +150,11 @@
     return true;
   }
 
+  /** Тот же набор ID без учёта порядка (практикум с перемешиванием заданий). */
+  function sameSet(a, b) {
+    return sameArray(a.slice().sort(), b.slice().sort());
+  }
+
   function isIsoDate(value) {
     return typeof value === 'string' && !isNaN(Date.parse(value));
   }
@@ -174,9 +187,10 @@
 
   /**
    * Проверяет запись и проигрывает попытку текущим движком.
-   * deps: { getTask, attempt: EGE.attempt, scoring: EGE.scoring, now?, taskIds? }.
-   * taskIds — фиксированный состав и порядок набора (страница предпросмотра): попытка
-   * восстанавливается, только если её задания совпадают с ним поштучно.
+   * deps: { getTask, attempt: EGE.attempt, scoring: EGE.scoring, now?, taskIds?, anyOrder? }.
+   * taskIds — фиксированный состав набора (практикум, страница предпросмотра): попытка
+   * восстанавливается, только если её задания совпадают с ним поштучно и по порядку;
+   * anyOrder: true — порядок не важен (практикум, задания которого перемешиваются).
    * Результат: { ok: true, attempt, viewIndex, draft, savedAt } или { ok: false, reason }.
    */
   function restore(record, scope, deps) {
@@ -199,8 +213,12 @@
     if (saved.answers.length >= saved.taskIds.length) return fail('corrupt');
     if (!record.tasks || typeof record.tasks !== 'object') return fail('corrupt');
 
-    // Набор с фиксированным составом: попытка другого состава или порядка не продолжается.
-    if (deps.taskIds && !sameArray(saved.taskIds, Array.prototype.slice.call(deps.taskIds))) return fail('composition');
+    // Набор с фиксированным составом: попытка другого состава (или порядка) не продолжается.
+    if (deps.taskIds) {
+      var expected = Array.prototype.slice.call(deps.taskIds);
+      var same = deps.anyOrder ? sameSet(saved.taskIds, expected) : sameArray(saved.taskIds, expected);
+      if (!same) return fail('composition');
+    }
 
     // Задания: на месте, выдаются и не изменились с момента старта.
     for (var i = 0; i < saved.taskIds.length; i++) {
@@ -259,6 +277,53 @@
     return { status: 'invalid', reason: result.reason, message: REASONS[result.reason] };
   }
 
+  /**
+   * Перенос незавершённой попытки из прежней области в новую — например, попытки
+   * темы целиком (ege/OBS/OBS-ACT, до появления практикумов) в практикум этой темы
+   * (ege/OBS/OBS-ACT/OBS-ACT-P01).
+   * options: { from, to, settings, deps } — settings дописываются в attempt.settings
+   * (например, { practicum: 'OBS-ACT-P01' }); deps — как у restore для новой области.
+   *
+   * Переносится только запись, которая полностью проходит проверку restore в новой
+   * области (в том числе по составу практикума): тогда она записывается под новым
+   * ключом, а прежняя удаляется. Во всех остальных случаях хранилище не меняется:
+   * прежняя запись не удаляется и не портится, новая не создаётся.
+   * Результат: { status: 'migrated' | 'none' | 'kept' | 'skipped', reason? }:
+   * none — переносить нечего; skipped — в новой области уже есть своя запись;
+   * kept — запись не подходит (reason — причина из REASONS) и оставлена как есть.
+   */
+  function migrate(storage, options) {
+    if (!storage) return { status: 'none' };
+    var raw;
+    try {
+      if (storage.getItem(storageKey(options.to)) != null) return { status: 'skipped' };
+      raw = storage.getItem(storageKey(options.from));
+    } catch (e) {
+      return { status: 'none' };
+    }
+    if (raw == null) return { status: 'none' };
+    var record;
+    try { record = JSON.parse(raw); } catch (e) { return { status: 'kept', reason: 'corrupt' }; }
+    if (!record || typeof record !== 'object' || record.scope !== options.from ||
+        !record.attempt || typeof record.attempt !== 'object' || !record.attempt.settings) {
+      return { status: 'kept', reason: 'corrupt' };
+    }
+    var moved = JSON.parse(raw);
+    moved.scope = options.to;
+    Object.keys(options.settings || {}).forEach(function (k) { moved.attempt.settings[k] = options.settings[k]; });
+    var result = restore(moved, options.to, options.deps);
+    if (!result.ok) return { status: 'kept', reason: result.reason };
+    try {
+      storage.setItem(storageKey(options.to), JSON.stringify(moved));
+      storage.removeItem(storageKey(options.from));
+    } catch (e) {
+      // Новая запись не записалась (или прежняя не удалилась) — прежняя остаётся источником.
+      try { storage.removeItem(storageKey(options.to)); } catch (e2) { /* не критично */ }
+      return { status: 'kept', reason: 'corrupt' };
+    }
+    return { status: 'migrated' };
+  }
+
   var api = {
     FORMAT: FORMAT,
     SAVE_VERSION: SAVE_VERSION,
@@ -272,7 +337,8 @@
     write: write,
     remove: remove,
     restore: restore,
-    load: load
+    load: load,
+    migrate: migrate
   };
 
   EGE.attemptSave = api;

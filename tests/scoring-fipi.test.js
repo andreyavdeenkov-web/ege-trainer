@@ -153,7 +153,9 @@ test('kimTask в данных должен подходить типу зада�
 
 test('данные существующих заданий не изменились: у них нет kimTask, соответствия — за 2 балла', () => {
   const EGE = loadBank();
-  for (const task of EGE.tasks) {
+  // «Познание» и «Наука» перенесены из предпросмотра с kimTask (позиция КИМ задана с самого начала).
+  const withKim = /^OBS-(COG|SCI)-/;
+  for (const task of EGE.tasks.filter((t) => !withKim.test(t.id))) {
     assert.equal(task.kimTask, undefined, task.id);
     if (S.getTaskType(task) === 'matching') assert.equal(S.getMaxPoints(task), 2, task.id);
   }

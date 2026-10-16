@@ -43,7 +43,7 @@ test('фильтр формата учитывает раздел и тему', 
   assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'multiple').length, 16);
   assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'exclude-two').length, 5);
   assert.equal(EGE.getPool('SOC', 'SOC-FAM', 'matching').length, 10);
-  assert.equal(EGE.getPool('OBS', 'all', 'matching').length, 3);
+  assert.equal(EGE.getPool('OBS', 'OBS-ACT', 'matching').length, 3);
   // Снятые с выдачи задания не возвращаются и через фильтр.
   EGE.getPool('all', 'all', 'multiple').forEach((t) => assert.ok(!t.retired));
 });
@@ -119,7 +119,10 @@ test('смешанная попытка: баллы по каждому форм
   const a = A.createAttempt({ settings: { section: 'all', topic: 'all', format: 'all' }, taskIds: pool.map((t) => t.id) });
   const excludeCount = EGE.getPool('all', 'all', 'exclude-two').length;
   const matchingCount = EGE.getPool('all', 'all', 'matching').length;
-  assert.equal(A.maxScore(a, EGE.getTask), 2 * 2 + excludeCount * 1 + matchingCount * 2);
+  // Соответствие за 1 балл (позиция 3 КИМ, поле kimTask) — у заданий «Познания» и «Науки».
+  const matchingMax = EGE.getPool('all', 'all', 'matching').reduce((sum, t) => sum + S.getMaxPoints(t), 0);
+  assert.ok(matchingCount > 0);
+  assert.equal(A.maxScore(a, EGE.getTask), 2 * 2 + excludeCount * 1 + matchingMax);
 
   let expected = 0;
   pool.forEach((task, i) => {

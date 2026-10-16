@@ -32,18 +32,10 @@
       <div class="hero">
         <h1 id="start-title">Практикуй задания ЕГЭ по обществознанию и разбирай каждую ошибку</h1>
         <p class="hero__lead">
-          Выбери раздел и тему. Отвечай на вопросы, получай баллы и изучай подробный разбор каждого ответа.
+          Выбери раздел, тему и практикум. Отвечай на вопросы, получай баллы и изучай подробный разбор каждого ответа.
         </p>
       </div>
 
-      <div class="panel resume" id="resume-panel" role="region" aria-labelledby="resume-title" hidden>
-        <p class="resume__title" id="resume-title">Незавершённая тренировка</p>
-        <p class="resume__text" id="resume-text"></p>
-        <div class="resume__actions">
-          <button type="button" class="btn btn--primary" id="resume-continue">Продолжить</button>
-          <button type="button" class="btn btn--ghost" id="resume-restart">Начать заново</button>
-        </div>
-      </div>
       <p class="resume-notice" id="resume-notice" role="status" hidden></p>
 
       <form class="panel" id="start-form">
@@ -52,13 +44,17 @@
           <div class="topic-grid" id="section-options"></div>
         </fieldset>
 
+        <p class="empty-note" id="section-empty" role="status" hidden></p>
+
         <fieldset class="field" id="topic-field" hidden>
           <legend class="field__label">Тема</legend>
           <div class="topic-grid topic-grid--compact" id="topic-options"></div>
         </fieldset>
 
-
-        <button type="submit" class="btn btn--primary btn--lg btn--block" id="start-btn">Начать тренировку</button>
+        <section class="field practicums" id="practicum-field" aria-labelledby="practicum-title" hidden>
+          <h2 class="field__label" id="practicum-title">Практикумы</h2>
+          <div class="practicum-list" id="practicum-options"></div>
+        </section>
       </form>
 
       <details class="panel rules">
@@ -78,12 +74,14 @@
     <!-- Экран задания -->
     <section class="screen" id="screen-quiz" hidden aria-live="polite">
       <div class="exit-bar" id="exit-bar" role="alertdialog" aria-labelledby="exit-bar-text" hidden>
-        <p class="exit-bar__text" id="exit-bar-text">Прервать тренировку? Ответы сохранены — продолжить можно со стартового экрана.</p>
+        <p class="exit-bar__text" id="exit-bar-text">Прервать практикум? Ответы сохранены — продолжить можно со стартового экрана.</p>
         <div class="exit-bar__actions">
           <button type="button" class="btn btn--ghost" id="exit-cancel">Продолжить</button>
           <button type="button" class="btn btn--primary" id="exit-confirm">Выйти</button>
         </div>
       </div>
+
+      <p class="quiz-title" id="quiz-title" hidden></p>
 
       <div class="progress">
         <div class="progress__row">
@@ -93,7 +91,7 @@
         <div class="progress__track" role="progressbar" aria-label="Прогресс" aria-valuemin="0" id="progress-bar">
           <div class="progress__fill" id="progress-fill"></div>
         </div>
-        <nav class="task-nav" aria-label="Задания тренировки">
+        <nav class="task-nav" aria-label="Задания практикума">
           <ol class="task-nav__list" id="task-nav"></ol>
         </nav>
       </div>
@@ -137,12 +135,13 @@
         <div class="result__ring" id="result-ring" aria-hidden="true">
           <span id="result-percent">0%</span>
         </div>
-        <h2 class="result__title" id="result-title">Тренировка завершена</h2>
+        <h2 class="result__title" id="result-title">Практикум завершён</h2>
+        <p class="result__context" id="result-context"></p>
         <p class="result__score" id="result-score"></p>
         <p class="result__message" id="result-message"></p>
         <div class="result__actions">
           <button type="button" class="btn btn--primary btn--lg" id="restart-btn">Пройти ещё раз</button>
-          <button type="button" class="btn btn--ghost btn--lg" id="home-btn">Выбрать тему</button>
+          <button type="button" class="btn btn--ghost btn--lg" id="home-btn">К выбору практикума</button>
         </div>
       </div>
 
@@ -181,6 +180,8 @@
   <!-- Банк заданий: папка раздела, по файлу на тему (см. README) -->
   <script src="data/tasks/society/general.js"></script>
   <script src="data/tasks/society/activity.js"></script>
+  <script src="data/tasks/society/cognition.js"></script>
+  <script src="data/tasks/society/science.js"></script>
   <script src="data/tasks/economy/general.js"></script>
   <script src="data/tasks/social/stratification.js"></script>
   <script src="data/tasks/social/mobility.js"></script>
@@ -188,6 +189,9 @@
   <script src="data/tasks/social/family-2.js"></script>
   <script src="data/tasks/politics/general.js"></script>
   <script src="data/tasks/law/general.js"></script>
+
+  <!-- Практикумы: фиксированные наборы заданий тем (после банка заданий) -->
+  <script src="data/practicums.js"></script>
 
   <!-- Интерфейс -->
   <script src="js/task-view.js"></script>
