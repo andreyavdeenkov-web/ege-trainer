@@ -41,6 +41,14 @@ function metadataErrors(EGE, task) {
     errors.push(`difficulty — одно из: ${EGE.DIFFICULTY_LEVELS.join(', ')}`);
   }
 
+  if (task.kimTask !== undefined) {
+    // Позиция в КИМ должна подходить модели оценивания задания (EGE.scoring.SCORING_RULES).
+    const rule = EGE.scoring.SCORING_RULES[EGE.scoring.getScoringModel(task)];
+    if (!rule.kimTasks.includes(task.kimTask)) {
+      errors.push(`kimTask ${task.kimTask} не подходит для ${type}`);
+    }
+  }
+
   if (task.commonFeature !== undefined) {
     if (type !== 'exclude-two') errors.push('commonFeature бывает только у exclude-two');
     else if (!isText(task.commonFeature)) errors.push('commonFeature — непустая строка');
