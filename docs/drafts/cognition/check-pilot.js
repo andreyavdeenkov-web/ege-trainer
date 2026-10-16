@@ -99,7 +99,8 @@ for (const t of tasks) {
   }
 
   // Ограничительные слова: не больше одного такого суждения в задании.
-  const restricted = textsOf(t).filter((x) => RESTRICTIVE.test(x.replace(/не только/gi, '')));
+  // Правило — для суждений и позиций выбора; в позициях соответствия «только» описывает действие, а не ограничивает суждение.
+  const restricted = S.getTaskType(t) === 'matching' ? [] : textsOf(t).filter((x) => RESTRICTIVE.test(x.replace(/не только/gi, '')));
   if (restricted.length > 1) err(t.id, `ограничительные слова в ${restricted.length} суждениях`);
 
   // Пустые объяснения-шаблоны.
