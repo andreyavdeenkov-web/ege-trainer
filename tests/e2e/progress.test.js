@@ -379,3 +379,50 @@ test('хранилище недоступно: тренировка работа
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('предпросмотр: попытка прежней редакции заданий не восстанавливается, новая — восстанавливается', async () => {
+  const { toRevision1, EDITS } = require('../helpers/cognition-r2.js');
+  const scope = 'preview/preview/cognition-batch1';
+  const context = await newContext(CONFIGS[1]);
+  // Сначала страница получает данные редакции 1 (как до публикации правки).
+  const dataUrl = previewUrl.replace('preview-cognition.html', 'data/preview/cognition-batch1.js');
+  const oldData = toRevision1(fs.readFileSync(path.join(root, 'data/preview/cognition-batch1.js'), 'utf8'));
+  await context.route(dataUrl, (route) => route.fulfill({ contentType: 'text/javascript; charset=utf-8', body: oldData }));
+  const first = await newPage(context, previewUrl);
+  await first.page.click('#start-btn');
+  for (let i = 0; i < 4; i++) {
+    await answer(first.page, await shownTask(first.page, scope), false);
+    await first.page.click('#next-btn');
+  }
+  assert.equal(await first.page.evaluate(() => EGE.getTask('OBS-COG-008').statements[0].text), EDITS[0].before);
+  await context.unroute(dataUrl);
+  await first.page.close({ runBeforeUnload: true });
+
+  // После публикации редакции 2: объяснение вместо прежних баллов.
+  const { page, errors } = await newPage(context, previewUrl);
+  assert.equal(await page.isVisible('#resume-panel'), false);
+  assert.equal(await page.textContent('#resume-notice'),
+    'Сохранённую тренировку нельзя продолжить: задания этой тренировки с тех пор обновились. Начните её заново.');
+  await assertNoHorizontalScroll(page, 'уведомление');
+  await shot(page, CONFIGS[1], '4-revision');
+  assert.deepEqual(await savedKeys(page), []);
+
+  // Новая попытка: согласованные формулировки на экране, сохранение и продолжение работают.
+  await page.click('#start-btn');
+  for (let i = 0; i < 4; i++) {
+    await answer(page, await shownTask(page, scope), false);
+    await page.click('#next-btn');
+  }
+  assert.match(await page.textContent('#progress-label'), /^Задание 5 из 20 · выполнено 4$/);
+  await page.click('#task-nav li:nth-child(4) button');
+  const texts = await page.locator('#statements .statement__text').allTextContents();
+  assert.equal(texts[0], EDITS[0].after);
+  assert.equal(texts[2], EDITS[1].after);
+  await page.reload();
+  assert.match(await page.textContent('#resume-text'), /^Выполнено 4 из 20 · баллы 7 из 7 · сохранено /);
+  await page.click('#resume-continue');
+  assert.match(await page.textContent('#progress-label'), /^Задание 4 из 20 · выполнено 4$/);
+  assert.equal(await page.textContent('#score-pill'), 'Баллы: 7 из 7');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
