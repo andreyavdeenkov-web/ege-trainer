@@ -277,3 +277,43 @@ test('две вкладки: устаревшее состояние не зат
   assert.equal(S.write(storage, build(fresh), { force: true }), true);
   assert.equal(S.load(storage, scope, deps(EGE)).state.attempt.id, fresh.id);
 });
+
+test('попытка, сохранённая в прежней редакции заданий предпросмотра, не восстанавливается', () => {
+  const { toRevision1, EDITED_IDS } = require('./helpers/cognition-r2.js');
+  const source = fs.readFileSync(path.join(root, 'data/preview/cognition-batch1.js'), 'utf8');
+  const revision1 = toRevision1(source);
+  assert.notEqual(revision1, source);
+
+  // Ученик начал попытку на странице с редакцией 1 и ответил на первые пять заданий (в том числе COG-008).
+  const context = vm.createContext({});
+  context.globalThis = context;
+  for (const src of CORE) vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context);
+  vm.runInContext(revision1, context);
+  const OLD = context.EGE;
+  assert.equal(OLD.getTask('OBS-COG-008').version, undefined);
+  const storage = memoryStorage();
+  const settings = { section: 'preview', topic: OLD.preview.id };
+  const scope = OLD.attemptSave.scopeId('preview', settings);
+  const attempt = OLD.attempt.createAttempt({ settings, taskIds: OLD.preview.taskIds });
+  for (const id of OLD.preview.taskIds.slice(0, 5)) OLD.attempt.recordAnswer(attempt, OLD.getTask(id), key(OLD, OLD.getTask(id)));
+  saveRecord(OLD, storage, attempt, scope, { viewIndex: 5 });
+
+  // После публикации редакции 2 эту попытку продолжить нельзя: прежние баллы не выдаются за действительные.
+  const NEW = loadPreview();
+  assert.ok(EDITED_IDS.every((id) => NEW.getTask(id).version === 2));
+  const result = NEW.attemptSave.load(storage, scope, deps(NEW));
+  assert.equal(result.status, 'invalid');
+  assert.equal(result.reason, 'tasks');
+  assert.equal(result.message, 'задания этой тренировки с тех пор обновились.');
+  assert.equal(storage.getItem(NEW.attemptSave.storageKey(scope)), null);
+
+  // Новая попытка в редакции 2 сохраняется и восстанавливается.
+  const fresh = NEW.attempt.createAttempt({ settings, taskIds: NEW.preview.taskIds });
+  for (const id of NEW.preview.taskIds.slice(0, 5)) NEW.attempt.recordAnswer(fresh, NEW.getTask(id), key(NEW, NEW.getTask(id)));
+  saveRecord(NEW, storage, fresh, scope, { viewIndex: 5 });
+  const restored = NEW.attemptSave.load(storage, scope, deps(NEW));
+  assert.equal(restored.status, 'ok');
+  assert.equal(restored.state.attempt.answers[3].taskId, 'OBS-COG-008');
+  assert.equal(restored.state.attempt.answers[3].taskVersion, 2);
+  assert.equal(NEW.attempt.totalScore(restored.state.attempt), 9);
+});

@@ -171,3 +171,69 @@ test('попытка предпросмотра: все 20 заданий по �
   assert.equal(A.totalScore(attempt), 34);
   assert.equal(A.mistakeIndexes(attempt).length, 0);
 });
+
+/* ---------- Редакция 2: согласованные формулировки (tests/helpers/cognition-r2.js) ---------- */
+
+const { EDITS, EDITED_IDS } = require('./helpers/cognition-r2.js');
+
+test('редакция 2: семь позиций содержат согласованные формулировки, правильность не изменилась', () => {
+  const EGE = loadPreview();
+  const source = fs.readFileSync(path.join(root, PREVIEW_DATA), 'utf8');
+  assert.equal(EDITS.length, 7);
+  for (const e of EDITS) {
+    const task = EGE.getTask(e.id);
+    const part = (task.statements || task.items)[e.position - 1];
+    assert.equal(part.text, e.after, `${e.id}, позиция ${e.position}`);
+    if (e.match !== undefined) assert.equal(part.match, e.match, `${e.id}: категория соответствия`);
+    else assert.equal(part.correct, e.correct, `${e.id}: правильность суждения`);
+    assert.ok(!source.includes(e.before), `${e.id}: прежняя формулировка осталась в данных`);
+    assert.doesNotMatch(part.text, /например/i, `${e.id}: пример — в объяснении, а не в суждении`);
+  }
+});
+
+test('редакция 2: номер редакции только у изменённых заданий, ID и порядок прежние', () => {
+  const EGE = loadPreview();
+  for (const task of tasksOf(EGE)) {
+    assert.equal(task.version || 1, EDITED_IDS.includes(task.id) ? 2 : 1, task.id);
+  }
+  assert.deepEqual(Array.from(EGE.preview.taskIds), Object.keys(APPROVED_KEYS));
+});
+
+test('редакция 2: объяснения соответствуют новым формулировкам', () => {
+  const EGE = loadPreview();
+  const expl = (id, n) => (EGE.getTask(id).statements || EGE.getTask(id).items)[n - 1].explanation;
+  assert.match(expl('OBS-COG-008', 1), /^Верно\./);
+  assert.match(expl('OBS-COG-008', 1), /оптических иллюзиях/);
+  assert.match(expl('OBS-COG-008', 3), /^Верно\./);
+  assert.match(expl('OBS-COG-008', 3), /ультразвук/);
+  assert.match(expl('OBS-COG-016', 4), /^Верно\./);
+  assert.match(expl('OBS-COG-016', 4), /не только принадлежностью к научному познанию/);
+  assert.match(expl('OBS-COG-016', 4), /систематизаци/);
+  assert.match(expl('OBS-COG-025', 3), /^Верно\./);
+  assert.match(expl('OBS-COG-025', 3), /остаётся истинным для своих условий/);
+  assert.match(expl('OBS-COG-025', 3), /неприменимым/);
+  assert.match(expl('OBS-COG-028', 3), /^Неверно\./);
+  assert.match(expl('OBS-COG-028', 3), /не является практическим подтверждением/);
+  assert.match(expl('OBS-COG-028', 3), /не заменяет эмпирическую проверку/);
+  assert.match(expl('OBS-COG-017', 5), /^Научное знание\./);
+  assert.match(expl('OBS-COG-017', 5), /важное требование научного исследования/);
+  assert.match(expl('OBS-COG-017', 5), /сопоставимых условиях/);
+  assert.match(expl('OBS-COG-025', 5), /^Верно\./);
+  assert.match(expl('OBS-COG-025', 5), /исторического контекста/);
+  assert.match(expl('OBS-COG-025', 5), /а не об их нравственной оценке/);
+});
+
+test('OBS-COG-025: суждения 1–4 прежние, ключ 135, повтора между суждениями 1, 3 и 5 нет', () => {
+  const EGE = loadPreview();
+  const task = EGE.getTask('OBS-COG-025');
+  assert.equal(task.question, 'Выберите верные суждения о конкретности истины.');
+  assert.deepEqual(Array.from(task.statements, (s) => s.text), [
+    'Конкретность истины означает, что истинность знания зависит от условий места и времени, к которым оно относится.',
+    'Конкретность истины означает, что каждый человек сам решает, что для него истинно.',
+    'Знание, истинное в одних условиях, может оказаться неприменимым в других условиях.',
+    'Конкретность истины несовместима с её объективностью.',
+    'Принцип конкретности истины предполагает учёт исторических условий при познании общественных явлений и процессов.'
+  ]);
+  assert.equal(EGE.scoring.getCorrect(task).join(''), '135');
+  assert.ok(!task.statements.some((s) => /границах|Научные положения/.test(s.text)), 'прежнее суждение 5 удалено');
+});
