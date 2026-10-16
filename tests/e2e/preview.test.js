@@ -32,9 +32,10 @@ const CONFIGS = [
 
 /** Задания с намеренной ошибкой (номер в наборе с 1) и ожидаемые баллы. */
 const WRONG = {
-  1: { points: 1 },   // OBS-COG-002, соответствие: одна неверная позиция
+  1: { points: 0 },   // OBS-COG-002, соответствие (позиция 3 КИМ, 1 балл): одна неверная позиция
   2: { points: 1 },   // OBS-COG-003, суждения: пропущен один верный
   3: { points: 1 },   // OBS-COG-006, ситуация: одно лишнее
+  4: { points: 1, replace: true },   // OBS-COG-008, суждения: одна цифра заменена другой (ФИПИ — 1 балл)
   19: { points: 0 }   // OBS-SCI-029, два лишних: одна неверная позиция
 };
 
@@ -117,6 +118,10 @@ function answerFor(task, wrong) {
   if (task.type === 'exclude-two') {
     const other = [1, 2, 3, 4, 5, 6].find((n) => !key.includes(n));
     return [key[0], other];
+  }
+  if (wrong.replace) {
+    const other = [1, 2, 3, 4, 5, 6].slice(0, task.size).find((n) => !key.includes(n));
+    return key.slice(1).concat(other);
   }
   if (task.choiceOf === 'items') {
     const extra = [1, 2, 3, 4, 5, 6].find((n) => !key.includes(n));
@@ -214,11 +219,11 @@ for (const config of CONFIGS) {
 
     // Итоги.
     await page.waitForSelector('#screen-result:not([hidden])');
-    assert.equal(max, 39);
-    assert.equal(total, 35);
-    assert.match(await page.textContent('#result-score'), /^35 из 39/);
-    assert.equal(await page.textContent('#filter-mistakes-label'), 'Только с ошибками (4)');
-    assert.equal(await page.locator('#review-list .review-item').count(), 4);
+    assert.equal(max, 34);
+    assert.equal(total, 29);
+    assert.match(await page.textContent('#result-score'), /^29 из 34/);
+    assert.equal(await page.textContent('#filter-mistakes-label'), 'Только с ошибками (5)');
+    assert.equal(await page.locator('#review-list .review-item').count(), 5);
     await assertNoHorizontalScroll(page, 'итоги');
     await shot(page, config, '99-result');
 

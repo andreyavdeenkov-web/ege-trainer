@@ -50,6 +50,16 @@ test('страница предпросмотра: тот же движок, т�
   assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
 });
 
+test('разметка предпросмотра не отстаёт от index.html: экраны задания и итогов, правила оценивания', () => {
+  const block = (html, re) => (html.match(re) || [null])[0];
+  const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const previewHtml = fs.readFileSync(path.join(root, PREVIEW_HTML), 'utf8');
+  for (const re of [/<details class="panel rules">[\s\S]*?<\/details>/, /<section class="screen" id="screen-quiz"[\s\S]*?<\/section>/]) {
+    assert.ok(block(indexHtml, re), String(re));
+    assert.equal(block(previewHtml, re), block(indexHtml, re), String(re));
+  }
+});
+
 test('основной каталог не затронут: index.html не подключает предпросмотр, темы без заданий скрыты', () => {
   const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.ok(!indexHtml.includes('data/preview/'), 'index.html не должен подключать data/preview/');
@@ -120,7 +130,7 @@ test('заключительные редакционные уточнения C
   assert.doesNotMatch(cog028.explanation, /исключ/);
 });
 
-test('баллы по правилам движка: верный ответ — максимум, одна ошибка — 1, две — 0', () => {
+test('баллы по системе оценивания ЕГЭ-2026: модели 1 и 3 — 1 балл, модели 2 и 4 — 2/1/0', () => {
   const EGE = loadPreview();
   const S = EGE.scoring;
   for (const task of tasksOf(EGE)) {
@@ -133,30 +143,31 @@ test('баллы по правилам движка: верный ответ —
       const wrong = [1, 2, 3, 4, 5, 6].find((n) => !key.includes(n));
       assert.equal(S.scoreTask(task, [key[0], wrong], key), 0, `${task.id}: одна ошибка`);
     } else if (S.getTaskType(task) === 'matching') {
-      assert.equal(max, 2);
+      // Соответствие на позиции 3 КИМ — 1 балл только за полностью верный ответ.
+      assert.equal(task.kimTask, 3);
+      assert.equal(S.getScoringModel(task), 'matching-1');
+      assert.equal(max, 1);
       const one = key.slice();
       one[0] = one[0] === 1 ? 2 : 1;
-      assert.equal(S.scoreTask(task, one, key), 1, `${task.id}: одна неверная позиция`);
-      const two = one.slice();
-      two[1] = two[1] === 1 ? 2 : 1;
-      assert.equal(S.scoreTask(task, two, key), 0, `${task.id}: две неверные позиции`);
+      assert.equal(S.scoreTask(task, one, key), 0, `${task.id}: одна неверная позиция`);
     } else {
       assert.equal(max, 2);
       assert.equal(S.scoreTask(task, key.slice(1), key), 1, `${task.id}: пропущен один верный`);
       const extra = [1, 2, 3, 4, 5, 6].slice(0, task.statements.length).find((n) => !key.includes(n));
       assert.equal(S.scoreTask(task, key.concat(extra).sort(), key), 1, `${task.id}: один лишний`);
-      assert.equal(S.scoreTask(task, key.slice(1).concat(extra).sort(), key), 0, `${task.id}: замена (две ошибки по правилам движка)`);
+      assert.equal(S.scoreTask(task, key.slice(1).concat(extra).sort(), key), 1, `${task.id}: одна цифра заменена другой`);
+      assert.equal(S.scoreTask(task, key.slice(2).concat(extra).sort(), key), 0, `${task.id}: замена и пропуск — две ошибки`);
     }
   }
 });
 
-test('попытка предпросмотра: все 20 заданий по порядку, итог 39 из 39', () => {
+test('попытка предпросмотра: все 20 заданий по порядку, итог 34 из 34', () => {
   const EGE = loadPreview();
   const A = EGE.attempt;
   const attempt = A.createAttempt({ settings: { section: 'preview', topic: EGE.preview.id }, taskIds: EGE.preview.taskIds });
-  assert.equal(A.maxScore(attempt, EGE.getTask), 39);
+  assert.equal(A.maxScore(attempt, EGE.getTask), 34); // 1 + 5 × 1 + 14 × 2
   for (const task of tasksOf(EGE)) A.recordAnswer(attempt, task, Array.from(EGE.scoring.getCorrect(task)));
   assert.ok(A.isComplete(attempt));
-  assert.equal(A.totalScore(attempt), 39);
+  assert.equal(A.totalScore(attempt), 34);
   assert.equal(A.mistakeIndexes(attempt).length, 0);
 });
