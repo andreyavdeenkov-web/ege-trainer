@@ -1,0 +1,274 @@
+/**
+ * Сохранение незавершённой попытки в браузере (localStorage) и её восстановление.
+ * Чистые функции без DOM: хранилище передаётся аргументом, поэтому модуль
+ * работает и в браузере, и в Node.js (для тестов).
+ *
+ * Одна запись на «область» (scope): режим страницы + раздел + тема.
+ *   ege/SOC/SOC-FAM              — основной тренажёр, тема «Семья и брак»;
+ *   ege/all/all                  — основной тренажёр, все разделы;
+ *   preview/preview/<id набора>  — страница предпросмотра.
+ * Записи разных областей не пересекаются: у каждой свой ключ хранилища.
+ *
+ * Запись:
+ * {
+ *   format: 'ege-attempt-save', saveVersion: 1, scope, savedAt,
+ *   attempt,                      // попытка целиком (js/attempt.js)
+ *   viewIndex,                    // задание на экране
+ *   draft,                        // отметки в текущем, ещё не засчитанном задании
+ *   tasks: { id: отпечаток }      // отпечатки заданий на момент старта
+ * }
+ *
+ * Восстановление (load) ничему не верит на слово: попытка проигрывается заново
+ * текущим движком (recordAnswer по сохранённым ответам). Запись отбрасывается,
+ * если задание удалено, снято с выдачи или изменилось (отпечаток, version),
+ * если ответ не проходит проверку или текущее оценивание даёт другие баллы
+ * и ключ, если запись повреждена, устарела или от другой версии формата.
+ * Отброшенная запись удаляется, ученик получает объяснение, а не прежние баллы.
+ */
+(function (root) {
+  'use strict';
+
+  var EGE = root.EGE || (root.EGE = {});
+
+  var FORMAT = 'ege-attempt-save';
+  var SAVE_VERSION = 1;
+  var KEY_PREFIX = 'ege-trainer:attempt:';
+  /** Старше этого срока попытка не предлагается к продолжению. */
+  var MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+  /** Причины, по которым сохранение нельзя продолжить (продолжение фразы «Сохранённую тренировку нельзя продолжить: …»). */
+  var REASONS = {
+    corrupt: 'запись повреждена.',
+    format: 'она записана в старом формате.',
+    expired: 'она старше 30 дней.',
+    tasks: 'задания этой тренировки с тех пор обновились.',
+    scoring: 'правила оценивания или ключи заданий с тех пор изменились.'
+  };
+
+  /** Область сохранения: mode — 'ege' (основной тренажёр) или 'preview'. */
+  function scopeId(mode, settings) {
+    var s = settings || {};
+    return [mode, s.section || 'all', s.topic || 'all'].join('/');
+  }
+
+  function storageKey(scope) {
+    return KEY_PREFIX + scope;
+  }
+
+  /** FNV-1a (32 бита) — короткий отпечаток строки. */
+  function hash(str) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return ('0000000' + h.toString(16)).slice(-8);
+  }
+
+  /**
+   * Отпечаток задания: всё, от чего зависят номера вариантов, ключ и баллы.
+   * Объяснения не входят: их правка не делает сохранённые ответы неверными.
+   */
+  function taskFingerprint(task) {
+    return hash(JSON.stringify({
+      version: task.version || 1,
+      type: task.type || 'multiple',
+      kimTask: task.kimTask === undefined ? null : task.kimTask,
+      oneToOne: !!task.oneToOne,
+      question: task.question,
+      statements: (task.statements || []).map(function (s) { return [s.text, !!s.correct]; }),
+      items: (task.items || []).map(function (i) { return [i.text, i.match]; }),
+      options: task.options || []
+    }));
+  }
+
+  /** Запись для сохранения: копия попытки и отпечатки её заданий. */
+  function buildRecord(options) {
+    var attempt = options.attempt;
+    var tasks = {};
+    attempt.taskIds.forEach(function (id) {
+      var task = options.getTask(id);
+      if (task) tasks[id] = taskFingerprint(task);
+    });
+    return {
+      format: FORMAT,
+      saveVersion: SAVE_VERSION,
+      scope: options.scope,
+      savedAt: (options.now || new Date()).toISOString(),
+      attempt: JSON.parse(JSON.stringify(attempt)),
+      viewIndex: options.viewIndex,
+      draft: options.draft == null ? null : JSON.parse(JSON.stringify(options.draft)),
+      tasks: tasks
+    };
+  }
+
+  /**
+   * Не затирает ли запись более свежее состояние из другой вкладки: в хранилище
+   * другая попытка той же области или та же попытка с бо́льшим числом ответов.
+   */
+  function isStale(storage, record) {
+    var stored;
+    try { stored = JSON.parse(storage.getItem(storageKey(record.scope))); } catch (e) { return false; }
+    if (!stored || !stored.attempt || !Array.isArray(stored.attempt.answers)) return false;
+    if (stored.attempt.id !== record.attempt.id) return true;
+    return stored.attempt.answers.length > record.attempt.answers.length;
+  }
+
+  /**
+   * Записывает запись; false — не записано: хранилище недоступно или переполнено
+   * (тренировка продолжается) либо запись устарела (см. isStale).
+   * options.force — новая или только что продолженная попытка: записать в любом случае.
+   */
+  function write(storage, record, options) {
+    if (!storage) return false;
+    try {
+      if (!(options && options.force) && isStale(storage, record)) return false;
+      storage.setItem(storageKey(record.scope), JSON.stringify(record));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function remove(storage, scope) {
+    if (!storage) return;
+    try { storage.removeItem(storageKey(scope)); } catch (e) { /* не критично */ }
+  }
+
+  function sameArray(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+
+  function isIsoDate(value) {
+    return typeof value === 'string' && !isNaN(Date.parse(value));
+  }
+
+  /** Черновик текущего задания: проверяется по заданию; неверный просто не восстанавливается. */
+  function cleanDraft(task, draft, scoring) {
+    if (!Array.isArray(draft)) return null;
+    var type = scoring.getTaskType(task);
+    if (type === 'matching') {
+      if (draft.length !== task.items.length) return null;
+      var used = [];
+      for (var i = 0; i < draft.length; i++) {
+        var n = draft[i];
+        if (n === null) continue;
+        if (!Number.isInteger(n) || n < 1 || n > task.options.length) return null;
+        if (task.oneToOne && used.indexOf(n) !== -1) return null;
+        used.push(n);
+      }
+      return draft.slice();
+    }
+    var seen = [];
+    for (var j = 0; j < draft.length; j++) {
+      var k = draft[j];
+      if (!Number.isInteger(k) || k < 1 || k > task.statements.length || seen.indexOf(k) !== -1) return null;
+      seen.push(k);
+    }
+    if (type === 'exclude-two' && seen.length > scoring.EXCLUDE_COUNT) return null;
+    return seen;
+  }
+
+  /**
+   * Проверяет запись и проигрывает попытку текущим движком.
+   * deps: { getTask, attempt: EGE.attempt, scoring: EGE.scoring, now? }.
+   * Результат: { ok: true, attempt, viewIndex, draft, savedAt } или { ok: false, reason }.
+   */
+  function restore(record, scope, deps) {
+    var A = deps.attempt;
+    var scoring = deps.scoring;
+    var fail = function (reason) { return { ok: false, reason: reason }; };
+
+    if (!record || typeof record !== 'object') return fail('corrupt');
+    if (record.format !== FORMAT || record.saveVersion !== SAVE_VERSION) return fail('format');
+    if (record.scope !== scope) return fail('corrupt');
+    if (!isIsoDate(record.savedAt)) return fail('corrupt');
+    var now = deps.now || new Date();
+    if (now.getTime() - Date.parse(record.savedAt) > MAX_AGE_MS) return fail('expired');
+
+    var saved = record.attempt;
+    if (!saved || typeof saved !== 'object') return fail('corrupt');
+    if (saved.schemaVersion !== A.SCHEMA_VERSION) return fail('format');
+    if (saved.finishedAt !== null) return fail('corrupt');
+    if (!Array.isArray(saved.taskIds) || !Array.isArray(saved.answers) || !isIsoDate(saved.startedAt)) return fail('corrupt');
+    if (saved.answers.length >= saved.taskIds.length) return fail('corrupt');
+    if (!record.tasks || typeof record.tasks !== 'object') return fail('corrupt');
+
+    // Задания: на месте, выдаются и не изменились с момента старта.
+    for (var i = 0; i < saved.taskIds.length; i++) {
+      var id = saved.taskIds[i];
+      var task = typeof id === 'string' ? deps.getTask(id) : null;
+      if (!task || task.retired) return fail('tasks');
+      if (record.tasks[id] !== taskFingerprint(task)) return fail('tasks');
+    }
+
+    // Попытка проигрывается заново: те же ID, порядок, ответы — баллы считает текущий движок.
+    var attempt;
+    try {
+      attempt = A.createAttempt({
+        id: saved.id,
+        settings: saved.settings,
+        taskIds: saved.taskIds,
+        now: new Date(saved.startedAt)
+      });
+      for (var k = 0; k < saved.answers.length; k++) {
+        var s = saved.answers[k];
+        if (!s || s.taskId !== saved.taskIds[k] || !isIsoDate(s.answeredAt)) return fail('corrupt');
+        var t = deps.getTask(s.taskId);
+        if (s.taskVersion !== (t.version || 1)) return fail('tasks');
+        var answer = A.recordAnswer(attempt, t, s.selected, new Date(s.answeredAt));
+        if (answer.points !== s.points || answer.maxPoints !== s.maxPoints || !sameArray(answer.correct, s.correct)) {
+          return fail('scoring');
+        }
+      }
+    } catch (e) {
+      return fail('corrupt');
+    }
+    if (scopeId(scope.split('/')[0], attempt.settings) !== scope) return fail('corrupt');
+
+    var viewIndex = A.canView(attempt, record.viewIndex) ? record.viewIndex : A.lastReachableIndex(attempt);
+    var current = A.currentIndex(attempt);
+    var draft = cleanDraft(deps.getTask(attempt.taskIds[current]), record.draft, scoring);
+    return { ok: true, attempt: attempt, viewIndex: viewIndex, draft: draft, savedAt: record.savedAt };
+  }
+
+  /**
+   * Читает и проверяет сохранение области.
+   * { status: 'none' } — сохранения нет;
+   * { status: 'ok', state } — можно продолжить (state — результат restore);
+   * { status: 'invalid', reason, message } — запись отброшена и удалена.
+   */
+  function load(storage, scope, deps) {
+    if (!storage) return { status: 'none' };
+    var raw;
+    try { raw = storage.getItem(storageKey(scope)); } catch (e) { return { status: 'none' }; }
+    if (raw == null) return { status: 'none' };
+    var record;
+    try { record = JSON.parse(raw); } catch (e) { record = null; }
+    var result = restore(record, scope, deps);
+    if (result.ok) return { status: 'ok', state: result };
+    remove(storage, scope);
+    return { status: 'invalid', reason: result.reason, message: REASONS[result.reason] };
+  }
+
+  var api = {
+    FORMAT: FORMAT,
+    SAVE_VERSION: SAVE_VERSION,
+    KEY_PREFIX: KEY_PREFIX,
+    MAX_AGE_MS: MAX_AGE_MS,
+    REASONS: REASONS,
+    scopeId: scopeId,
+    storageKey: storageKey,
+    taskFingerprint: taskFingerprint,
+    buildRecord: buildRecord,
+    write: write,
+    remove: remove,
+    restore: restore,
+    load: load
+  };
+
+  EGE.attemptSave = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);

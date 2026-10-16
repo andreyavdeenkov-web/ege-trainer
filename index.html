@@ -36,6 +36,16 @@
         </p>
       </div>
 
+      <div class="panel resume" id="resume-panel" role="region" aria-labelledby="resume-title" hidden>
+        <p class="resume__title" id="resume-title">Незавершённая тренировка</p>
+        <p class="resume__text" id="resume-text"></p>
+        <div class="resume__actions">
+          <button type="button" class="btn btn--primary" id="resume-continue">Продолжить</button>
+          <button type="button" class="btn btn--ghost" id="resume-restart">Начать заново</button>
+        </div>
+      </div>
+      <p class="resume-notice" id="resume-notice" role="status" hidden></p>
+
       <form class="panel" id="start-form">
         <fieldset class="field">
           <legend class="field__label">Раздел</legend>
@@ -68,7 +78,7 @@
     <!-- Экран задания -->
     <section class="screen" id="screen-quiz" hidden aria-live="polite">
       <div class="exit-bar" id="exit-bar" role="alertdialog" aria-labelledby="exit-bar-text" hidden>
-        <p class="exit-bar__text" id="exit-bar-text">Прервать тренировку? Результаты не сохранятся.</p>
+        <p class="exit-bar__text" id="exit-bar-text">Прервать тренировку? Ответы сохранены — продолжить можно со стартового экрана.</p>
         <div class="exit-bar__actions">
           <button type="button" class="btn btn--ghost" id="exit-cancel">Продолжить</button>
           <button type="button" class="btn btn--primary" id="exit-confirm">Выйти</button>
@@ -166,6 +176,7 @@
   <script src="js/registry.js"></script>
   <script src="js/scoring.js"></script>
   <script src="js/attempt.js"></script>
+  <script src="js/attempt-save.js"></script>
 
   <!-- Банк заданий: папка раздела, по файлу на тему (см. README) -->
   <script src="data/tasks/society/general.js"></script>

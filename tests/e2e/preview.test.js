@@ -227,14 +227,15 @@ for (const config of CONFIGS) {
     await assertNoHorizontalScroll(page, 'итоги');
     await shot(page, config, '99-result');
 
-    // Настройки основного тренажёра не записаны.
+    // Настройки основного тренажёра не записаны; завершённая попытка не сохраняется.
     assert.equal(await page.evaluate(() => localStorage.getItem('ege-trainer:settings')), null);
+    assert.equal(await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('ege-trainer:attempt:')).length), 0);
     assert.deepEqual(errors, []);
     await context.close();
   });
 }
 
-test('обновление страницы: прогресс попытки предпросмотра сейчас НЕ сохраняется', async () => {
+test('обновление страницы: попытка предпросмотра продолжается с того же места', async () => {
   const { page, context, errors } = await open(CONFIGS[0], previewUrl);
   await page.click('#start-btn');
   for (let i = 0; i < 2; i++) {
@@ -244,9 +245,11 @@ test('обновление страницы: прогресс попытки п�
   }
   assert.match(await page.textContent('#progress-label'), /выполнено 2$/);
   await page.reload();
-  // Фиксирует текущее поведение движка ЕГЭ: после обновления — стартовый экран, ответы потеряны.
-  assert.ok(await page.isVisible('#screen-start'));
-  assert.equal(await page.isVisible('#screen-quiz'), false);
+  assert.ok(await page.isVisible('#resume-panel'));
+  assert.match(await page.textContent('#resume-text'), /^Выполнено 2 из 20 · баллы 3 из 3 · сохранено /);
+  await page.click('#resume-continue');
+  assert.match(await page.textContent('#progress-label'), /^Задание 3 из 20 · выполнено 2$/);
+  assert.equal(await page.textContent('#score-pill'), 'Баллы: 3 из 3');
   assert.deepEqual(errors, []);
   await context.close();
 });
