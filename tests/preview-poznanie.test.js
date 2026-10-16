@@ -194,3 +194,37 @@ test('перестановка вариантов в 032, 034, 035, 037: объ�
   ];
   for (const [id, n, re] of pairs) assert.match(parts(EGE.getTask(id))[n - 1].explanation, re, `${id}, ${n}`);
 });
+
+test('редакционные правки PR #21: объяснения 032 (суждение 2) и 038 (суждение 5)', () => {
+  const EGE = loadPage();
+  const sensory = parts(EGE.getTask('OBS-COG-032'))[1];
+  assert.equal(sensory.text, 'Чувственное познание позволяет получать информацию об отдельных свойствах и внешних признаках предметов.');
+  assert.match(sensory.explanation, /Выявление существенных причинно-следственных связей и закономерностей связано прежде всего с рациональным познанием\.$/);
+  assert.doesNotMatch(sensory.explanation, /не раскрывает/);
+  assert.equal(parts(EGE.getTask('OBS-COG-038'))[4].explanation,
+    'Неверно. Отсутствие практической проверки само по себе не доказывает ложность знания. Возможности такой проверки зависят от исторического уровня развития практики.');
+  assert.doesNotMatch(fs.readFileSync(path.join(root, DATA), 'utf8'), /об атомах|атомист|не было ложным/);
+});
+
+test('правила оценивания на странице соответствуют типам заданий набора', () => {
+  const EGE = loadPage();
+  const S = EGE.scoring;
+  const html = fs.readFileSync(path.join(root, PAGE), 'utf8');
+  const rules = html.match(/<details class="panel rules rules--set">[\s\S]*?<\/details>/)[0];
+  const models = new Set(tasksOf(EGE).map((t) => S.getScoringModel(t)));
+  assert.deepEqual([...models].sort(), ['matching-1', 'multiple'], 'в наборе только суждения и соответствие модели 3');
+  // Нерелевантное для набора не упоминается: «два лишних термина» и соответствие на 2 балла.
+  assert.doesNotMatch(rules, /выпадающих|два термина/);
+  assert.doesNotMatch(rules, /одна ошибка — 1, две и более — 0/);
+  // Есть объяснение обеих моделей и итог набора.
+  assert.match(rules, /Задания с выбором верных суждений<\/strong> — максимум 2 балла/);
+  assert.match(rules, /модель задания 3 ЕГЭ\) — максимум 1 балл/);
+  assert.match(rules, /1 балл — только если все позиции указаны верно/);
+  const max = tasksOf(EGE).reduce((sum, t) => sum + S.getMaxPoints(t), 0);
+  assert.match(rules, new RegExp(`всего ${max} балла`));
+  const counts = [...models].map((m) => tasksOf(EGE).filter((t) => S.getScoringModel(t) === m).length);
+  assert.match(rules, new RegExp(`${counts[[...models].indexOf('multiple')]} заданий с выбором суждений и ${counts[[...models].indexOf('matching-1')]} заданий на соответствие`));
+  // Экраны задания и итогов совпадают с основным тренажёром.
+  const quiz = (h) => h.match(/<section class="screen" id="screen-quiz"[\s\S]*?<\/section>/)[0];
+  assert.equal(quiz(html), quiz(fs.readFileSync(path.join(root, 'index.html'), 'utf8')));
+});
