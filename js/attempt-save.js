@@ -42,7 +42,8 @@
     format: 'она записана в старом формате.',
     expired: 'она старше 30 дней.',
     tasks: 'задания этой тренировки с тех пор обновились.',
-    scoring: 'правила оценивания или ключи заданий с тех пор изменились.'
+    scoring: 'правила оценивания или ключи заданий с тех пор изменились.',
+    composition: 'состав заданий этой тренировки с тех пор изменился.'
   };
 
   /** Область сохранения: mode — 'ege' (основной тренажёр) или 'preview'. */
@@ -173,7 +174,9 @@
 
   /**
    * Проверяет запись и проигрывает попытку текущим движком.
-   * deps: { getTask, attempt: EGE.attempt, scoring: EGE.scoring, now? }.
+   * deps: { getTask, attempt: EGE.attempt, scoring: EGE.scoring, now?, taskIds? }.
+   * taskIds — фиксированный состав и порядок набора (страница предпросмотра): попытка
+   * восстанавливается, только если её задания совпадают с ним поштучно.
    * Результат: { ok: true, attempt, viewIndex, draft, savedAt } или { ok: false, reason }.
    */
   function restore(record, scope, deps) {
@@ -195,6 +198,9 @@
     if (!Array.isArray(saved.taskIds) || !Array.isArray(saved.answers) || !isIsoDate(saved.startedAt)) return fail('corrupt');
     if (saved.answers.length >= saved.taskIds.length) return fail('corrupt');
     if (!record.tasks || typeof record.tasks !== 'object') return fail('corrupt');
+
+    // Набор с фиксированным составом: попытка другого состава или порядка не продолжается.
+    if (deps.taskIds && !sameArray(saved.taskIds, Array.prototype.slice.call(deps.taskIds))) return fail('composition');
 
     // Задания: на месте, выдаются и не изменились с момента старта.
     for (var i = 0; i < saved.taskIds.length; i++) {

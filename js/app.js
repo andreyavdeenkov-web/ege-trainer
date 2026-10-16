@@ -354,7 +354,9 @@
    */
   function renderResume() {
     var result = saver.load(storage, startScope(), {
-      getTask: EGE.getTask, attempt: A, scoring: scoring
+      getTask: EGE.getTask, attempt: A, scoring: scoring,
+      // Предпросмотр: состав набора фиксирован — попытка другого состава не продолжается.
+      taskIds: preview ? preview.taskIds : null
     });
     state.resume = result.status === 'ok' ? result.state : null;
     ui.resumePanel.hidden = !state.resume;
