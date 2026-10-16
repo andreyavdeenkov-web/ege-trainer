@@ -19,10 +19,15 @@ const argSet = process.argv.indexOf('--set');
 const SET = argSet === -1 ? 'pilot' : process.argv[argSet + 1];
 const isPilot = SET === 'pilot';
 const pilot = require('./pilot.js');
-const { tasks, REVIEW } = require(`./${SET}.js`);
+const { tasks, REVIEW, APPROVED } = require(`./${SET}.js`);
 const BASIS = require(`./${SET}.js`).BASIS || pilot.BASIS;
-// С чем сверяются дубли: банк сайта, а для партии — ещё и утверждённый пилот.
-const others = () => EGE.tasks.concat(isPilot ? [] : pilot.tasks);
+// Остальные наборы черновика (пилот и другие партии): с ними сверяются ID и близкие суждения.
+const OTHER_SETS = ['pilot', 'batch1', 'batch2', 'batch3']
+  .filter((n) => n !== SET && fs.existsSync(path.join(__dirname, `${n}.js`)))
+  .map((n) => ({ name: n, tasks: require(`./${n}.js`).tasks }));
+const otherTasks = OTHER_SETS.flatMap((o) => o.tasks);
+// С чем сверяются дубли: банк сайта, а для партии — ещё и пилот, и другие партии.
+const others = () => EGE.tasks.concat(isPilot ? [] : otherTasks);
 const STATUSES = isPilot ? ['принять', 'переработать', 'заменить'] : ['готово', 'требует согласования', 'требует уточнения'];
 
 const EGE = loadBank();
@@ -60,7 +65,7 @@ for (const t of tasks) {
   ids.add(t.id);
   if (!/^OBS-(COG|SCI)-\d{3}$/.test(t.id)) err(t.id, 'ID вида OBS-COG-001 / OBS-SCI-001');
   if (EGE.tasks.some((b) => b.id === t.id)) err(t.id, 'ID уже занят в банке');
-  if (!isPilot && pilot.tasks.some((b) => b.id === t.id)) err(t.id, 'ID уже занят в утверждённом пилоте');
+  if (!isPilot) OTHER_SETS.forEach((o) => { if (o.tasks.some((b) => b.id === t.id)) err(t.id, `ID уже занят в наборе ${o.name}`); });
 
   // Схема 2 банка — те же правила, что и для новых заданий банка.
   metadataErrors(EGE, t).concat(newTaskErrors(EGE, t)).forEach((e) => err(t.id, e));
@@ -153,13 +158,15 @@ function render() {
     out.push('# Пилот: 10 + 10 заданий — итоговая версия для утверждения', '');
     out.push('Статус: **утверждён автором (редакция 6)**. Задания не подключены к сайту и не входят в банк.');
   } else {
-    out.push(`# Партия ${SET.replace(/\D/g, '')}: ${tasks.length} заданий — редакционный черновик`, '');
-    out.push('Статус: **черновик для экспертизы автором**. Задания не подключены к сайту и не входят в банк.');
+    out.push(`# Партия ${SET.replace(/\D/g, '')}: ${tasks.length} заданий — ${APPROVED ? 'утверждена автором' : 'редакционный черновик'}`, '');
+    out.push(APPROVED
+      ? 'Статус: **утверждена автором**. Задания не подключены к сайту и не входят в банк.'
+      : 'Статус: **черновик для экспертизы автором**. Задания не подключены к сайту и не входят в банк.');
   }
   out.push(`Источник данных: \`docs/drafts/cognition/${SET}.js\`; этот файл собран скриптом \`check-pilot.js${isPilot ? '' : ' --set ' + SET} --write\` — правьте \`${SET}.js\`.`, '');
   out.push('Формулировки адаптированы к интерфейсу тренажёра (без «запишите цифры…»). В скобках «Ответ в бланке» — запись ответа по правилам ЕГЭ.', '');
   const count = (st) => tasks.filter((t) => REVIEW[t.id][0] === st).length;
-  if (!isPilot) out.push(`**Редакционная экспертиза партии:** готово — ${count('готово')}, требует согласования — ${count('требует согласования')}, требует уточнения — ${count('требует уточнения')}. Обоснование отбора и перепланировки — в отчёте \`stage-1-2.md\`, раздел «Партия 1».`, '');
+  if (!isPilot) out.push(`**Редакционная экспертиза партии:** готово — ${count('готово')}, требует согласования — ${count('требует согласования')}, требует уточнения — ${count('требует уточнения')}. Обоснование отбора и перепланировки — в отчёте \`stage-1-2.md\`, раздел «Партия ${SET.replace(/\D/g, '')}».`, '');
   else out.push(`**Заключительная экспертиза** (сверка с полным корпусом № 1–4 из 30 вариантов Котовой — Лисковой 2026): принять — ${count('принять')}, переработать — ${count('переработать')}, заменить — ${count('заменить')}. Подробности — в отчёте \`stage-1-2.md\`, разделы «Редакция 5» и «Редакция 6».`, '');
   out.push('| ID | Модель | Элемент | Ключ | Сл. | Статус |', '|---|---|---|---|---|---|');
   for (const t of tasks) {
