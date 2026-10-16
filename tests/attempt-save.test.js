@@ -317,3 +317,30 @@ test('попытка, сохранённая в прежней редакции 
   assert.equal(restored.state.attempt.answers[3].taskVersion, 2);
   assert.equal(NEW.attempt.totalScore(restored.state.attempt), 9);
 });
+
+test('набор с фиксированным составом: попытка другого состава или порядка не восстанавливается', () => {
+  const EGE = load(['data/preview/cognition-batch1.js', 'data/preview/cognition-poznanie.js']);
+  const S = EGE.attemptSave;
+  const ids = Array.from(EGE.preview.taskIds);
+  const settings = { section: 'preview', topic: EGE.preview.id };
+  const scope = S.scopeId('preview', settings);
+  const save = (taskIds) => {
+    const storage = memoryStorage();
+    const attempt = EGE.attempt.createAttempt({ settings, taskIds });
+    EGE.attempt.recordAnswer(attempt, EGE.getTask(taskIds[0]), key(EGE, EGE.getTask(taskIds[0])));
+    saveRecord(EGE, storage, attempt, scope, { viewIndex: 1 });
+    return storage;
+  };
+  const withSet = Object.assign(deps(EGE), { taskIds: EGE.preview.taskIds });
+
+  assert.equal(S.load(save(ids), scope, withSet).status, 'ok', 'тот же состав');
+  for (const taskIds of [ids.slice(0, 18), ids.concat('OBS-SCI-004'), [ids[1], ids[0], ...ids.slice(2)]]) {
+    const storage = save(taskIds);
+    const result = S.load(storage, scope, withSet);
+    assert.equal(result.reason, 'composition');
+    assert.equal(result.message, 'состав заданий этой тренировки с тех пор изменился.');
+    assert.equal(storage.getItem(S.storageKey(scope)), null);
+  }
+  // Без фиксированного состава (основной тренажёр) проверка не применяется.
+  assert.equal(S.load(save(ids.slice(0, 18)), scope, deps(EGE)).status, 'ok');
+});
