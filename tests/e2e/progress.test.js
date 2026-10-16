@@ -270,8 +270,8 @@ test('сохранения разных тем и предпросмотра н�
   await page.reload();
   assert.ok(await page.isVisible('#resume-panel'));
 
-  // Другая тема того же раздела, весь раздел, все разделы — своего сохранения нет.
-  for (const [section, topic] of [['OBS', 'OBS-GEN'], ['OBS', 'all'], ['all', null]]) {
+  // Другая тема, другой раздел, тема ещё не выбрана — своего сохранения нет.
+  for (const [section, topic] of [['SOC', 'SOC-STR'], ['SOC', 'SOC-FAM'], ['OBS', null]]) {
     await pick(page, 'section', section);
     if (topic) await pick(page, 'topic', topic);
     assert.equal(await page.isVisible('#resume-panel'), false, `${section}/${topic}`);
@@ -368,8 +368,8 @@ test('хранилище недоступно: тренировка работа
   const errors = [];
   page.on('pageerror', (err) => errors.push(String(err)));
   await page.goto(base);
-  await pick(page, 'section', 'OBS');
-  await pick(page, 'topic', 'OBS-GEN');
+  await pick(page, 'section', 'SOC');
+  await pick(page, 'topic', 'SOC-STR');
   await page.click('#start-btn');
   await page.click('#statements .statement[data-number="1"] .statement__btn');
   await page.click('#submit-btn');

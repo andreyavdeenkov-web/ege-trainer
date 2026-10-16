@@ -58,6 +58,7 @@
     sectionOptions: $('section-options'),
     topicField: $('topic-field'),
     topicOptions: $('topic-options'),
+    topicEmpty: $('topic-empty'),
     startBtn: $('start-btn'),
     resumePanel: $('resume-panel'),
     resumeText: $('resume-text'),
@@ -139,22 +140,22 @@
   }
 
   function isValidSection(id) {
-    return id === 'all' || EGE.getAvailableSections().some(function (s) { return s.id === id; });
+    return EGE.getAvailableSections().some(function (s) { return s.id === id; });
   }
 
   function isValidTopic(sectionId, topicId) {
-    if (topicId === 'all') return true;
-    if (sectionId === 'all') return false;
-    return EGE.getAvailableTopics(sectionId).some(function (t) { return t.id === topicId; });
+    return EGE.getTrainingTopics(sectionId).some(function (t) { return t.id === topicId; });
   }
 
   /**
-   * Настройки старта: раздел и тема. Тренировка всегда включает все задания выбора
-   * во всех форматах; формат ученик не выбирает. Сохранённое ранее поле format
-   * (из прежних версий) игнорируется и не ограничивает набор заданий.
+   * Настройки старта: раздел и конкретная тема (null — ещё не выбраны). Тренировка
+   * идёт только по одной теме: «Все разделы», «Весь раздел» и «Общие вопросы»
+   * не предлагаются, такие значения из прежних версий сбрасываются. В тренировку
+   * входят все задания темы во всех форматах; сохранённое ранее поле format
+   * игнорируется и не ограничивает набор заданий.
    */
   function loadSettings() {
-    var result = { section: 'all', topic: 'all' };
+    var result = { section: null, topic: null };
     if (preview) return result;
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -201,7 +202,8 @@
 
   /* ---------- Стартовый экран ---------- */
 
-  function optionCard(name, value, title, count, color, checked) {
+  /** countText — подпись под названием; по умолчанию «N заданий». */
+  function optionCard(name, value, title, count, color, checked, countText) {
     var label = el('label', 'topic-option');
     if (color) label.style.setProperty('--topic-color', color);
 
@@ -214,7 +216,7 @@
     var body = el('span', 'topic-option__body');
     body.appendChild(el('span', 'topic-option__dot'));
     body.appendChild(el('span', 'topic-option__title', title));
-    body.appendChild(el('span', 'topic-option__count', count + ' ' + tasksWord(count)));
+    body.appendChild(el('span', 'topic-option__count', countText || count + ' ' + tasksWord(count)));
 
     label.appendChild(input);
     label.appendChild(body);
@@ -236,56 +238,81 @@
     renderResume();
   }
 
-  /** Разделы со счётчиками всех заданий (во всех форматах). Разделы без заданий скрыты. */
+  /** Задания конкретных тем раздела — столько можно потренировать, выбрав тему. */
+  function trainingTaskCount(sectionId) {
+    return EGE.getTrainingTopics(sectionId).reduce(function (n, topic) {
+      return n + EGE.getTasksByTopic(topic.id).length;
+    }, 0);
+  }
+
+  /**
+   * Разделы — навигационные категории: выбор раздела только открывает его темы.
+   * Счётчик — задания конкретных тем. Разделы без заданий скрыты.
+   */
   function renderSectionOptions() {
     ui.sectionOptions.textContent = '';
-    ui.sectionOptions.appendChild(optionCard('section', 'all', 'Все разделы',
-      EGE.getTasksBySection('all').length, null, settings.section === 'all'));
     EGE.getAvailableSections().forEach(function (section) {
+      var n = trainingTaskCount(section.id);
       ui.sectionOptions.appendChild(optionCard('section', section.id, section.title,
-        EGE.getTasksBySection(section.id).length, section.color, settings.section === section.id));
+        n, section.color, settings.section === section.id, n === 0 ? 'Темы готовятся' : null));
     });
   }
 
-  /** Темы выбранного раздела. Темы без заданий не показываются. */
+  /**
+   * Конкретные темы выбранного раздела, в которых есть задания («Общие вопросы»
+   * не предлагаются). Если таких тем нет — сообщение вместо пустого списка.
+   */
   function renderTopicOptions() {
     ui.topicOptions.textContent = '';
     var section = EGE.getSection(settings.section);
     ui.topicField.hidden = !section;
     if (!section) return;
 
-    ui.topicOptions.appendChild(optionCard('topic', 'all', 'Весь раздел',
-      EGE.getTasksBySection(section.id).length, section.color, settings.topic === 'all'));
-    EGE.getAvailableTopics(section.id).forEach(function (topic) {
+    var topics = EGE.getTrainingTopics(section.id);
+    ui.topicOptions.hidden = topics.length === 0;
+    ui.topicEmpty.hidden = topics.length > 0;
+    ui.topicEmpty.textContent = topics.length > 0 ? '' : 'В разделе «' + section.title +
+      '» пока нет отдельных тем для тренировки — они появятся позже. Выберите другой раздел.';
+    topics.forEach(function (topic) {
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
         EGE.getTasksByTopic(topic.id).length, section.color, settings.topic === topic.id));
     });
   }
 
-  /** Все задания выбранных раздела и темы — во всех трёх форматах. */
+  /** Все задания выбранной темы — во всех трёх форматах. Пока тема не выбрана — пусто. */
   function currentPool() {
     if (preview) return preview.taskIds.map(EGE.getTask);
+    if (!settings.topic) return [];
     return EGE.getPool(settings.section, settings.topic);
   }
 
+  /** Кнопка старта подсказывает следующий шаг, пока тема не выбрана. */
   function updateStartButton() {
     var n = currentPool().length;
     ui.startBtn.disabled = n === 0;
-    ui.startBtn.textContent = n === 0
-      ? 'Здесь пока нет заданий'
-      : 'Начать: ' + n + ' ' + tasksWord(n);
+    if (n > 0) {
+      ui.startBtn.textContent = 'Начать: ' + n + ' ' + tasksWord(n);
+    } else if (preview || settings.topic) {
+      ui.startBtn.textContent = 'Здесь пока нет заданий';
+    } else if (!settings.section) {
+      ui.startBtn.textContent = 'Выберите раздел';
+    } else if (EGE.getTrainingTopics(settings.section).length === 0) {
+      ui.startBtn.textContent = 'В разделе пока нет тем';
+    } else {
+      ui.startBtn.textContent = 'Выберите тему';
+    }
   }
 
   function readStartForm() {
     var data = new FormData(ui.startForm);
-    var section = data.get('section') || 'all';
+    var section = data.get('section') || null;
     if (section !== settings.section) {
-      // При смене раздела выбор темы сбрасывается на «Весь раздел».
+      // При смене раздела тему нужно выбрать заново.
       settings.section = section;
-      settings.topic = 'all';
+      settings.topic = null;
       renderTopicOptions();
     } else {
-      settings.topic = data.get('topic') || 'all';
+      settings.topic = data.get('topic') || null;
     }
   }
 
@@ -353,6 +380,12 @@
    * причину — без прежних баллов.
    */
   function renderResume() {
+    if (!preview && !settings.topic) {
+      // Тема не выбрана: продолжать нечего (попытки прежних «Все разделы» и «Весь раздел» не предлагаются).
+      state.resume = null;
+      ui.resumePanel.hidden = true;
+      return;
+    }
     var result = saver.load(storage, startScope(), {
       getTask: EGE.getTask, attempt: A, scoring: scoring,
       // Предпросмотр: состав набора фиксирован — попытка другого состава не продолжается.

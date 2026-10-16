@@ -267,9 +267,9 @@ test('основной тренажёр не изменился: нет тем �
   assert.deepEqual(state.topics, ['OBS-GEN', 'OBS-ACT']);
   assert.equal(state.previewTasks, 0);
   await page.locator('label.topic-option:has(input[name="section"][value="OBS"])').click();
-  assert.deepEqual(await page.locator('#topic-options .topic-option__title').allTextContents(),
-    ['Весь раздел', 'Общие вопросы', 'Деятельность']);
-  assert.match(await page.textContent('#start-btn'), new RegExp(`^Начать: ${state.obs} `));
+  // На главном экране — только конкретные темы («Весь раздел» и «Общие вопросы» не предлагаются).
+  assert.deepEqual(await page.locator('#topic-options .topic-option__title').allTextContents(), ['Деятельность']);
+  assert.equal(await page.textContent('#start-btn'), 'Выберите тему');
   assert.ok(!(await page.content()).includes('preview-cognition'));
   assert.deepEqual(errors, []);
   await context.close();

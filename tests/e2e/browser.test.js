@@ -140,10 +140,8 @@ async function advanceTo(page, type) {
 
 /** Счётчики, которые должны быть на карточках: все задания во всех форматах. */
 const bankCounts = (page) => page.evaluate(() => ({
-  all: EGE.getTasksBySection('all').length,
-  OBS: EGE.getTasksBySection('OBS').length,
   'OBS-ACT': EGE.getTasksByTopic('OBS-ACT').length,
-  SOC: EGE.getTasksBySection('SOC').length,
+  SOC: EGE.getTrainingTopics('SOC').reduce((n, t) => n + EGE.getTasksByTopic(t.id).length, 0),
   'SOC-FAM': EGE.getTasksByTopic('SOC-FAM').length
 }));
 const countOf = (page, name, value) =>
@@ -167,9 +165,8 @@ for (const config of CONFIGS) {
     assert.equal(await page.locator('input[name="format"], #train-settings, #format-options').count(), 0);
     assert.deepEqual(await page.locator('#start-form legend').allTextContents(), ['Раздел', 'Тема']);
 
-    // Счётчики — все задания во всех форматах.
+    // Счётчики — все задания конкретных тем во всех форматах.
     const counts = await bankCounts(page);
-    assert.match(await countOf(page, 'section', 'all'), new RegExp(`^${counts.all} `));
     assert.match(await countOf(page, 'section', 'SOC'), new RegExp(`^${counts.SOC} `));
     await assertNoHorizontalScroll(page, 'старт');
     await shot(page, config, '1-start');
@@ -179,7 +176,9 @@ for (const config of CONFIGS) {
     await pick(page, 'topic', 'OBS-ACT');
     assert.equal(await page.textContent('#start-btn'), 'Начать: 16 заданий');
     await pick(page, 'section', 'SOC');
-    assert.ok(await radio(page, 'topic', 'all').isChecked(), 'смена раздела сбрасывает тему');
+    assert.equal(await page.locator('input[name="topic"]:checked').count(), 0, 'смена раздела сбрасывает тему');
+    assert.equal(await page.textContent('#start-btn'), 'Выберите тему');
+    assert.ok(await page.locator('#start-btn').isDisabled());
     await pick(page, 'topic', 'SOC-FAM');
     assert.equal(await page.textContent('#start-btn'), `Начать: ${counts['SOC-FAM']} задание`);
     await shot(page, config, '2-topic');
@@ -191,6 +190,76 @@ for (const config of CONFIGS) {
 
     assert.deepEqual(errors, []);
     await context.close();
+  });
+
+  test(`${config.name}: тренировка только по конкретной теме — без «Все разделы», «Весь раздел», «Общие вопросы»`, async () => {
+    const { page, context, errors } = await open(config);
+    const titles = (field) => page.locator(`#${field} .topic-option__title`).allTextContents();
+
+    // До выбора: темы скрыты, старт недоступен.
+    assert.deepEqual(await titles('section-options'),
+      ['Человек и общество', 'Экономика', 'Социальные отношения', 'Политика', 'Право']);
+    assert.equal(await page.locator('input[value="all"][name="section"], input[name="topic"]').count(), 0);
+    assert.ok(await page.locator('#topic-field').isHidden());
+    assert.equal(await page.textContent('#start-btn'), 'Выберите раздел');
+    assert.ok(await page.locator('#start-btn').isDisabled());
+
+    // Раздел с темами: только конкретные темы, «Общие вопросы» нет.
+    await pick(page, 'section', 'OBS');
+    assert.deepEqual(await titles('topic-options'), ['Деятельность']);
+    assert.ok(await page.locator('#topic-empty').isHidden());
+    assert.equal(await page.textContent('#start-btn'), 'Выберите тему');
+    assert.ok(await page.locator('#start-btn').isDisabled());
+    await pick(page, 'section', 'SOC');
+    assert.deepEqual(await titles('topic-options'),
+      ['Социальная стратификация', 'Социальная мобильность', 'Семья и брак']);
+    await assertNoHorizontalScroll(page, 'темы раздела');
+
+    // Раздел без конкретных тем: понятное сообщение и недоступная кнопка.
+    for (const [id, title] of [['ECO', 'Экономика'], ['POL', 'Политика'], ['LAW', 'Право']]) {
+      assert.equal(await countOf(page, 'section', id), 'Темы готовятся');
+      await pick(page, 'section', id);
+      assert.ok(await page.locator('#topic-options').isHidden(), id);
+      assert.equal(await page.locator('input[name="topic"]').count(), 0, id);
+      assert.ok(await page.locator('#topic-empty').isVisible(), id);
+      assert.match(await page.textContent('#topic-empty'), new RegExp(`^В разделе «${title}» пока нет отдельных тем`));
+      assert.equal(await page.textContent('#start-btn'), 'В разделе пока нет тем');
+      assert.ok(await page.locator('#start-btn').isDisabled());
+    }
+    // Сообщение читается в обеих темах оформления: текст отличается от фона.
+    const colors = await page.evaluate(() => {
+      const cs = getComputedStyle(document.getElementById('topic-empty'));
+      return [cs.color, cs.backgroundColor];
+    });
+    assert.notEqual(colors[0], colors[1]);
+    await assertNoHorizontalScroll(page, 'раздел без тем');
+    await shot(page, config, '1b-no-topics');
+
+    // Задания «Общих вопросов» остаются в банке.
+    const general = await page.evaluate(() => ['OBS-GEN', 'ECO-GEN', 'POL-GEN', 'LAW-GEN']
+      .map((id) => EGE.getTasksByTopic(id).length));
+    assert.deepEqual(general, [3, 3, 3, 3]);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: прежний выбор «Все разделы», «Весь раздел», «Общие вопросы» сбрасывается`, async () => {
+    for (const [saved, section, button] of [
+      [{ section: 'all', topic: 'all' }, null, 'Выберите раздел'],
+      [{ section: 'OBS', topic: 'all' }, 'OBS', 'Выберите тему'],
+      [{ section: 'OBS', topic: 'OBS-GEN' }, 'OBS', 'Выберите тему'],
+      [{ section: 'ECO', topic: 'ECO-GEN' }, 'ECO', 'В разделе пока нет тем']
+    ]) {
+      const { page, context, errors } = await open(config, { storage: JSON.stringify(saved) });
+      const where = JSON.stringify(saved);
+      assert.equal(await page.locator('input[name="section"]:checked').count(), section ? 1 : 0, where);
+      if (section) assert.ok(await radio(page, 'section', section).isChecked(), where);
+      assert.equal(await page.locator('input[name="topic"]:checked').count(), 0, where);
+      assert.equal(await page.textContent('#start-btn'), button, where);
+      assert.ok(await page.locator('#start-btn').isDisabled(), where);
+      assert.deepEqual(errors, []);
+      await context.close();
+    }
   });
 
   test(`${config.name}: сохранённый ранее формат не ограничивает набор заданий`, async () => {
@@ -266,8 +335,9 @@ for (const config of CONFIGS) {
 
   test(`${config.name}: выбор нескольких ответов, итоги и повторное прохождение`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'ECO');
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 3 задания');
+    await pick(page, 'section', 'SOC');
+    await pick(page, 'topic', 'SOC-STR');
+    assert.equal(await page.textContent('#start-btn'), 'Начать: 6 заданий');
     await page.click('#start-btn');
 
     const first = await currentKey(page);
@@ -284,19 +354,19 @@ for (const config of CONFIGS) {
     // У старых заданий нет source — блок пояснений скрыт.
     assert.ok(await page.locator('#task-notes').isHidden());
 
-    for (let i = 1; i < 3; i++) {
+    for (let i = 1; i < 6; i++) {
       await page.click('#next-btn');
       await answerWithKey(page, await currentKey(page));
     }
     await page.click('#next-btn');
     await page.waitForSelector('#screen-result:not([hidden])');
-    assert.equal(await page.textContent('#result-score'), '5 из 6 баллов');
+    assert.equal(await page.textContent('#result-score'), '11 из 12 баллов');
     await assertNoHorizontalScroll(page, 'итоги');
     await shot(page, config, '7-result');
 
     await page.click('#restart-btn');
     await page.waitForSelector('#screen-quiz:not([hidden])');
-    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 3 · выполнено 0$/);
+    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 6 · выполнено 0$/);
     assert.ok(await page.locator('#feedback').isHidden());
     assert.equal(await page.locator('#statements .statement.is-selected').count(), 0);
     await answerWithKey(page, await currentKey(page));
@@ -412,7 +482,8 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     await page.waitForURL(base);
     assert.ok(await page.locator('#screen-start').isVisible());
     // Тренировка начата, но ответов ещё нет — терять нечего, подтверждение не нужно.
-    await pick(page, 'section', 'ECO');
+    await pick(page, 'section', 'SOC');
+    await pick(page, 'topic', 'SOC-STR');
     await page.click('#start-btn');
     await page.waitForSelector('#screen-quiz:not([hidden])');
     await navLink(page, 'Олимпиады').click();
@@ -423,7 +494,8 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
 
   test(`${config.name}: шапка — при начатой тренировке переход только после подтверждения`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'ECO');
+    await pick(page, 'section', 'SOC');
+    await pick(page, 'topic', 'SOC-STR');
     await page.click('#start-btn');
     await answerWithKey(page, await currentKey(page));
     const before = await attemptState(page);
@@ -453,7 +525,8 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     assert.ok(await page.locator('#screen-start').isVisible());
 
     // Подтверждение после «Олимпиады» ведёт на олимпиадную страницу.
-    await pick(page, 'section', 'ECO');
+    await pick(page, 'section', 'SOC');
+    await pick(page, 'topic', 'SOC-STR');
     await page.click('#start-btn');
     await answerWithKey(page, await currentKey(page));
     await navLink(page, 'Олимпиады').click();
@@ -466,7 +539,8 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
 
   test(`${config.name}: логотип — прежнее подтверждение выхода на стартовый экран`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'ECO');
+    await pick(page, 'section', 'SOC');
+    await pick(page, 'topic', 'SOC-STR');
     await page.click('#start-btn');
     await answerWithKey(page, await currentKey(page));
     const before = await attemptState(page);

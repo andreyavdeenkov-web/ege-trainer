@@ -35,3 +35,45 @@ test('пул тренировки — все форматы выбранной �
   assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple']);
   assert.equal(pool.length, 31);
 });
+
+test('на главном экране нет «Все разделы», «Весь раздел» и «Общие вопросы»', () => {
+  assert.doesNotMatch(appCode, /Все разделы'|'Весь раздел'/);
+  assert.doesNotMatch(appCode, /optionCard\('(section|topic)', 'all'/);
+  assert.match(html, /<p class="topic-empty" id="topic-empty" role="status" hidden><\/p>/);
+});
+
+test('темы для выбора — только конкретные темы с заданиями', () => {
+  const EGE = loadBank();
+  const ids = (list) => Array.from(list, (t) => t.id);
+  assert.deepEqual(ids(EGE.getTrainingTopics('OBS')), ['OBS-ACT']);
+  assert.deepEqual(ids(EGE.getTrainingTopics('SOC')), ['SOC-STR', 'SOC-MOB', 'SOC-FAM']);
+  for (const section of ['ECO', 'POL', 'LAW']) {
+    assert.deepEqual(ids(EGE.getTrainingTopics(section)), [], section);
+  }
+  assert.equal(EGE.getTrainingTopics('XXX').length, 0);
+  for (const section of EGE.sections) {
+    for (const topic of EGE.getTrainingTopics(section.id)) {
+      assert.ok(!topic.general && !/-GEN$/.test(topic.id), topic.id);
+      assert.ok(EGE.getTasksByTopic(topic.id).length > 0, topic.id);
+    }
+  }
+});
+
+test('«Общие вопросы» помечены general, их задания остаются в банке', () => {
+  const EGE = loadBank();
+  const general = Array.from(EGE.sections.flatMap((s) => s.topics).filter((t) => t.general), (t) => t.id);
+  assert.deepEqual(general, ['OBS-GEN', 'ECO-GEN', 'POL-GEN', 'LAW-GEN']);
+  for (const id of general) {
+    assert.equal(EGE.getTopic(id).title, 'Общие вопросы');
+    assert.equal(EGE.getTasksByTopic(id).length, 3, id);
+  }
+  // Разделы остаются: в каждом есть задания, даже если конкретных тем пока нет.
+  assert.deepEqual(Array.from(EGE.getAvailableSections(), (s) => s.id), ['OBS', 'ECO', 'SOC', 'POL', 'LAW']);
+});
+
+test('настройки по умолчанию: раздел и тема не выбраны, без темы набор пуст', () => {
+  const load = appCode.slice(appCode.indexOf('function loadSettings'), appCode.indexOf('function saveSettings'));
+  assert.match(load, /var result = \{ section: null, topic: null \};/);
+  assert.match(appCode, /if \(!settings\.topic\) return \[\];/);
+  assert.match(appCode, /return EGE\.getTrainingTopics\(sectionId\)\.some/);
+});

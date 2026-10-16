@@ -17,6 +17,9 @@
    * id раздела и темы постоянные: они попадают в ID заданий и в сохранённые
    * попытки. Название можно менять, id — нет. Новую тему достаточно дописать
    * в массив topics нужного раздела. Темы без заданий ученику не показываются.
+   *
+   * general: true — сводная тема «Общие вопросы»: её задания остаются в банке,
+   * но на главном экране тема не предлагается (тренировка — только по конкретной теме).
    */
   EGE.sections = [
     {
@@ -24,7 +27,7 @@
       title: 'Человек и общество',
       color: '#6366f1',
       topics: [
-        { id: 'OBS-GEN', title: 'Общие вопросы' },
+        { id: 'OBS-GEN', title: 'Общие вопросы', general: true },
         { id: 'OBS-ACT', title: 'Деятельность' },
         // Задания этих тем пока есть только на странице предпросмотра
         // (preview-cognition.html); в основном каталоге темы без заданий не показываются.
@@ -37,7 +40,7 @@
       title: 'Экономика',
       color: '#0ea5e9',
       topics: [
-        { id: 'ECO-GEN', title: 'Общие вопросы' }
+        { id: 'ECO-GEN', title: 'Общие вопросы', general: true }
       ]
     },
     {
@@ -60,7 +63,7 @@
       title: 'Политика',
       color: '#f59e0b',
       topics: [
-        { id: 'POL-GEN', title: 'Общие вопросы' }
+        { id: 'POL-GEN', title: 'Общие вопросы', general: true }
       ]
     },
     {
@@ -68,7 +71,7 @@
       title: 'Право',
       color: '#ef4444',
       topics: [
-        { id: 'LAW-GEN', title: 'Общие вопросы' }
+        { id: 'LAW-GEN', title: 'Общие вопросы', general: true }
       ]
     }
   ];
@@ -229,6 +232,16 @@
     if (!section) return [];
     return section.topics.filter(function (topic) {
       return EGE.getTasksByTopic(topic.id).length > 0;
+    });
+  };
+
+  /**
+   * Темы раздела для выбора на главном экране: конкретные темы (не «Общие
+   * вопросы») с хотя бы одним активным заданием.
+   */
+  EGE.getTrainingTopics = function (sectionId) {
+    return EGE.getAvailableTopics(sectionId).filter(function (topic) {
+      return !topic.general;
     });
   };
 

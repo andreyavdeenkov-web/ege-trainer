@@ -315,6 +315,15 @@ button, input { font: inherit; color: inherit; }
 .topic-option input:disabled + .topic-option__body { opacity: .5; cursor: not-allowed; }
 .topic-grid--compact { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .topic-grid--compact .topic-option__body { padding: 10px 12px; }
+/* Раздел без конкретных тем: сообщение вместо пустого списка */
+.topic-empty {
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 15px;
+}
 
 .segmented {
   display: inline-flex;
