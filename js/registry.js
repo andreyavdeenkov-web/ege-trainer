@@ -246,12 +246,17 @@
 
   /**
    * Статусы практикума: published — готов и виден ученику; draft — состав
-   * готовится, ученик его не видит.
+   * готовится, ученик его не видит; retired — прежний набор, заменённый
+   * другими практикумами: новую попытку начать нельзя, ученик видит его, только
+   * чтобы продолжить уже начатую (и сохранённую) попытку.
    */
-  EGE.PRACTICUM_STATUSES = ['published', 'draft'];
+  EGE.PRACTICUM_STATUSES = ['published', 'draft', 'retired'];
 
-  /** Формат постоянного ID практикума: ТЕМА-PНОМЕР, например OBS-COG-P01. */
-  EGE.PRACTICUM_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-P\d{2}$/;
+  /**
+   * Формат постоянного ID: ТЕМА-PНОМЕР для практикума (OBS-COG-P01),
+   * ТЕМА-RНОМЕР для прежнего набора со статусом retired (SOC-FAM-R01).
+   */
+  EGE.PRACTICUM_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-[PR]\d{2}$/;
 
   /** Все практикумы в порядке регистрации. */
   EGE.practicums = [];
@@ -265,16 +270,23 @@
   /**
    * Регистрирует практикумы. Подключается после файлов с заданиями: каждое задание
    * практикума должно быть уже зарегистрировано. Практикум:
-   *   id       — постоянный уникальный ID: id темы + '-P' + номер из двух цифр;
+   *   id       — постоянный уникальный ID: id темы + '-P' + номер из двух цифр
+   *              (у прежнего набора со статусом retired — '-R' + номер);
    *   topic    — id темы; все задания практикума — из этой темы;
    *   number   — порядковый номер в теме (1 → «Практикум № 1»), совпадает с номером в id;
-   *   status   — 'published' или 'draft' (см. EGE.PRACTICUM_STATUSES);
+   *              у прежних наборов (R) своя нумерация;
+   *   status   — 'published', 'draft' или 'retired' (см. EGE.PRACTICUM_STATUSES);
+   *   title    — только у retired и обязательно: название для ученика,
+   *              например «Прежний набор (31 задание)»;
    *   taskIds  — ID заданий: состав задаётся явно и не меняется от попытки к попытке;
    *   shuffle  — необязательно: true — задания показываются в случайном порядке,
    *              иначе — в порядке taskIds;
    *   legacyTopicAttempts — необязательно: true — незавершённая попытка, сохранённая
    *              до появления практикумов для темы целиком, продолжается в этом практикуме
    *              (если её задания совпадают с его составом). Не больше одного на тему.
+   *
+   * Задание может входить в прежний набор (retired) и в один из действующих практикумов;
+   * между действующими практикумами задания не повторяются (проверяет тест).
    */
   EGE.addPracticums = function (list) {
     list.forEach(function (p) {
@@ -284,10 +296,13 @@
       var topic = EGE.getTopic(p.topic);
       if (!topic) throw new Error('Неизвестная тема: ' + p.topic + ' (' + where + ')');
       if (topic.general) throw new Error('В «Общих вопросах» практикумов не бывает: ' + where);
-      if (!Number.isInteger(p.number) || p.number < 1 || p.id !== p.topic + '-P' + pad2(p.number)) {
+      if (EGE.PRACTICUM_STATUSES.indexOf(p.status) === -1) throw new Error('Неизвестный статус: ' + where);
+      var kind = p.status === 'retired' ? 'R' : 'P';
+      if (!Number.isInteger(p.number) || p.number < 1 || p.id !== p.topic + '-' + kind + pad2(p.number)) {
         throw new Error('Номер практикума не совпадает с id: ' + where);
       }
-      if (EGE.PRACTICUM_STATUSES.indexOf(p.status) === -1) throw new Error('Неизвестный статус: ' + where);
+      if (kind === 'R' && !(typeof p.title === 'string' && p.title)) throw new Error('У прежнего набора нет названия: ' + where);
+      if (kind === 'P' && p.title !== undefined) throw new Error('Название практикума — только «Практикум № N»: ' + where);
       if (!Array.isArray(p.taskIds) || p.taskIds.length === 0) throw new Error('В практикуме нет заданий: ' + where);
       if (new Set(p.taskIds).size !== p.taskIds.length) throw new Error('Задания повторяются: ' + where);
       p.taskIds.forEach(function (id) {
@@ -297,7 +312,7 @@
       });
       EGE.practicums.forEach(function (other) {
         if (other.topic !== p.topic) return;
-        if (other.number === p.number) throw new Error('Повторяющийся номер практикума: ' + where);
+        if (other.number === p.number && (other.status === 'retired') === (kind === 'R')) throw new Error('Повторяющийся номер практикума: ' + where);
         if (other.legacyTopicAttempts && p.legacyTopicAttempts) {
           throw new Error('legacyTopicAttempts — только у одного практикума темы: ' + where);
         }
@@ -322,18 +337,37 @@
    * и выдаются (снятое с выдачи задание делает практикум недоступным, а не
    * молча меняет его состав).
    */
-  EGE.isPracticumReady = function (practicum) {
-    return practicum.status === 'published' && practicum.taskIds.every(function (id) {
+  function hasActiveTasks(practicum) {
+    return practicum.taskIds.every(function (id) {
       var task = EGE.getTask(id);
       return !!task && isActive(task);
     });
+  }
+
+  EGE.isPracticumReady = function (practicum) {
+    return practicum.status === 'published' && hasActiveTasks(practicum);
   };
 
-  /** Все практикумы темы (в том числе черновики) по порядковому номеру. */
+  /**
+   * Можно ли продолжить сохранённую попытку: опубликованный практикум или прежний
+   * набор (retired), задания которого на месте. Начать прежний набор заново нельзя.
+   */
+  EGE.isPracticumContinuable = function (practicum) {
+    return (practicum.status === 'published' || practicum.status === 'retired') && hasActiveTasks(practicum);
+  };
+
+  /** Все практикумы темы (в том числе черновики и прежние наборы) по порядковому номеру. */
   EGE.getPracticumsByTopic = function (topicId) {
     return EGE.practicums
       .filter(function (p) { return p.topic === topicId; })
       .sort(function (a, b) { return a.number - b.number; });
+  };
+
+  /** Прежние наборы темы, попытки которых ещё можно продолжить (показываются только при сохранении). */
+  EGE.getRetiredPracticums = function (topicId) {
+    return EGE.getPracticumsByTopic(topicId).filter(function (p) {
+      return p.status === 'retired' && EGE.isPracticumContinuable(p);
+    });
   };
 
   /** Практикумы темы, которые видит ученик. */
@@ -348,9 +382,9 @@
     }, 0);
   };
 
-  /** Название для ученика: «Практикум № 1». */
+  /** Название для ученика: «Практикум № 1»; у прежнего набора — его title. */
   EGE.practicumTitle = function (practicum) {
-    return 'Практикум № ' + practicum.number;
+    return practicum.status === 'retired' ? practicum.title : 'Практикум № ' + practicum.number;
   };
 
   /** Темы раздела, в которых есть хотя бы один опубликованный практикум. */

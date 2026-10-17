@@ -373,6 +373,9 @@ button, input { font: inherit; color: inherit; }
   background: var(--warn-bg);
   font-size: 14px;
 }
+/* Прежний набор: виден только для продолжения начатой попытки */
+.practicum-card--retired { border-style: dashed; background: var(--surface-2); }
+.practicum-card__note { font-size: 14px; color: var(--text-muted); }
 .practicum-card__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
 .practicum-card__actions .btn { flex: 1 1 auto; white-space: nowrap; }
 

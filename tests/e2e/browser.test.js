@@ -209,7 +209,14 @@ for (const config of CONFIGS) {
     assert.equal(await page.locator('input[name="topic"]:checked').count(), 0, 'смена раздела сбрасывает тему');
     assert.ok(await page.locator('#practicum-field').isHidden());
     await pick(page, 'topic', 'SOC-FAM');
-    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__meta').textContent(), '31 задание · максимум 57 баллов');
+    assert.equal(await noteOf(page, 'topic', 'SOC-FAM'), '2 практикума');
+    assert.deepEqual(await page.locator('.practicum-card').evaluateAll((list) => list.map((c) => c.dataset.practicum)),
+      ['SOC-FAM-P01', 'SOC-FAM-P02'], 'прежний набор новому ученику не предлагается');
+    assert.deepEqual(await page.locator('.practicum-card__title').allTextContents(), ['Практикум № 1', 'Практикум № 2']);
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__meta').textContent(), '16 заданий · максимум 29 баллов');
+    assert.equal(await card(page, 'SOC-FAM-P02').locator('.practicum-card__meta').textContent(), '15 заданий · максимум 28 баллов');
+    await assertNoHorizontalScroll(page, 'два практикума');
+    await shot(page, config, '2b-family');
 
     // Раздел и тема запоминаются.
     await page.reload();
@@ -426,38 +433,42 @@ for (const config of CONFIGS) {
     await context.close();
   });
 
-  test(`${config.name}: «Семья и брак», Практикум № 1 — все 31 задание проходят и отображаются`, async () => {
+  test(`${config.name}: «Семья и брак», Практикумы № 1 и № 2 — все 31 задание проходят и отображаются`, async () => {
     const { page, context, errors } = await open(config);
-    await openPracticum(page, 'SOC', 'SOC-FAM', 'SOC-FAM-P01');
-
     const seen = new Set();
-    const types = new Set();
-    let max = 0;
-    for (let i = 0; i < 31; i++) {
-      const task = await currentKey(page);
-      assert.ok(!seen.has(task.id), `задание ${task.id} повторилось`);
-      seen.add(task.id);
-      types.add(task.type);
-      await assertNoHorizontalScroll(page, `${task.id}, до ответа`);
-      await answerWithKey(page, task);
-      max += task.maxPoints;
-      assert.equal(await page.textContent('.points__value'),
-        task.maxPoints === 1 ? '1 из 1 балла' : '2 из 2 баллов', task.id);
-      if (task.hasSource) {
-        assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание', task.id);
+    for (const [id, n, total] of [['SOC-FAM-P01', 16, 29], ['SOC-FAM-P02', 15, 28]]) {
+      await openPracticum(page, 'SOC', 'SOC-FAM', id);
+      const types = new Set();
+      let max = 0;
+      for (let i = 0; i < n; i++) {
+        const task = await currentKey(page);
+        assert.ok(!seen.has(task.id), `задание ${task.id} повторилось`);
+        seen.add(task.id);
+        types.add(task.type);
+        await assertNoHorizontalScroll(page, `${task.id}, до ответа`);
+        await answerWithKey(page, task);
+        max += task.maxPoints;
+        assert.equal(await page.textContent('.points__value'),
+          task.maxPoints === 1 ? '1 из 1 балла' : '2 из 2 баллов', task.id);
+        if (task.hasSource) {
+          assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание', task.id);
+        }
+        assert.equal(await page.locator('#task-notes .task-notes__feature').count(), task.hasFeature ? 1 : 0, task.id);
+        // Объяснение есть у каждого суждения или позиции.
+        const parts = task.type === 'matching' ? '.match-row' : '#statements .statement';
+        assert.equal(await page.locator(`${parts} .statement__explanation`).count(), await page.locator(parts).count(), task.id);
+        await assertNoHorizontalScroll(page, `${task.id}, разбор`);
+        if (['SOC-FAM-033', 'SOC-FAM-038', 'SOC-FAM-040'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
+        await page.click('#next-btn');
       }
-      assert.equal(await page.locator('#task-notes .task-notes__feature').count(), task.hasFeature ? 1 : 0, task.id);
-      // Объяснение есть у каждого суждения или позиции.
-      const parts = task.type === 'matching' ? '.match-row' : '#statements .statement';
-      assert.equal(await page.locator(`${parts} .statement__explanation`).count(), await page.locator(parts).count(), task.id);
-      await assertNoHorizontalScroll(page, `${task.id}, разбор`);
-      if (['SOC-FAM-033', 'SOC-FAM-038', 'SOC-FAM-040'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
-      await page.click('#next-btn');
+      await page.waitForSelector('#screen-result:not([hidden])');
+      assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple'], `${id}: все три формата`);
+      assert.equal(max, total, id);
+      assert.equal(await page.textContent('#result-percent'), '100%');
+      assert.equal(await page.textContent('#result-context'), `Семья и брак · Практикум № ${id.endsWith('1') ? 1 : 2}`);
+      await page.click('#home-btn');
     }
-    await page.waitForSelector('#screen-result:not([hidden])');
-    assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple'], 'в практикуме все три формата');
-    assert.equal(max, 16 * 2 + 5 + 10 * 2);
-    assert.equal(await page.textContent('#result-percent'), '100%');
+    assert.equal(seen.size, 31, 'вместе — все 31 задание темы, без повторов');
     assert.deepEqual(errors, []);
     await context.close();
   });

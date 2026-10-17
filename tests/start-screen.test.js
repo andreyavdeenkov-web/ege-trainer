@@ -53,10 +53,12 @@ test('стартовый экран не начинает попытку без 
   assert.match(appCode, /'Начать практикум'/);
 });
 
-test('практикум «Семья и брак» — все форматы темы', () => {
+test('практикумы «Семья и брак» — в каждом все форматы темы', () => {
   const EGE = loadBank();
-  const tasks = EGE.getPracticumTasks(EGE.getPracticum('SOC-FAM-P01'));
-  const types = new Set(tasks.map((t) => EGE.scoring.getTaskType(t)));
-  assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple']);
-  assert.equal(tasks.length, 31);
+  for (const [id, n] of [['SOC-FAM-P01', 16], ['SOC-FAM-P02', 15]]) {
+    const tasks = EGE.getPracticumTasks(EGE.getPracticum(id));
+    const types = new Set(tasks.map((t) => EGE.scoring.getTaskType(t)));
+    assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple'], id);
+    assert.equal(tasks.length, n, id);
+  }
 });

@@ -68,6 +68,8 @@ function save(storage, p, attempt, extra = {}) {
 const COG = EGE.getPracticum('OBS-COG-P01');
 const ACT = EGE.getPracticum('OBS-ACT-P01');
 const FAM = EGE.getPracticum('SOC-FAM-P01');
+const FAM2 = EGE.getPracticum('SOC-FAM-P02');
+const FAM_OLD = EGE.getPracticum('SOC-FAM-R01');
 
 /* ---------- Области сохранения ---------- */
 
@@ -207,13 +209,70 @@ test('попытка темы «Деятельность» до практику
   assert.deepEqual(storage.data, after);
 });
 
-test('попытка темы «Семья и брак» до практикумов переносится в Практикум № 1', () => {
+test('попытка темы «Семья и брак» до практикумов переносится в прежний набор (31 задание) без потерь', () => {
+  const before = LEGACY['ege/SOC/SOC-FAM'];
   const storage = legacyStorage(['ege/SOC/SOC-FAM']);
-  assert.equal(migrateTo(storage, FAM).status, 'migrated');
-  const result = S.load(storage, scopeOf(FAM), depsOf(FAM, NOW));
+  // В новые практикумы (16 и 15 заданий) попытка из 31 задания не подходит по составу.
+  for (const p of [FAM, FAM2]) {
+    const probe = legacyStorage(['ege/SOC/SOC-FAM']);
+    assert.equal(S.load(probe, scopeOf(p), depsOf(p, NOW)).status, 'none');
+    assert.equal(S.migrate(probe, { from: 'ege/SOC/SOC-FAM', to: scopeOf(p), settings: { practicum: p.id }, deps: depsOf(p, NOW) }).reason,
+      'composition', p.id);
+    assert.equal(probe.getItem(KEY('ege/SOC/SOC-FAM')), JSON.stringify(before), `${p.id}: запись не тронута`);
+  }
+  // Перенос делает приложение — в прежний набор, у которого legacyTopicAttempts.
+  for (const p of EGE.practicums.filter((x) => x.legacyTopicAttempts)) migrateTo(storage, p);
+  assert.equal(storage.getItem(KEY('ege/SOC/SOC-FAM')), null);
+  assert.deepEqual([...storage.data.keys()], [KEY('ege/SOC/SOC-FAM/SOC-FAM-R01')]);
+  const result = S.load(storage, scopeOf(FAM_OLD), depsOf(FAM_OLD, NOW));
   assert.equal(result.status, 'ok');
-  assert.equal(A.answeredCount(result.state.attempt), 3);
-  assert.equal(A.totalScore(result.state.attempt), 4);
+  const a = result.state.attempt;
+  assert.equal(a.id, before.attempt.id);
+  assert.deepEqual(Array.from(a.taskIds), before.attempt.taskIds, 'порядок заданий прежний');
+  assert.deepEqual(plain(a.answers), before.attempt.answers, 'ответы и баллы прежние');
+  assert.equal(a.settings.practicum, 'SOC-FAM-R01');
+  assert.equal(A.answeredCount(a), 3);
+  assert.equal(A.totalScore(a), 4);
+  // Восстановленную попытку можно довести до конца.
+  for (let i = 3; i < 31; i++) A.recordAnswer(a, EGE.getTask(a.taskIds[i]), key(EGE.getTask(a.taskIds[i])));
+  assert.ok(A.isComplete(a));
+});
+
+test('«Семья и брак»: Практикум № 1, № 2 и прежний набор сохраняются независимо', () => {
+  const storage = legacyStorage(['ege/SOC/SOC-FAM']);
+  migrateTo(storage, FAM_OLD);
+  const p1 = startAndAnswer(FAM, 4, [...FAM.taskIds].reverse());
+  save(storage, FAM, p1);
+  const p2 = startAndAnswer(FAM2, 2);
+  save(storage, FAM2, p2);
+  assert.deepEqual([...storage.data.keys()].sort(), [
+    KEY('ege/SOC/SOC-FAM/SOC-FAM-P01'), KEY('ege/SOC/SOC-FAM/SOC-FAM-P02'), KEY('ege/SOC/SOC-FAM/SOC-FAM-R01')]);
+
+  const r1 = S.load(storage, scopeOf(FAM), depsOf(FAM, NOW));
+  const r2 = S.load(storage, scopeOf(FAM2), depsOf(FAM2, NOW));
+  const old = S.load(storage, scopeOf(FAM_OLD), depsOf(FAM_OLD, NOW));
+  assert.equal(r1.state.attempt.id, p1.id);
+  assert.equal(A.answeredCount(r1.state.attempt), 4);
+  assert.deepEqual(Array.from(r1.state.attempt.taskIds), [...FAM.taskIds].reverse());
+  assert.equal(r2.state.attempt.id, p2.id);
+  assert.equal(A.answeredCount(r2.state.attempt), 2);
+  assert.equal(old.state.attempt.id, LEGACY['ege/SOC/SOC-FAM'].attempt.id);
+  assert.equal(A.answeredCount(old.state.attempt), 3);
+
+  // Завершение прежнего набора удаляет только его запись (как у любого практикума).
+  S.remove(storage, scopeOf(FAM_OLD));
+  assert.equal(S.load(storage, scopeOf(FAM), depsOf(FAM, NOW)).status, 'ok');
+  assert.equal(S.load(storage, scopeOf(FAM2), depsOf(FAM2, NOW)).status, 'ok');
+  // Записи практикумов не подменяют друг друга: P01 под ключом P02 не принимается.
+  storage.setItem(KEY(scopeOf(FAM2)), storage.getItem(KEY(scopeOf(FAM))));
+  assert.equal(S.load(storage, scopeOf(FAM2), depsOf(FAM2, NOW)).status, 'invalid');
+  assert.equal(S.load(storage, scopeOf(FAM), depsOf(FAM, NOW)).status, 'ok');
+});
+
+test('прежний набор: попытка иного состава (не все 31 задание) не продолжается', () => {
+  const storage = memoryStorage();
+  save(storage, FAM_OLD, startAndAnswer(FAM_OLD, 1, FAM.taskIds));
+  assert.equal(S.load(storage, scopeOf(FAM_OLD), depsOf(FAM_OLD)).reason, 'composition');
 });
 
 test('старые записи без подходящего практикума не удаляются и не меняются', () => {

@@ -51,12 +51,12 @@ const PUBLISHED = {
       'OBS-COG-037', 'OBS-COG-025', 'OBS-COG-026', 'OBS-COG-006', 'OBS-COG-038', 'OBS-COG-028']
   },
   'SOC-FAM-P01': {
-    topic: 'SOC-FAM', number: 1, shuffle: true, max: 57,
-    taskIds: ['SOC-FAM-001', 'SOC-FAM-002', 'SOC-FAM-003', 'SOC-FAM-004', 'SOC-FAM-005', 'SOC-FAM-006',
-      'SOC-FAM-007', 'SOC-FAM-012', 'SOC-FAM-014', 'SOC-FAM-016', 'SOC-FAM-017', 'SOC-FAM-018', 'SOC-FAM-019',
-      'SOC-FAM-021', 'SOC-FAM-022', 'SOC-FAM-023', 'SOC-FAM-024', 'SOC-FAM-025', 'SOC-FAM-026', 'SOC-FAM-031',
-      'SOC-FAM-032', 'SOC-FAM-033', 'SOC-FAM-034', 'SOC-FAM-035', 'SOC-FAM-036', 'SOC-FAM-037', 'SOC-FAM-038',
-      'SOC-FAM-039', 'SOC-FAM-040', 'SOC-FAM-041', 'SOC-FAM-042']
+    topic: 'SOC-FAM', number: 1, shuffle: true, max: 29,
+    taskIds: ['SOC-FAM-001', 'SOC-FAM-004', 'SOC-FAM-005', 'SOC-FAM-012', 'SOC-FAM-014', 'SOC-FAM-017', 'SOC-FAM-019', 'SOC-FAM-022', 'SOC-FAM-024', 'SOC-FAM-031', 'SOC-FAM-032', 'SOC-FAM-034', 'SOC-FAM-037', 'SOC-FAM-038', 'SOC-FAM-041', 'SOC-FAM-042']
+  },
+  'SOC-FAM-P02': {
+    topic: 'SOC-FAM', number: 2, shuffle: true, max: 28,
+    taskIds: ['SOC-FAM-002', 'SOC-FAM-003', 'SOC-FAM-006', 'SOC-FAM-007', 'SOC-FAM-016', 'SOC-FAM-018', 'SOC-FAM-021', 'SOC-FAM-023', 'SOC-FAM-025', 'SOC-FAM-026', 'SOC-FAM-033', 'SOC-FAM-035', 'SOC-FAM-036', 'SOC-FAM-039', 'SOC-FAM-040']
   }
 };
 
@@ -104,7 +104,8 @@ test('у каждого практикума: постоянный уникал�
     assert.ok(!seen.has(p.id), `повтор ${p.id}`);
     seen.add(p.id);
     assert.ok(EGE.getTopic(p.topic), p.id);
-    assert.equal(p.id, `${p.topic}-P${String(p.number).padStart(2, '0')}`);
+    const kind = p.status === 'retired' ? 'R' : 'P';
+    assert.equal(p.id, `${p.topic}-${kind}${String(p.number).padStart(2, '0')}`);
     assert.ok(EGE.PRACTICUM_STATUSES.includes(p.status), p.id);
     assert.ok(p.taskIds.length > 0, p.id);
     assert.equal(new Set(p.taskIds).size, p.taskIds.length, `${p.id}: задания повторяются`);
@@ -115,7 +116,7 @@ test('у каждого практикума: постоянный уникал�
   }
 });
 
-test('опубликованы ровно три практикума с утверждённым составом', () => {
+test('опубликованы ровно четыре практикума с утверждённым составом', () => {
   const published = EGE.practicums.filter((p) => p.status === 'published');
   assert.deepEqual(ids(published).sort(), Object.keys(PUBLISHED).sort());
   for (const [id, want] of Object.entries(PUBLISHED)) {
@@ -126,7 +127,7 @@ test('опубликованы ровно три практикума с утв�
     assert.deepEqual(Array.from(p.taskIds), want.taskIds, `${id}: состав и порядок`);
     assert.equal(EGE.getPracticumMaxScore(p), want.max, `${id}: максимум баллов`);
     assert.ok(EGE.isPracticumReady(p), id);
-    assert.equal(EGE.practicumTitle(p), 'Практикум № 1');
+    assert.equal(EGE.practicumTitle(p), `Практикум № ${want.number}`);
   }
 });
 
@@ -149,15 +150,50 @@ test('«Познание», Практикум № 1 — набор страни
   assert.equal(EGE.getPracticumMaxScore(p), 33);
 });
 
+test('«Семья и брак»: два самостоятельных практикума из всех 31 задания, без повторов', () => {
+  const p1 = EGE.getPracticum('SOC-FAM-P01');
+  const p2 = EGE.getPracticum('SOC-FAM-P02');
+  assert.equal(p1.taskIds.length, 16);
+  assert.equal(p2.taskIds.length, 15);
+  assert.ok(p1.taskIds.every((id) => !p2.taskIds.includes(id)), 'задания не повторяются');
+  assert.deepEqual([...p1.taskIds, ...p2.taskIds].sort(), [...ids(EGE.getTasksByTopic('SOC-FAM'))].sort(), 'все 31 задание темы');
+  // В каждом — все три формата и разные уровни сложности.
+  for (const [p, formats] of [[p1, { multiple: 8, 'exclude-two': 3, matching: 5 }], [p2, { multiple: 8, 'exclude-two': 2, matching: 5 }]]) {
+    const tasks = EGE.getPracticumTasks(p);
+    const count = {};
+    for (const t of tasks) count[EGE.scoring.getTaskType(t)] = (count[EGE.scoring.getTaskType(t)] || 0) + 1;
+    assert.deepEqual(count, formats, p.id);
+    const levels = new Set(tasks.map((t) => t.difficulty).filter(Boolean));
+    assert.deepEqual([...levels].sort(), [1, 2, 3], `${p.id}: сложность 1–3`);
+  }
+});
+
+test('«Семья и брак»: прежний набор из 31 задания — только для продолжения начатых попыток', () => {
+  const old = EGE.getPracticum('SOC-FAM-R01');
+  assert.equal(old.status, 'retired');
+  assert.equal(EGE.practicumTitle(old), 'Прежний набор (31 задание)');
+  assert.deepEqual([...old.taskIds].sort(), [...ids(EGE.getTasksByTopic('SOC-FAM'))].sort());
+  assert.equal(EGE.getPracticumMaxScore(old), 57);
+  assert.ok(old.legacyTopicAttempts, 'сюда переносятся попытки темы целиком');
+  assert.equal(EGE.getPracticum('SOC-FAM-P01').legacyTopicAttempts, undefined);
+  // Новым ученикам не предлагается, но продолжить начатое можно.
+  assert.ok(!EGE.isPracticumReady(old));
+  assert.ok(EGE.isPracticumContinuable(old));
+  assert.deepEqual(ids(EGE.getPublishedPracticums('SOC-FAM')), ['SOC-FAM-P01', 'SOC-FAM-P02']);
+  assert.deepEqual(ids(EGE.getRetiredPracticums('SOC-FAM')), ['SOC-FAM-R01']);
+  assert.deepEqual(ids(EGE.getRetiredPracticums('OBS-ACT')), []);
+});
+
 test('«Наука и научное познание»: задания сохранены, неполный набор не опубликован', () => {
   assert.equal(EGE.getTasksByTopic('OBS-SCI').length, 10);
   assert.equal(EGE.getPublishedPracticums('OBS-SCI').length, 0);
   assert.ok(!ids(EGE.getAvailableTopics('OBS')).includes('OBS-SCI'));
 });
 
-test('задание входит не больше чем в один практикум; ID заданий и практикумов не повторяются', () => {
+test('задание входит не больше чем в один действующий практикум; ID заданий и практикумов не повторяются', () => {
   const owner = new Map();
-  for (const p of EGE.practicums) {
+  // Прежний набор (retired) намеренно повторяет задания действующих практикумов.
+  for (const p of EGE.practicums.filter((x) => x.status !== 'retired')) {
     for (const id of p.taskIds) {
       assert.ok(!owner.has(id), `${id}: и в ${owner.get(id)}, и в ${p.id}`);
       owner.set(id, p.id);
@@ -217,6 +253,11 @@ test('реестр отклоняет некорректные практику�
   assert.throws(() => T.addPracticums([{ id: 'ECO-GEN-P01', topic: 'ECO-GEN', number: 1, status: 'published', taskIds: ['ECO-GEN-001'] }]),
     /Общих вопросах/);
   assert.throws(bad({ status: 'ready' }), /Неизвестный статус/);
+  // Прежний набор: id с R, обязательное название; у обычного практикума названия нет.
+  assert.throws(bad({ status: 'retired', title: 'Прежний набор' }), /Номер практикума не совпадает/);
+  assert.throws(bad({ id: 'SOC-STR-R01', status: 'retired' }), /нет названия/);
+  assert.throws(bad({ id: 'SOC-STR-R01', status: 'published' }), /Номер практикума не совпадает/);
+  assert.throws(bad({ title: 'Особый практикум' }), /только «Практикум № N»/);
   assert.throws(bad({ taskIds: ['SOC-STR-001', 'SOC-STR-001'] }), /повторяются/);
   assert.throws(bad({ taskIds: ['SOC-STR-999'] }), /Неизвестное задание/);
   assert.throws(bad({ taskIds: ['SOC-MOB-001'] }), /не из темы/);

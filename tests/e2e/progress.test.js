@@ -131,7 +131,9 @@ const progressOf = (page, id) => card(page, id).locator('.practicum-card__progre
 const SCOPES = {
   'OBS-ACT-P01': 'ege/OBS/OBS-ACT/OBS-ACT-P01',
   'OBS-COG-P01': 'ege/OBS/OBS-COG/OBS-COG-P01',
-  'SOC-FAM-P01': 'ege/SOC/SOC-FAM/SOC-FAM-P01'
+  'SOC-FAM-P01': 'ege/SOC/SOC-FAM/SOC-FAM-P01',
+  'SOC-FAM-P02': 'ege/SOC/SOC-FAM/SOC-FAM-P02',
+  'SOC-FAM-R01': 'ege/SOC/SOC-FAM/SOC-FAM-R01'
 };
 
 /** Раздел → тема → «Начать практикум». */
@@ -177,7 +179,7 @@ for (const config of CONFIGS) {
     assert.ok(await page.locator('input[name="topic"][value="SOC-FAM"]').isChecked());
     assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__status').textContent(), 'Не завершён');
     const scoreText = pillBefore.replace('Баллы: ', 'баллы ');
-    assert.match(await progressOf(page, 'SOC-FAM-P01'), new RegExp(`^Выполнено 3 из 31 · ${scoreText} · сохранено `));
+    assert.match(await progressOf(page, 'SOC-FAM-P01'), new RegExp(`^Выполнено 3 из 16 · ${scoreText} · сохранено `));
     assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').textContent(), 'Продолжить');
     assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__restart').textContent(), 'Начать заново');
     assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__start').count(), 0);
@@ -186,7 +188,7 @@ for (const config of CONFIGS) {
     await shot(page, config, '1-resume');
 
     await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').click();
-    assert.match(await page.textContent('#progress-label'), /^Задание 4 из 31 · выполнено 3$/);
+    assert.match(await page.textContent('#progress-label'), /^Задание 4 из 16 · выполнено 3$/);
     assert.equal(await page.textContent('#score-pill'), pillBefore);
     const after = await savedRecord(page, scope);
     assert.deepEqual(after.attempt.taskIds, before.attempt.taskIds, 'порядок заданий тот же');
@@ -201,7 +203,7 @@ for (const config of CONFIGS) {
     await page.click('#task-nav li:nth-child(2) button');
     await page.reload();
     await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').click();
-    assert.match(await page.textContent('#progress-label'), /^Задание 2 из 31/);
+    assert.match(await page.textContent('#progress-label'), /^Задание 2 из 16/);
     assert.ok(await page.isVisible('#feedback'), 'выполненное задание — с разбором');
     assert.equal(await page.isVisible('#submit-btn'), false, 'засчитанный ответ не меняется');
 
@@ -382,6 +384,74 @@ test('незавершённая попытка темы, сохранённая
   const record = await savedRecord(page, SCOPES['OBS-ACT-P01']);
   assert.deepEqual(record.attempt.taskIds, legacy['ege/OBS/OBS-ACT'].attempt.taskIds, 'порядок заданий прежний');
   assert.equal(record.attempt.id, legacy['ege/OBS/OBS-ACT'].attempt.id);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('«Семья и брак»: прежний набор (31 задание) — перенос старой попытки, продолжение до конца, независимость от новых практикумов', async () => {
+  const legacy = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/legacy-attempts.json'), 'utf8')).records;
+  const config = CONFIGS[1];
+  const context = await newContext(config);
+  const { page, errors } = await newPage(context, base + 'olympiad.html');
+  // Запись прежней версии (тема целиком, 3 ответа из 31) и прежние настройки старта.
+  const savedAt = new Date(Date.now() - 3600 * 1000).toISOString();
+  await page.evaluate(([record, at]) => {
+    localStorage.setItem('ege-trainer:attempt:ege/SOC/SOC-FAM', JSON.stringify(Object.assign(record, { savedAt: at })));
+    localStorage.setItem('ege-trainer:settings', JSON.stringify({ section: 'SOC', topic: 'SOC-FAM' }));
+  }, [legacy['ege/SOC/SOC-FAM'], savedAt]);
+
+  await page.goto(base);
+  const old = card(page, 'SOC-FAM-R01');
+  assert.deepEqual(await page.locator('.practicum-card').evaluateAll((list) => list.map((c) => c.dataset.practicum)),
+    ['SOC-FAM-R01', 'SOC-FAM-P01', 'SOC-FAM-P02']);
+  assert.equal(await old.locator('.practicum-card__title').textContent(), 'Прежний набор (31 задание)');
+  assert.equal(await old.locator('.practicum-card__meta').textContent(), '31 задание · максимум 57 баллов');
+  assert.match(await progressOf(page, 'SOC-FAM-R01'), /^Выполнено 3 из 31 · баллы 4 из 6 · сохранено /);
+  assert.equal(await old.locator('.practicum-card__restart, .practicum-card__start').count(), 0, 'прежний набор заново не начинается');
+  assert.match(await page.locator('label.topic-option:has(input[value="SOC-FAM"]) .topic-option__count').textContent(), /есть незавершённый/);
+  assert.deepEqual(await savedKeys(page), [PREFIX + SCOPES['SOC-FAM-R01']], 'запись перенесена, ничего не потеряно');
+  await assertNoHorizontalScroll(page, 'прежний набор');
+  await shot(page, config, '6-family-retired');
+
+  // Новые практикумы — своя запись у каждого, прежний набор не трогают.
+  await card(page, 'SOC-FAM-P01').locator('.practicum-card__start').click();
+  await answer(page, await shownTask(page, SCOPES['SOC-FAM-P01']), false);
+  await page.click('#brand-home');
+  await page.click('#exit-confirm');
+  await card(page, 'SOC-FAM-P02').locator('.practicum-card__start').click();
+  for (let i = 0; i < 2; i++) {
+    await answer(page, await shownTask(page, SCOPES['SOC-FAM-P02']), false);
+    await page.click('#next-btn');
+  }
+  await page.reload();
+  assert.match(await progressOf(page, 'SOC-FAM-R01'), /^Выполнено 3 из 31 /);
+  assert.match(await progressOf(page, 'SOC-FAM-P01'), /^Выполнено 1 из 16 /);
+  assert.match(await progressOf(page, 'SOC-FAM-P02'), /^Выполнено 2 из 15 /);
+  assert.deepEqual(await savedKeys(page), [SCOPES['SOC-FAM-P01'], SCOPES['SOC-FAM-P02'], SCOPES['SOC-FAM-R01']].map((s) => PREFIX + s));
+
+  // Продолжение прежнего набора с того же места и до конца.
+  await old.locator('.practicum-card__continue').click();
+  assert.match(await page.textContent('#progress-label'), /^Задание 4 из 31 · выполнено 3$/);
+  assert.equal(await page.textContent('#quiz-title'), 'Семья и брак · Прежний набор (31 задание)');
+  const record = await savedRecord(page, SCOPES['SOC-FAM-R01']);
+  assert.deepEqual(record.attempt.taskIds, legacy['ege/SOC/SOC-FAM'].attempt.taskIds, 'порядок заданий прежний');
+  for (let i = 3; i < 31; i++) {
+    await answer(page, await shownTask(page, SCOPES['SOC-FAM-R01']), false);
+    await page.click('#next-btn');
+  }
+  await page.waitForSelector('#screen-result:not([hidden])');
+  assert.equal(await page.textContent('#result-context'), 'Семья и брак · Прежний набор (31 задание)');
+  assert.equal(await page.textContent('#result-score'), '55 из 57 баллов');
+  assert.ok(await page.locator('#restart-btn').isHidden(), 'прежний набор не проходится заново');
+
+  // После завершения карточка исчезает; новые практикумы на месте.
+  await page.click('#home-btn');
+  assert.equal(await old.count(), 0);
+  assert.match(await progressOf(page, 'SOC-FAM-P01'), /^Выполнено 1 из 16 /);
+  assert.match(await progressOf(page, 'SOC-FAM-P02'), /^Выполнено 2 из 15 /);
+  assert.deepEqual(await savedKeys(page), [SCOPES['SOC-FAM-P01'], SCOPES['SOC-FAM-P02']].map((s) => PREFIX + s));
+  await page.reload();
+  assert.equal(await old.count(), 0);
   assert.deepEqual(errors, []);
   await context.close();
 });

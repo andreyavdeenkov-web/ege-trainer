@@ -292,7 +292,7 @@
     topics.forEach(function (topic) {
       var practicums = EGE.getPublishedPracticums(topic.id);
       var n = practicums.length;
-      var unfinished = practicums.some(hasSavedAttempt);
+      var unfinished = practicums.concat(EGE.getRetiredPracticums(topic.id)).some(hasSavedAttempt);
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
         n + ' ' + plural(n, 'практикум', 'практикума', 'практикумов'),
         section.color, settings.topic === topic.id, unfinished ? 'есть незавершённый' : null));
@@ -308,6 +308,11 @@
     if (!topic) return;
     ui.practicumTitle.textContent = 'Практикумы по теме «' + topic.title + '»';
     var section = EGE.getSection(topic.section);
+    // Прежние наборы — первыми и только при сохранённой попытке (иначе карточки нет).
+    EGE.getRetiredPracticums(topic.id).forEach(function (practicum) {
+      var card = retiredCard(practicum, section);
+      if (card) ui.practicumOptions.appendChild(card);
+    });
     EGE.getPublishedPracticums(topic.id).forEach(function (practicum) {
       ui.practicumOptions.appendChild(practicumCard(practicum, section));
     });
@@ -336,7 +341,8 @@
    * и кнопки «Продолжить» / «Начать заново». Сохранение проверяется при показе:
    * запись, которую нельзя продолжить, удаляется, а ученик видит причину.
    */
-  function practicumCard(practicum, section) {
+  /** Каркас карточки: название, число заданий и максимум баллов. */
+  function cardFrame(practicum, section) {
     var tasks = practicum.taskIds.length;
     var max = EGE.getPracticumMaxScore(practicum);
     var titleId = 'practicum-' + practicum.id + '-title';
@@ -353,19 +359,66 @@
     card.appendChild(head);
     card.appendChild(el('p', 'practicum-card__meta',
       tasks + ' ' + tasksWord(tasks) + ' · максимум ' + max + ' ' + scoring.pluralPoints(max)));
+    return { card: card, head: head, titleId: titleId, actions: el('div', 'practicum-card__actions') };
+  }
+
+  /** Метка «Не завершён» и прогресс сохранённой попытки. */
+  function showProgress(frame, saved) {
+    frame.head.appendChild(el('span', 'practicum-card__status', 'Не завершён'));
+    var attempt = saved.attempt;
+    frame.card.appendChild(el('p', 'practicum-card__progress',
+      'Выполнено ' + A.answeredCount(attempt) + ' из ' + attempt.taskIds.length +
+      ' · баллы ' + A.totalScore(attempt) + ' из ' + A.answeredMaxScore(attempt) +
+      ' · сохранено ' + formatSavedAt(saved.savedAt)));
+  }
+
+  function finishCard(frame) {
+    frame.actions.querySelectorAll('button').forEach(function (btn) {
+      btn.setAttribute('aria-describedby', frame.titleId);
+    });
+    frame.card.appendChild(frame.actions);
+    return frame.card;
+  }
+
+  /**
+   * Карточка прежнего набора (status: 'retired'): только если у ученика есть
+   * сохранённая попытка. Её можно лишь продолжить — начать набор заново нельзя.
+   * Если запись нельзя продолжить (правила js/attempt-save.js), ученик видит
+   * причину; иначе — карточки нет (null).
+   */
+  function retiredCard(practicum, section) {
+    var result = saver.load(storage, practicumScope(practicum), practicumDeps(practicum));
+    if (result.status === 'none') return null;
+    var frame = cardFrame(practicum, section);
+    frame.card.classList.add('practicum-card--retired');
+    if (result.status === 'ok') {
+      state.resumes[practicum.id] = result.state;
+      showProgress(frame, result.state);
+      frame.card.appendChild(el('p', 'practicum-card__note',
+        'Набор, по которому вы начали заниматься до разделения темы на практикумы. Его можно завершить; новые попытки — в практикумах ниже.'));
+      frame.actions.appendChild(button('btn--primary practicum-card__continue', 'Продолжить', function () {
+        resumePracticum(practicum);
+      }));
+    } else {
+      var notice = el('p', 'practicum-card__notice', 'Сохранённую попытку прежнего набора нельзя продолжить: ' +
+        PRACTICUM_REASONS[result.reason] + ' Выберите один из практикумов ниже.');
+      notice.setAttribute('role', 'status');
+      frame.card.appendChild(notice);
+    }
+    return finishCard(frame);
+  }
+
+  function practicumCard(practicum, section) {
+    var frame = cardFrame(practicum, section);
+    var card = frame.card;
+    var actions = frame.actions;
 
     var result = saver.load(storage, practicumScope(practicum), practicumDeps(practicum));
     var saved = result.status === 'ok' ? result.state : null;
-    var actions = el('div', 'practicum-card__actions');
 
     if (saved) {
       state.resumes[practicum.id] = saved;
-      head.appendChild(el('span', 'practicum-card__status', 'Не завершён'));
-      var attempt = saved.attempt;
-      card.appendChild(el('p', 'practicum-card__progress',
-        'Выполнено ' + A.answeredCount(attempt) + ' из ' + attempt.taskIds.length +
-        ' · баллы ' + A.totalScore(attempt) + ' из ' + A.answeredMaxScore(attempt) +
-        ' · сохранено ' + formatSavedAt(saved.savedAt)));
+      showProgress(frame, saved);
       actions.appendChild(button('btn--primary practicum-card__continue', 'Продолжить', function () {
         resumePracticum(practicum);
       }));
@@ -384,11 +437,7 @@
         startPracticum(practicum);
       }));
     }
-    actions.querySelectorAll('button').forEach(function (btn) {
-      btn.setAttribute('aria-describedby', titleId);
-    });
-    card.appendChild(actions);
-    return card;
+    return finishCard(frame);
   }
 
   /** Предпросмотр: все задания набора. */
@@ -489,7 +538,7 @@
    */
   function migrateLegacyAttempts() {
     EGE.practicums.forEach(function (practicum) {
-      if (!practicum.legacyTopicAttempts || !EGE.isPracticumReady(practicum)) return;
+      if (!practicum.legacyTopicAttempts || !EGE.isPracticumContinuable(practicum)) return;
       saver.migrate(storage, {
         from: saver.scopeId(SAVE_MODE, { section: practicum.section, topic: practicum.topic }),
         to: practicumScope(practicum),
@@ -884,6 +933,8 @@
     ui.resultRing.className = 'result__ring ' + (pct >= 80 ? 'is-high' : pct >= 50 ? 'is-mid' : 'is-low');
     ui.resultScore.textContent = scoring.formatPointsOutOf(score, max);
     ui.resultMessage.textContent = resultMessage(pct);
+    // Прежний набор заново не проходится: после завершения — только к выбору практикума.
+    ui.restartBtn.hidden = !!state.practicum && state.practicum.status === 'retired';
     if (ui.resultContext) {
       ui.resultContext.hidden = !state.practicum;
       ui.resultContext.textContent = state.practicum ? practicumLabel(state.practicum) : '';
