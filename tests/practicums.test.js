@@ -83,6 +83,8 @@ test('«Человек и общество»: 14 тем кодификатора
 });
 
 test('«Общие вопросы» остаются в реестре (их задания не удалены), но в практикумы не входят', () => {
+  const general = EGE.sections.flatMap((sec) => sec.topics).filter((t) => t.general).map((t) => t.id);
+  assert.deepEqual([...general], ['OBS-GEN', 'ECO-GEN', 'POL-GEN', 'LAW-GEN']);
   for (const id of ['OBS-GEN', 'ECO-GEN', 'POL-GEN', 'LAW-GEN']) {
     assert.ok(EGE.getTopic(id), id);
     assert.equal(EGE.getTasksByTopic(id).length, 3, `${id}: задания на месте`);
@@ -211,6 +213,9 @@ test('реестр отклоняет некорректные практику�
   assert.throws(bad({ id: 'SOC-STR-001' }), /Некорректный id практикума/);
   assert.throws(bad({ topic: 'SOC-XXX', id: 'SOC-XXX-P01' }), /Неизвестная тема/);
   assert.throws(bad({ number: 2 }), /Номер практикума не совпадает/);
+  // Практикум в «Общих вопросах» отклоняется, даже если задания из этой темы.
+  assert.throws(() => T.addPracticums([{ id: 'ECO-GEN-P01', topic: 'ECO-GEN', number: 1, status: 'published', taskIds: ['ECO-GEN-001'] }]),
+    /Общих вопросах/);
   assert.throws(bad({ status: 'ready' }), /Неизвестный статус/);
   assert.throws(bad({ taskIds: ['SOC-STR-001', 'SOC-STR-001'] }), /повторяются/);
   assert.throws(bad({ taskIds: ['SOC-STR-999'] }), /Неизвестное задание/);

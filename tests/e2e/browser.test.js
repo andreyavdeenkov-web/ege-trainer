@@ -216,14 +216,28 @@ for (const config of CONFIGS) {
     assert.ok(await radio(page, 'topic', 'SOC-FAM').isChecked());
     assert.ok(await card(page, 'SOC-FAM-P01').isVisible());
 
-    // Раздел без готовых практикумов — понятное сообщение.
-    await pick(page, 'section', 'ECO');
-    assert.ok(await page.locator('#topic-field').isHidden());
-    assert.ok(await page.locator('#practicum-field').isHidden());
-    assert.equal(await page.textContent('#section-empty'),
-      'Практикумы по разделу «Экономика» готовятся. Когда они будут готовы, они появятся здесь.');
+    // Разделы без готовых практикумов — понятное сообщение, ни тем, ни практикумов.
+    for (const [id, title] of [['ECO', 'Экономика'], ['POL', 'Политика'], ['LAW', 'Право']]) {
+      assert.equal(await noteOf(page, 'section', id), 'Практикумы готовятся', id);
+      await pick(page, 'section', id);
+      assert.ok(await page.locator('#topic-field').isHidden(), id);
+      assert.equal(await page.locator('input[name="topic"]').count(), 0, id);
+      assert.ok(await page.locator('#practicum-field').isHidden(), id);
+      assert.equal(await page.textContent('#section-empty'),
+        `Практикумы по разделу «${title}» готовятся. Когда они будут готовы, они появятся здесь.`);
+    }
+    // Сообщение читается в обеих темах оформления: текст отличается от фона.
+    const [color, background] = await page.evaluate(() => {
+      const cs = getComputedStyle(document.getElementById('section-empty'));
+      return [cs.color, cs.backgroundColor];
+    });
+    assert.notEqual(color, background);
     await assertNoHorizontalScroll(page, 'раздел без практикумов');
     await shot(page, config, '3-section-empty');
+
+    // Задания «Общих вопросов» остаются в банке, хотя ученику не показываются.
+    assert.deepEqual(await page.evaluate(() => ['OBS-GEN', 'ECO-GEN', 'POL-GEN', 'LAW-GEN']
+      .map((id) => EGE.getTasksByTopic(id).length)), [3, 3, 3, 3]);
 
     assert.deepEqual(errors, []);
     await context.close();
@@ -241,11 +255,20 @@ for (const config of CONFIGS) {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    // Прежние «Все разделы» / «Весь раздел» и скрытая тема: просто ничего не выбрано.
-    for (const saved of [{ section: 'all', topic: 'all' }, { section: 'OBS', topic: 'all' }, { section: 'OBS', topic: 'OBS-GEN' }]) {
+    // Прежние «Все разделы», «Весь раздел», «Общие вопросы»: тема сбрасывается, верный раздел остаётся.
+    for (const [saved, section] of [
+      [{ section: 'all', topic: 'all' }, null],
+      [{ section: 'OBS', topic: 'all' }, 'OBS'],
+      [{ section: 'OBS', topic: 'OBS-GEN' }, 'OBS'],
+      [{ section: 'ECO', topic: 'ECO-GEN' }, 'ECO']
+    ]) {
+      const where = JSON.stringify(saved);
       const { page, context, errors } = await open(config, { storage: JSON.stringify(saved) });
-      assert.equal(await page.locator('input[name="topic"]:checked').count(), 0, JSON.stringify(saved));
-      assert.ok(await page.locator('#practicum-field').isHidden());
+      assert.equal(await page.locator('input[name="section"]:checked').count(), section ? 1 : 0, where);
+      if (section) assert.ok(await radio(page, 'section', section).isChecked(), where);
+      assert.equal(await page.locator('input[name="topic"]:checked').count(), 0, where);
+      assert.ok(await page.locator('#practicum-field').isHidden(), where);
+      assert.equal(await page.locator('#section-empty').isVisible(), section === 'ECO', where);
       assert.deepEqual(errors, []);
       await context.close();
     }

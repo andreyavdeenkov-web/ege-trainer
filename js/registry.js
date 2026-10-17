@@ -21,9 +21,9 @@
    * дописать в массив topics нужного раздела. Ученик видит только темы, в которых
    * есть хотя бы один опубликованный практикум (см. EGE.getAvailableTopics).
    *
-   * Темы «Общие вопросы» (*-GEN) в интерфейсе не показываются: в них нет практикумов.
-   * Они остаются в реестре, потому что их задания хранятся под этими темами
-   * (ID заданий не меняются).
+   * general: true — сводная тема «Общие вопросы» (*-GEN). Она не показывается ученику:
+   * практикумов в ней быть не может (EGE.addPracticums их отклоняет). Тема остаётся
+   * в реестре, потому что её задания хранятся под ней (ID заданий не меняются).
    */
   EGE.sections = [
     {
@@ -47,7 +47,7 @@
         { id: 'OBS-EDU', title: 'Образование' },
         { id: 'OBS-REL', title: 'Религия' },
         { id: 'OBS-ART', title: 'Искусство' },
-        { id: 'OBS-GEN', title: 'Общие вопросы' }
+        { id: 'OBS-GEN', title: 'Общие вопросы', general: true }
       ]
     },
     {
@@ -55,7 +55,7 @@
       title: 'Экономика',
       color: '#0ea5e9',
       topics: [
-        { id: 'ECO-GEN', title: 'Общие вопросы' }
+        { id: 'ECO-GEN', title: 'Общие вопросы', general: true }
       ]
     },
     {
@@ -78,7 +78,7 @@
       title: 'Политика',
       color: '#f59e0b',
       topics: [
-        { id: 'POL-GEN', title: 'Общие вопросы' }
+        { id: 'POL-GEN', title: 'Общие вопросы', general: true }
       ]
     },
     {
@@ -86,7 +86,7 @@
       title: 'Право',
       color: '#ef4444',
       topics: [
-        { id: 'LAW-GEN', title: 'Общие вопросы' }
+        { id: 'LAW-GEN', title: 'Общие вопросы', general: true }
       ]
     }
   ];
@@ -283,6 +283,7 @@
       if (practicumsById[p.id]) throw new Error('Повторяющийся id практикума: ' + p.id);
       var topic = EGE.getTopic(p.topic);
       if (!topic) throw new Error('Неизвестная тема: ' + p.topic + ' (' + where + ')');
+      if (topic.general) throw new Error('В «Общих вопросах» практикумов не бывает: ' + where);
       if (!Number.isInteger(p.number) || p.number < 1 || p.id !== p.topic + '-P' + pad2(p.number)) {
         throw new Error('Номер практикума не совпадает с id: ' + where);
       }
