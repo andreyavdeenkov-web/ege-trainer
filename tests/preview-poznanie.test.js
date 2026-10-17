@@ -1,10 +1,11 @@
 'use strict';
 
 /**
- * Предпросмотр «Познание» — предварительный банк из 19 заданий (preview-poznanie.html):
- * десять утверждённых заданий из data/preview/cognition-batch1.js и девять новых
- * (data/preview/cognition-poznanie.js). Состав, порядок, ключи, согласованные
- * формулировки, оценивание и изоляция от основного каталога и предпросмотра из 20 заданий.
+ * Предпросмотр «Познание» — набор из 19 заданий (preview-poznanie.html): десять
+ * утверждённых заданий партии 1 и девять новых (OBS-COG-031…039). Задания хранятся
+ * в основном банке (data/tasks/society/cognition.js), набор — в
+ * data/preview/cognition-poznanie.js; тот же состав — «Практикум № 1» темы «Познание».
+ * Состав, порядок, ключи, согласованные формулировки и оценивание.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -16,6 +17,7 @@ const { metadataErrors, newTaskErrors } = require('./helpers/bank-rules.js');
 
 const PAGE = 'preview-poznanie.html';
 const DATA = 'data/preview/cognition-poznanie.js';
+const COGNITION = 'data/tasks/society/cognition.js';
 
 const APPROVED = ['OBS-COG-002', 'OBS-COG-003', 'OBS-COG-006', 'OBS-COG-008', 'OBS-COG-016',
   'OBS-COG-017', 'OBS-COG-019', 'OBS-COG-025', 'OBS-COG-026', 'OBS-COG-028'];
@@ -50,24 +52,21 @@ const tasksOf = (EGE) => Array.from(EGE.preview.taskIds, (id) => EGE.getTask(id)
 const keyOf = (EGE, task) => EGE.scoring.getCorrect(task).join('');
 const parts = (task) => task.statements || task.items;
 
-test('страница: тот же движок, утверждённые задания и новый набор, без основного банка', () => {
+test('страница: тот же движок, задания «Познания» и набор, без остального банка', () => {
   assert.deepEqual(pageScripts(PAGE), ['js/registry.js', 'js/scoring.js', 'js/attempt.js', 'js/attempt-save.js',
-    'data/preview/cognition-batch1.js', DATA, 'js/task-view.js', 'js/app.js']);
+    COGNITION, DATA, 'js/task-view.js', 'js/app.js']);
   assert.match(fs.readFileSync(path.join(root, PAGE), 'utf8'), /<meta name="robots" content="noindex, nofollow">/);
 });
 
-test('основной каталог и предпросмотр из 20 заданий не затронуты', () => {
+test('главная страница и предпросмотр из 20 заданий не подключают этот набор', () => {
   for (const page of ['index.html', 'preview-cognition.html']) {
     const html = fs.readFileSync(path.join(root, page), 'utf8');
-    assert.ok(!html.includes(DATA), `${page} не подключает новый набор`);
-    assert.ok(!html.includes(PAGE), `${page} не ссылается на новую страницу`);
+    assert.ok(!html.includes(DATA), `${page} не подключает набор`);
+    assert.ok(!html.includes(PAGE), `${page} не ссылается на страницу предпросмотра`);
   }
-  const main = loadBank();
-  assert.ok(main.tasks.every((t) => !t.id.startsWith('OBS-COG')));
   const twenty = loadPage('preview-cognition.html');
   assert.equal(twenty.preview.id, 'cognition-batch1');
   assert.equal(twenty.preview.taskIds.length, 20);
-  assert.equal(twenty.tasks.length, 20);
 });
 
 test('состав: 19 заданий в тематическом порядке — 10 утверждённых и 9 новых, ключи согласованы', () => {
@@ -80,14 +79,18 @@ test('состав: 19 заданий в тематическом порядке
   for (const [id, key] of ORDER_AND_KEYS) assert.equal(keyOf(EGE, EGE.getTask(id)), key, id);
 });
 
-test('новые ID не заняты: ни в основном банке, ни в предпросмотре из 20 заданий', () => {
-  const taken = new Set([...loadBank().tasks, ...loadPage('preview-cognition.html').tasks].map((t) => t.id));
-  for (const id of NEW) assert.ok(!taken.has(id), id);
+test('ID набора определены в банке ровно один раз; содержание на странице и в основном банке одинаково', () => {
+  const bank = loadBank();
+  const page = loadPage();
+  for (const id of [...APPROVED, ...NEW]) {
+    assert.equal(bank.tasks.filter((t) => t.id === id).length, 1, id);
+    assert.deepEqual(JSON.parse(JSON.stringify(page.getTask(id))), JSON.parse(JSON.stringify(bank.getTask(id))), id);
+  }
 });
 
-test('утверждённые задания берутся из cognition-batch1.js, новый файл их не переопределяет', () => {
+test('файл набора не определяет задания; на обеих страницах предпросмотра задания одинаковые', () => {
   const source = fs.readFileSync(path.join(root, DATA), 'utf8');
-  for (const id of APPROVED) assert.ok(!source.includes(`id: '${id}'`), `${id} не должен определяться в ${DATA}`);
+  assert.doesNotMatch(source, /addTasks|id: 'OBS-|"id": "OBS-/, `${DATA} содержит только набор`);
   const twenty = loadPage('preview-cognition.html');
   const nineteen = loadPage();
   for (const id of APPROVED) {

@@ -21,7 +21,7 @@
         </span>
       </button>
       <nav class="site-nav" aria-label="Направления">
-        <a class="site-nav__link" href="./">ЕГЭ</a>
+        <a class="site-nav__link" href="index.html">ЕГЭ</a>
         <a class="site-nav__link" href="olympiad.html">Олимпиады</a>
       </nav>
     </div>
@@ -81,12 +81,14 @@
     <!-- Экран задания -->
     <section class="screen" id="screen-quiz" hidden aria-live="polite">
       <div class="exit-bar" id="exit-bar" role="alertdialog" aria-labelledby="exit-bar-text" hidden>
-        <p class="exit-bar__text" id="exit-bar-text">Прервать тренировку? Ответы сохранены — продолжить можно со стартового экрана.</p>
+        <p class="exit-bar__text" id="exit-bar-text">Прервать практикум? Ответы сохранены — продолжить можно со стартового экрана.</p>
         <div class="exit-bar__actions">
           <button type="button" class="btn btn--ghost" id="exit-cancel">Продолжить</button>
           <button type="button" class="btn btn--primary" id="exit-confirm">Выйти</button>
         </div>
       </div>
+
+      <p class="quiz-title" id="quiz-title" hidden></p>
 
       <div class="progress">
         <div class="progress__row">
@@ -96,7 +98,7 @@
         <div class="progress__track" role="progressbar" aria-label="Прогресс" aria-valuemin="0" id="progress-bar">
           <div class="progress__fill" id="progress-fill"></div>
         </div>
-        <nav class="task-nav" aria-label="Задания тренировки">
+        <nav class="task-nav" aria-label="Задания практикума">
           <ol class="task-nav__list" id="task-nav"></ol>
         </nav>
       </div>
@@ -181,7 +183,9 @@
   <script src="js/attempt.js"></script>
   <script src="js/attempt-save.js"></script>
 
-  <!-- Только набор предпросмотра: основной банк здесь не подключается (см. README) -->
+  <!-- Только задания набора предпросмотра (из основного банка) и сам набор; остальной банк не подключается (см. README) -->
+  <script src="data/tasks/society/cognition.js"></script>
+  <script src="data/tasks/society/science.js"></script>
   <script src="data/preview/cognition-batch1.js"></script>
 
   <!-- Интерфейс -->

@@ -254,22 +254,19 @@ test('обновление страницы: попытка предпросмо
   await context.close();
 });
 
-test('основной тренажёр не изменился: нет тем «Познание» и «Научное познание», счётчики прежние', async () => {
+test('главная: «Познание» — через Практикум № 1, «Наука и научное познание» без практикума скрыта', async () => {
   const { page, context, errors } = await open(CONFIGS[0], base);
   assert.equal(await page.textContent('#start-title'), 'Практикуй задания ЕГЭ по обществознанию и разбирай каждую ошибку');
   const state = await page.evaluate(() => ({
     preview: typeof EGE.preview,
-    obs: EGE.getTasksBySection('OBS').length,
     topics: EGE.getAvailableTopics('OBS').map((t) => t.id),
-    previewTasks: EGE.tasks.filter((t) => /^OBS-(COG|SCI)-/.test(t.id)).length
+    sci: EGE.getTasksByTopic('OBS-SCI').length
   }));
-  assert.equal(state.preview, 'undefined');
-  assert.deepEqual(state.topics, ['OBS-GEN', 'OBS-ACT']);
-  assert.equal(state.previewTasks, 0);
+  assert.equal(state.preview, 'undefined', 'набор предпросмотра на главной не подключён');
+  assert.deepEqual(state.topics, ['OBS-ACT', 'OBS-COG']);
+  assert.equal(state.sci, 10, 'задания «Науки» сохранены в банке');
   await page.locator('label.topic-option:has(input[name="section"][value="OBS"])').click();
-  assert.deepEqual(await page.locator('#topic-options .topic-option__title').allTextContents(),
-    ['Весь раздел', 'Общие вопросы', 'Деятельность']);
-  assert.match(await page.textContent('#start-btn'), new RegExp(`^Начать: ${state.obs} `));
+  assert.deepEqual(await page.locator('#topic-options .topic-option__title').allTextContents(), ['Деятельность', 'Познание']);
   assert.ok(!(await page.content()).includes('preview-cognition'));
   assert.deepEqual(errors, []);
   await context.close();

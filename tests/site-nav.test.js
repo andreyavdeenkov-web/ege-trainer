@@ -20,9 +20,18 @@ for (const [file, active] of [['index.html', 'ЕГЭ'], ['olympiad.html', 'Ол�
   test(`${file}: ссылки ЕГЭ | Олимпиады, активен «${active}»`, () => {
     const html = read(file);
     assert.deepEqual(siteNav(html), [
-      { href: './', current: active === 'ЕГЭ', label: 'ЕГЭ' },
+      { href: 'index.html', current: active === 'ЕГЭ', label: 'ЕГЭ' },
       { href: 'olympiad.html', current: active === 'Олимпиады', label: 'Олимпиады' }
     ]);
     assert.match(html, /<span class="brand__title">Андрей Авдеенков<\/span>/);
   });
 }
+
+test('«ЕГЭ» ведёт на index.html, а не на адрес папки: работает и на домене, и на тестовой копии (Githack)', () => {
+  for (const file of ['index.html', 'olympiad.html', 'preview-cognition.html', 'preview-poznanie.html']) {
+    const links = siteNav(read(file));
+    assert.equal(links.find((l) => l.label === 'ЕГЭ').href, 'index.html', file);
+    assert.equal(links.find((l) => l.label === 'Олимпиады').href, 'olympiad.html', file);
+    assert.doesNotMatch(read(file), /href="\.\/"/, `${file}: ссылок на адрес папки нет`);
+  }
+});

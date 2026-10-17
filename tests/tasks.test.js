@@ -14,11 +14,12 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
 const dataScripts = scripts.filter((s) => s.startsWith('data/tasks/'));
+const practicumScripts = scripts.filter((s) => s === 'data/practicums.js');
 
 function loadBank() {
   const context = vm.createContext({});
   context.globalThis = context;
-  for (const src of ['js/registry.js', 'js/scoring.js', 'js/attempt.js', ...dataScripts]) {
+  for (const src of ['js/registry.js', 'js/scoring.js', 'js/attempt.js', ...dataScripts, ...practicumScripts]) {
     vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
   }
   return context.EGE;
@@ -162,16 +163,17 @@ function checkMatching(task, where) {
   }
 }
 
-test('в каждом разделе есть задания; темы без заданий скрываются', () => {
+test('в каждом разделе есть задания; ученик видит только темы с опубликованными практикумами', () => {
   const EGE = loadBank();
   for (const section of EGE.sections) {
     assert.ok(EGE.getTasksBySection(section.id).length > 0, `Раздел «${section.title}» пуст`);
   }
   assert.equal(EGE.getTasksBySection('all').length, EGE.tasks.length);
-  assert.equal(EGE.getAvailableSections().length, EGE.sections.length);
 
-  const available = [...EGE.getAvailableTopics('SOC').map((t) => t.id)];
-  assert.deepEqual(available, ['SOC-STR', 'SOC-MOB', 'SOC-FAM']);
+  // Задания тем без практикумов (стратификация, мобильность) остаются в банке, но тема скрыта.
+  assert.ok(EGE.getTasksByTopic('SOC-STR').length > 0);
+  assert.ok(EGE.getTasksByTopic('SOC-MOB').length > 0);
+  assert.deepEqual([...EGE.getAvailableTopics('SOC').map((t) => t.id)], ['SOC-FAM']);
   assert.equal(EGE.getTasksByTopic('SOC-GRP').length, 0);
 });
 
@@ -228,7 +230,8 @@ test('тема «Деятельность» в разделе «Человек �
   assert.equal(topic.section, 'OBS');
   assert.equal(EGE.getSection('OBS').title, 'Человек и общество');
   assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
-  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-GEN', 'OBS-ACT']);
+  // «Общие вопросы» ученику не показываются: в них нет практикумов.
+  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-ACT', 'OBS-COG']);
 });
 
 test('ключи проверенных заданий темы «Деятельность»', () => {

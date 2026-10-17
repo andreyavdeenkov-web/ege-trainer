@@ -13,12 +13,14 @@ const root = path.join(__dirname, '..', '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
 const dataScripts = scripts.filter((s) => s.startsWith('data/tasks/'));
+/** Реестр практикумов (data/practicums.js) — после банка заданий. */
+const practicumScripts = scripts.filter((s) => s === 'data/practicums.js');
 
-/** Ядро и банк заданий, без интерфейса. */
+/** Ядро, банк заданий и реестр практикумов, без интерфейса. */
 function loadBank() {
   const context = vm.createContext({});
   context.globalThis = context;
-  for (const src of ['js/registry.js', 'js/scoring.js', 'js/attempt.js', ...dataScripts]) {
+  for (const src of ['js/registry.js', 'js/scoring.js', 'js/attempt.js', ...dataScripts, ...practicumScripts]) {
     vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
   }
   return context.EGE;
@@ -48,4 +50,4 @@ function contentHash(task) {
   return crypto.createHash('sha256').update(JSON.stringify(authoredContent(task))).digest('hex');
 }
 
-module.exports = { root, scripts, dataScripts, loadBank, loadWithView, authoredContent, contentHash };
+module.exports = { root, scripts, dataScripts, practicumScripts, loadBank, loadWithView, authoredContent, contentHash };

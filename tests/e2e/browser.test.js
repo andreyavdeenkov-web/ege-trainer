@@ -2,8 +2,8 @@
 
 /**
  * Браузерные тесты тренажёра ЕГЭ (Playwright + Chromium):
- * компьютер и смартфон, светлая и тёмная темы. Проверяют три формата,
- * фильтры раздела, темы и формата, повторное прохождение, отсутствие
+ * компьютер и смартфон, светлая и тёмная темы. Проверяют выбор раздела, темы
+ * и практикума, три формата, повторное прохождение, клавиатуру, отсутствие
  * горизонтальной прокрутки и ошибок в консоли.
  *
  * Запуск: npm run test:e2e
@@ -106,6 +106,7 @@ async function currentKey(page) {
       type: window.EGE.scoring.getTaskType(task),
       key: Array.from(window.EGE.scoring.getCorrect(task)),
       maxPoints: window.EGE.scoring.getMaxPoints(task),
+      choiceOfItems: task.choiceOf === 'items',
       hasSource: !!task.source,
       hasFeature: !!task.commonFeature
     };
@@ -126,7 +127,7 @@ async function answerWithKey(page, { type, key }) {
 }
 
 /**
- * Проходит задания тренировки верными ответами, пока текущим не станет задание
+ * Проходит задания практикума верными ответами, пока текущим не станет задание
  * нужного типа (формат на главном экране не выбирается — порядок заданий случайный).
  */
 async function advanceTo(page, type) {
@@ -138,19 +139,21 @@ async function advanceTo(page, type) {
   }
 }
 
-/** Счётчики, которые должны быть на карточках: все задания во всех форматах. */
-const bankCounts = (page) => page.evaluate(() => ({
-  all: EGE.getTasksBySection('all').length,
-  OBS: EGE.getTasksBySection('OBS').length,
-  'OBS-ACT': EGE.getTasksByTopic('OBS-ACT').length,
-  SOC: EGE.getTasksBySection('SOC').length,
-  'SOC-FAM': EGE.getTasksByTopic('SOC-FAM').length
-}));
-const countOf = (page, name, value) =>
+const card = (page, id) => page.locator(`.practicum-card[data-practicum="${id}"]`);
+const noteOf = (page, name, value) =>
   page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"]) .topic-option__count`).textContent();
+const values = (page, name) => page.locator(`input[name="${name}"]`).evaluateAll((list) => list.map((i) => i.value));
+
+/** Раздел → тема → «Начать практикум». */
+async function openPracticum(page, section, topic, id) {
+  await pick(page, 'section', section);
+  await pick(page, 'topic', topic);
+  await card(page, id).locator('.practicum-card__start').click();
+  await page.waitForSelector('#screen-quiz:not([hidden])');
+}
 
 for (const config of CONFIGS) {
-  test(`${config.name}: главный экран — только раздел и тема, все форматы`, async () => {
+  test(`${config.name}: главный экран — раздел, тема, практикум`, async () => {
     const { page, context, errors } = await open(config);
     await assert.doesNotReject(page.waitForSelector('#start-title'));
     assert.equal(await page.textContent('#start-title'),
@@ -163,45 +166,117 @@ for (const config of CONFIGS) {
     const dark = (r + g + b) / 3 < 100;
     assert.equal(dark, config.colorScheme === 'dark', `фон ${bg}`);
 
-    // Выбора формата нет ни в каком виде.
-    assert.equal(await page.locator('input[name="format"], #train-settings, #format-options').count(), 0);
+    // Выбора формата нет ни в каком виде; обобщённых пунктов тоже нет.
+    assert.equal(await page.locator('input[name="format"], #train-settings, #format-options, #start-btn').count(), 0);
     assert.deepEqual(await page.locator('#start-form legend').allTextContents(), ['Раздел', 'Тема']);
+    assert.deepEqual(await values(page, 'section'), ['OBS', 'ECO', 'SOC', 'POL', 'LAW']);
+    const startText = await page.textContent('#screen-start');
+    for (const text of ['Все разделы', 'Весь раздел', 'Общие вопросы']) assert.ok(!startText.includes(text), text);
 
-    // Счётчики — все задания во всех форматах.
-    const counts = await bankCounts(page);
-    assert.match(await countOf(page, 'section', 'all'), new RegExp(`^${counts.all} `));
-    assert.match(await countOf(page, 'section', 'SOC'), new RegExp(`^${counts.SOC} `));
+    // Сначала виден только выбор раздела.
+    assert.ok(await page.locator('#topic-field').isHidden());
+    assert.ok(await page.locator('#practicum-field').isHidden());
+    assert.equal(await noteOf(page, 'section', 'OBS'), '2 темы');
+    assert.equal(await noteOf(page, 'section', 'ECO'), 'Практикумы готовятся');
     await assertNoHorizontalScroll(page, 'старт');
     await shot(page, config, '1-start');
 
+    // Раздел → темы (только с практикумами, без «Общих вопросов»).
     await pick(page, 'section', 'OBS');
-    assert.match(await countOf(page, 'topic', 'OBS-ACT'), /^16 заданий$/);
+    assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG']);
+    assert.equal(await noteOf(page, 'topic', 'OBS-COG'), '1 практикум');
+    assert.ok(await page.locator('#practicum-field').isHidden(), 'практикумы — после выбора темы');
+
+    // Тема → практикумы.
+    await pick(page, 'topic', 'OBS-COG');
+    assert.equal(await page.textContent('#practicum-title'), 'Практикумы по теме «Познание»');
+    assert.equal(await page.locator('.practicum-card').count(), 1);
+    assert.equal(await card(page, 'OBS-COG-P01').locator('.practicum-card__title').textContent(), 'Практикум № 1');
+    assert.equal(await card(page, 'OBS-COG-P01').locator('.practicum-card__meta').textContent(), '19 заданий · максимум 33 балла');
+    assert.equal(await card(page, 'OBS-COG-P01').locator('.practicum-card__start').textContent(), 'Начать практикум');
+    await assertNoHorizontalScroll(page, 'практикумы');
+    await shot(page, config, '2-practicums');
+
+    // Другая тема — карточки обновляются.
     await pick(page, 'topic', 'OBS-ACT');
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 16 заданий');
+    assert.equal(await page.textContent('#practicum-title'), 'Практикумы по теме «Деятельность»');
+    assert.equal(await page.locator('.practicum-card').count(), 1);
+    assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__meta').textContent(), '16 заданий · максимум 31 балл');
+
+    // Другой раздел — выбор темы сбрасывается, практикумы скрываются.
     await pick(page, 'section', 'SOC');
-    assert.ok(await radio(page, 'topic', 'all').isChecked(), 'смена раздела сбрасывает тему');
+    assert.deepEqual(await values(page, 'topic'), ['SOC-FAM']);
+    assert.equal(await page.locator('input[name="topic"]:checked').count(), 0, 'смена раздела сбрасывает тему');
+    assert.ok(await page.locator('#practicum-field').isHidden());
     await pick(page, 'topic', 'SOC-FAM');
-    assert.equal(await page.textContent('#start-btn'), `Начать: ${counts['SOC-FAM']} задание`);
-    await shot(page, config, '2-topic');
+    assert.equal(await noteOf(page, 'topic', 'SOC-FAM'), '2 практикума');
+    assert.deepEqual(await page.locator('.practicum-card').evaluateAll((list) => list.map((c) => c.dataset.practicum)),
+      ['SOC-FAM-P01', 'SOC-FAM-P02'], 'прежний набор новому ученику не предлагается');
+    assert.deepEqual(await page.locator('.practicum-card__title').allTextContents(), ['Практикум № 1', 'Практикум № 2']);
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__meta').textContent(), '16 заданий · максимум 29 баллов');
+    assert.equal(await card(page, 'SOC-FAM-P02').locator('.practicum-card__meta').textContent(), '15 заданий · максимум 28 баллов');
+    await assertNoHorizontalScroll(page, 'два практикума');
+    await shot(page, config, '2b-family');
 
     // Раздел и тема запоминаются.
     await page.reload();
     assert.ok(await radio(page, 'section', 'SOC').isChecked());
     assert.ok(await radio(page, 'topic', 'SOC-FAM').isChecked());
+    assert.ok(await card(page, 'SOC-FAM-P01').isVisible());
+
+    // Разделы без готовых практикумов — понятное сообщение, ни тем, ни практикумов.
+    for (const [id, title] of [['ECO', 'Экономика'], ['POL', 'Политика'], ['LAW', 'Право']]) {
+      assert.equal(await noteOf(page, 'section', id), 'Практикумы готовятся', id);
+      await pick(page, 'section', id);
+      assert.ok(await page.locator('#topic-field').isHidden(), id);
+      assert.equal(await page.locator('input[name="topic"]').count(), 0, id);
+      assert.ok(await page.locator('#practicum-field').isHidden(), id);
+      assert.equal(await page.textContent('#section-empty'),
+        `Практикумы по разделу «${title}» готовятся. Когда они будут готовы, они появятся здесь.`);
+    }
+    // Сообщение читается в обеих темах оформления: текст отличается от фона.
+    const [color, background] = await page.evaluate(() => {
+      const cs = getComputedStyle(document.getElementById('section-empty'));
+      return [cs.color, cs.backgroundColor];
+    });
+    assert.notEqual(color, background);
+    await assertNoHorizontalScroll(page, 'раздел без практикумов');
+    await shot(page, config, '3-section-empty');
+
+    // Задания «Общих вопросов» остаются в банке, хотя ученику не показываются.
+    assert.deepEqual(await page.evaluate(() => ['OBS-GEN', 'ECO-GEN', 'POL-GEN', 'LAW-GEN']
+      .map((id) => EGE.getTasksByTopic(id).length)), [3, 3, 3, 3]);
 
     assert.deepEqual(errors, []);
     await context.close();
   });
 
-  test(`${config.name}: сохранённый ранее формат не ограничивает набор заданий`, async () => {
+  test(`${config.name}: сохранённые ранее формат и «все разделы» не мешают выбору`, async () => {
     for (const format of ['matching', 'exclude-two', 'multiple', 'essay']) {
       const storage = JSON.stringify({ section: 'OBS', topic: 'OBS-ACT', format });
       const { page, context, errors } = await open(config, { storage });
       assert.ok(await radio(page, 'topic', 'OBS-ACT').isChecked());
-      assert.equal(await page.textContent('#start-btn'), 'Начать: 16 заданий', format);
-      await page.click('#start-btn');
+      assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__meta').textContent(), '16 заданий · максимум 31 балл', format);
+      await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').click();
       assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 /);
       assert.equal(await page.locator('#task-nav .task-nav__item').count(), 16);
+      assert.deepEqual(errors, []);
+      await context.close();
+    }
+    // Прежние «Все разделы», «Весь раздел», «Общие вопросы»: тема сбрасывается, верный раздел остаётся.
+    for (const [saved, section] of [
+      [{ section: 'all', topic: 'all' }, null],
+      [{ section: 'OBS', topic: 'all' }, 'OBS'],
+      [{ section: 'OBS', topic: 'OBS-GEN' }, 'OBS'],
+      [{ section: 'ECO', topic: 'ECO-GEN' }, 'ECO']
+    ]) {
+      const where = JSON.stringify(saved);
+      const { page, context, errors } = await open(config, { storage: JSON.stringify(saved) });
+      assert.equal(await page.locator('input[name="section"]:checked').count(), section ? 1 : 0, where);
+      if (section) assert.ok(await radio(page, 'section', section).isChecked(), where);
+      assert.equal(await page.locator('input[name="topic"]:checked').count(), 0, where);
+      assert.ok(await page.locator('#practicum-field').isHidden(), where);
+      assert.equal(await page.locator('#section-empty').isVisible(), section === 'ECO', where);
       assert.deepEqual(errors, []);
       await context.close();
     }
@@ -209,9 +284,8 @@ for (const config of CONFIGS) {
 
   test(`${config.name}: два лишних термина (клавиатура), ровно две позиции`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'OBS');
-    await pick(page, 'topic', 'OBS-ACT');
-    await page.click('#start-btn');
+    await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+    assert.equal(await page.textContent('#quiz-title'), 'Деятельность · Практикум № 1');
 
     const { key } = await advanceTo(page, 'exclude-two');
     assert.match(await page.textContent('#task-hint'), /Выбрано: 0 из 2/);
@@ -228,22 +302,20 @@ for (const config of CONFIGS) {
     await page.keyboard.press(String(wrong));
     await page.keyboard.press(String(key[1]));
     await assertNoHorizontalScroll(page, 'задание exclude-two');
-    await shot(page, config, '3-exclude-draft');
+    await shot(page, config, '4-exclude-draft');
 
     await page.keyboard.press('Enter');
     await page.waitForSelector('#feedback:not([hidden])');
     assert.equal(await page.textContent('.points__value'), '1 из 1 балла');
     assert.equal(await page.locator('#statements .statement.status-hit').count(), 2);
-    await shot(page, config, '4-exclude-answered');
+    await shot(page, config, '5-exclude-answered');
     assert.deepEqual(errors, []);
     await context.close();
   });
 
   test(`${config.name}: соответствие — частичный ответ не засчитывается, верный — 2 балла`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'OBS');
-    await pick(page, 'topic', 'OBS-ACT');
-    await page.click('#start-btn');
+    await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
 
     const { key } = await advanceTo(page, 'matching');
     for (let row = 0; row < key.length - 1; row++) {
@@ -253,25 +325,24 @@ for (const config of CONFIGS) {
     await page.click(`.match-choice[data-row="${key.length - 1}"][data-n="${key[key.length - 1]}"]`);
     assert.ok(!(await page.locator('#submit-btn').isDisabled()));
     await assertNoHorizontalScroll(page, 'задание matching');
-    await shot(page, config, '5-matching-draft');
+    await shot(page, config, '6-matching-draft');
 
     await page.click('#submit-btn');
     await page.waitForSelector('#feedback:not([hidden])');
     assert.equal(await page.textContent('.points__value'), '2 из 2 баллов');
     assert.equal(await page.locator('.match-row.status-right').count(), key.length);
-    await shot(page, config, '6-matching-answered');
+    await shot(page, config, '7-matching-answered');
     assert.deepEqual(errors, []);
     await context.close();
   });
 
-  test(`${config.name}: выбор нескольких ответов, итоги и повторное прохождение`, async () => {
+  test(`${config.name}: выбор нескольких ответов, итоги практикума, повторное прохождение и возврат к выбору`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'ECO');
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 3 задания');
-    await page.click('#start-btn');
+    await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
 
-    const first = await currentKey(page);
-    assert.equal(first.type, 'multiple');
+    const first = await advanceTo(page, 'multiple');
+    const before = await page.textContent('#progress-label');
+    const firstIndex = Number(/^Задание (\d+)/.exec(before)[1]);
     // Один пропущенный верный ответ — 1 балл.
     for (const n of first.key.slice(1)) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
     await page.click('#submit-btn');
@@ -279,28 +350,40 @@ for (const config of CONFIGS) {
     assert.equal(await page.textContent('.points__value'), '1 из 2 баллов');
     assert.equal(await page.locator('#statements .statement.status-missed').count(), 1);
     // Статус в разборе выражен не только цветом: подпись и значок.
-    assert.match(await page.textContent('#statements .statement.status-missed .statement__tag'), /Пропущено — это суждение верное/);
+    // Задания перемешаны: первым может оказаться выбор вариантов (choiceOf: 'items') — у него своя подпись.
+    assert.match(await page.textContent('#statements .statement.status-missed .statement__tag'),
+      first.choiceOfItems ? /Пропущено — этот вариант подходит/ : /Пропущено — это суждение верное/);
     assert.equal(await page.locator('#statements .statement.status-missed .statement__icon[aria-hidden="true"]').count(), 1);
     // У старых заданий нет source — блок пояснений скрыт.
     assert.ok(await page.locator('#task-notes').isHidden());
 
-    for (let i = 1; i < 3; i++) {
+    for (let i = firstIndex; i < 16; i++) {
       await page.click('#next-btn');
       await answerWithKey(page, await currentKey(page));
     }
     await page.click('#next-btn');
     await page.waitForSelector('#screen-result:not([hidden])');
-    assert.equal(await page.textContent('#result-score'), '5 из 6 баллов');
+    assert.equal(await page.textContent('#result-title'), 'Практикум завершён');
+    assert.equal(await page.textContent('#result-context'), 'Деятельность · Практикум № 1');
+    assert.equal(await page.textContent('#result-score'), '30 из 31 балла');
     await assertNoHorizontalScroll(page, 'итоги');
-    await shot(page, config, '7-result');
+    await shot(page, config, '8-result');
 
+    // «Пройти ещё раз» — тот же практикум заново.
     await page.click('#restart-btn');
     await page.waitForSelector('#screen-quiz:not([hidden])');
-    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 3 · выполнено 0$/);
+    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 · выполнено 0$/);
+    assert.equal(await page.textContent('#quiz-title'), 'Деятельность · Практикум № 1');
     assert.ok(await page.locator('#feedback').isHidden());
-    assert.equal(await page.locator('#statements .statement.is-selected').count(), 0);
+    assert.equal(await page.locator('#statements .statement.is-selected, .match-choice.is-selected').count(), 0);
     await answerWithKey(page, await currentKey(page));
-    assert.equal(await page.textContent('.points__value'), '2 из 2 баллов');
+
+    // Возврат к выбору: через логотип (с подтверждением) — та же тема, карточка предлагает продолжить.
+    await page.click('#brand-home');
+    await page.click('#exit-confirm');
+    await page.waitForSelector('#screen-start:not([hidden])');
+    assert.ok(await radio(page, 'topic', 'OBS-ACT').isChecked());
+    assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').isVisible());
     assert.deepEqual(errors, []);
     await context.close();
   });
@@ -309,8 +392,8 @@ for (const config of CONFIGS) {
     const { page, context, errors } = await open(config, { withFixture: true });
     await pick(page, 'section', 'SOC');
     await pick(page, 'topic', 'SOC-GRP');
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 2 задания');
-    await page.click('#start-btn');
+    assert.equal(await card(page, 'SOC-GRP-P01').locator('.practicum-card__meta').textContent(), '2 задания · максимум 3 балла');
+    await card(page, 'SOC-GRP-P01').locator('.practicum-card__start').click();
 
     // В тестовой теме два задания — exclude-two и matching — в случайном порядке.
     for (let i = 0; i < 2; i++) {
@@ -324,20 +407,20 @@ for (const config of CONFIGS) {
           'Источник: Тестовое пособие, 2025, с. 1, № 1 (формулировка адаптирована)');
         assert.match(await page.textContent('#statements .statement[data-number="2"] .statement__mistake'), /Типичная ошибка: Тестовая типичная ошибка/);
         await assertNoHorizontalScroll(page, 'разбор exclude-two');
-        await shot(page, config, '8-schema2-exclude');
+        await shot(page, config, '9-schema2-exclude');
       } else {
         // Соответствие с повторами, 7 вариантами и длинной формулировкой.
         for (let row = 0; row < task.key.length; row++) {
           await page.click(`.match-choice[data-row="${row}"][data-n="${task.key[row]}"]`);
         }
         await assertNoHorizontalScroll(page, 'matching, 7 вариантов');
-        await shot(page, config, '9-schema2-matching-draft');
+        await shot(page, config, '10-schema2-matching-draft');
         await page.click('#submit-btn');
         assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание');
         assert.match(await page.textContent('.match-row[data-row="0"] .statement__mistake'), /Тестовая ошибка соответствия/);
         assert.equal(await page.locator('#task-notes .task-notes__feature').count(), 0, 'общий признак только у exclude-two');
         await assertNoHorizontalScroll(page, 'разбор matching');
-        await shot(page, config, '10-schema2-matching-answered');
+        await shot(page, config, '11-schema2-matching-answered');
       }
       await page.click('#next-btn');
     }
@@ -350,45 +433,93 @@ for (const config of CONFIGS) {
     await context.close();
   });
 
-  test(`${config.name}: тема «Семья и брак» — все 31 задание проходят и отображаются`, async () => {
+  test(`${config.name}: «Семья и брак», Практикумы № 1 и № 2 — все 31 задание проходят и отображаются`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'SOC');
-    await pick(page, 'topic', 'SOC-FAM');
-    assert.equal(await page.textContent('#start-btn'), 'Начать: 31 задание');
-    await page.click('#start-btn');
-
     const seen = new Set();
-    const types = new Set();
-    let max = 0;
-    for (let i = 0; i < 31; i++) {
-      const task = await currentKey(page);
-      assert.ok(!seen.has(task.id), `задание ${task.id} повторилось`);
-      seen.add(task.id);
-      types.add(task.type);
-      await assertNoHorizontalScroll(page, `${task.id}, до ответа`);
-      await answerWithKey(page, task);
-      max += task.maxPoints;
-      assert.equal(await page.textContent('.points__value'),
-        task.maxPoints === 1 ? '1 из 1 балла' : '2 из 2 баллов', task.id);
-      if (task.hasSource) {
-        assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание', task.id);
+    for (const [id, n, total] of [['SOC-FAM-P01', 16, 29], ['SOC-FAM-P02', 15, 28]]) {
+      await openPracticum(page, 'SOC', 'SOC-FAM', id);
+      const types = new Set();
+      let max = 0;
+      for (let i = 0; i < n; i++) {
+        const task = await currentKey(page);
+        assert.ok(!seen.has(task.id), `задание ${task.id} повторилось`);
+        seen.add(task.id);
+        types.add(task.type);
+        await assertNoHorizontalScroll(page, `${task.id}, до ответа`);
+        await answerWithKey(page, task);
+        max += task.maxPoints;
+        assert.equal(await page.textContent('.points__value'),
+          task.maxPoints === 1 ? '1 из 1 балла' : '2 из 2 баллов', task.id);
+        if (task.hasSource) {
+          assert.equal(await page.textContent('#task-notes .task-notes__source'), 'Авторское задание', task.id);
+        }
+        assert.equal(await page.locator('#task-notes .task-notes__feature').count(), task.hasFeature ? 1 : 0, task.id);
+        // Объяснение есть у каждого суждения или позиции.
+        const parts = task.type === 'matching' ? '.match-row' : '#statements .statement';
+        assert.equal(await page.locator(`${parts} .statement__explanation`).count(), await page.locator(parts).count(), task.id);
+        await assertNoHorizontalScroll(page, `${task.id}, разбор`);
+        if (['SOC-FAM-033', 'SOC-FAM-038', 'SOC-FAM-040'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
+        await page.click('#next-btn');
       }
-      assert.equal(await page.locator('#task-notes .task-notes__feature').count(), task.hasFeature ? 1 : 0, task.id);
-      // Объяснение есть у каждого суждения или позиции.
-      const parts = task.type === 'matching' ? '.match-row' : '#statements .statement';
-      assert.equal(await page.locator(`${parts} .statement__explanation`).count(), await page.locator(parts).count(), task.id);
-      await assertNoHorizontalScroll(page, `${task.id}, разбор`);
-      if (['SOC-FAM-033', 'SOC-FAM-038', 'SOC-FAM-040'].includes(task.id)) await shot(page, config, `fam-${task.id}`);
+      await page.waitForSelector('#screen-result:not([hidden])');
+      assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple'], `${id}: все три формата`);
+      assert.equal(max, total, id);
+      assert.equal(await page.textContent('#result-percent'), '100%');
+      assert.equal(await page.textContent('#result-context'), `Семья и брак · Практикум № ${id.endsWith('1') ? 1 : 2}`);
+      await page.click('#home-btn');
+    }
+    assert.equal(seen.size, 31, 'вместе — все 31 задание темы, без повторов');
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: «Познание», Практикум № 1 — 19 заданий в утверждённом порядке, 33 балла`, async () => {
+    const { page, context, errors } = await open(config);
+    await openPracticum(page, 'OBS', 'OBS-COG', 'OBS-COG-P01');
+    const order = await page.evaluate(() => Array.from(EGE.getPracticum('OBS-COG-P01').taskIds));
+    for (let i = 0; i < 19; i++) {
+      const task = await currentKey(page);
+      assert.equal(task.id, order[i], `позиция ${i + 1}`);
+      await answerWithKey(page, task);
       await page.click('#next-btn');
     }
     await page.waitForSelector('#screen-result:not([hidden])');
-    assert.deepEqual([...types].sort(), ['exclude-two', 'matching', 'multiple'], 'в тренировке все три формата');
-    assert.equal(max, 16 * 2 + 5 + 10 * 2);
-    assert.equal(await page.textContent('#result-percent'), '100%');
+    assert.equal(await page.textContent('#result-score'), '33 из 33 баллов');
+    assert.equal(await page.textContent('#result-context'), 'Познание · Практикум № 1');
     assert.deepEqual(errors, []);
     await context.close();
   });
 }
+
+test('клавиатура: раздел, тема и практикум выбираются без мыши', async () => {
+  const { page, context, errors } = await open(CONFIGS[0]);
+  // Первый раздел — Tab с логотипа и ссылок шапки.
+  await page.locator('input[name="section"][value="OBS"]').focus();
+  await page.keyboard.press('Space');
+  assert.ok(await radio(page, 'section', 'OBS').isChecked());
+  // Стрелки внутри группы меняют раздел, темы обновляются.
+  await page.keyboard.press('ArrowRight');
+  assert.ok(await radio(page, 'section', 'ECO').isChecked());
+  assert.ok(await page.locator('#section-empty').isVisible());
+  await page.keyboard.press('ArrowLeft');
+  assert.ok(await radio(page, 'section', 'OBS').isChecked());
+  // Tab — к темам, Space — выбрать тему.
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(() => document.activeElement.name), 'topic');
+  await page.keyboard.press('Space');
+  await page.keyboard.press('ArrowRight');
+  assert.ok(await radio(page, 'topic', 'OBS-COG').isChecked());
+  // Tab — к кнопке практикума; фокус виден.
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Начать практикум');
+  const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
+  assert.notEqual(outline, 'none', 'видимый фокус');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#screen-quiz:not([hidden])');
+  assert.equal(await page.textContent('#quiz-title'), 'Познание · Практикум № 1');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
 
 /* ---------- Навигация ЕГЭ | Олимпиады в шапке ---------- */
 
@@ -402,6 +533,49 @@ const attemptState = (page) => page.evaluate(() => ({
   feedbackShown: !document.getElementById('feedback').hidden
 }));
 
+/**
+ * Копия сайта во вложенной папке, как на тестовой ссылке Githack
+ * (https://raw.githack.com/владелец/репозиторий/коммит/index.html): адрес папки
+ * там отдаёт 404, поэтому ссылки шапки должны вести на файлы, а не на «./».
+ */
+test('шапка работает и на копии сайта во вложенной папке (как на Githack)', async () => {
+  const mirror = 'https://githack.test/owner/ege-trainer/0123abcd/';
+  const context = await browser.newContext({ viewport: CONFIGS[2].viewport, isMobile: true, hasTouch: true });
+  await context.route('https://githack.test/**', async (route) => {
+    const url = new URL(route.request().url());
+    const rest = url.pathname.slice(new URL(mirror).pathname.length);
+    if (!rest || rest.endsWith('/')) return route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not found' });
+    const response = await route.fetch({ url: base + rest });
+    await route.fulfill({ response });
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(String(err)));
+
+  await page.goto(mirror + 'index.html');
+  await page.waitForSelector('#screen-start:not([hidden])');
+  // «Олимпиады» и обратно «ЕГЭ» — внутри той же копии.
+  await navLink(page, 'Олимпиады').click();
+  await page.waitForURL(mirror + 'olympiad.html');
+  await navLink(page, 'ЕГЭ').click();
+  await page.waitForURL(mirror + 'index.html');
+  await page.waitForSelector('#screen-start:not([hidden])');
+  // Логотип из практикума возвращает к выбору на этой же странице.
+  await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  await answerWithKey(page, await currentKey(page));
+  await page.click('#brand-home');
+  await page.click('#exit-confirm');
+  await page.waitForSelector('#screen-start:not([hidden])');
+  assert.equal(page.url(), mirror + 'index.html');
+  assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').isVisible());
+  // «ЕГЭ» со страниц предпросмотра — тоже на главную копии.
+  await page.goto(mirror + 'preview-poznanie.html');
+  await navLink(page, 'ЕГЭ').click();
+  await page.waitForURL(mirror + 'index.html');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 for (const config of [CONFIGS[0], CONFIGS[2]]) {
   test(`${config.name}: шапка — на стартовом экране переход без подтверждения`, async () => {
     const { page, context, errors } = await open(config);
@@ -409,22 +583,19 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     await page.waitForURL(`${base}olympiad.html`);
     assert.equal(await page.getAttribute('.site-nav__link[aria-current="page"]', 'href'), 'olympiad.html');
     await navLink(page, 'ЕГЭ').click();
-    await page.waitForURL(base);
+    await page.waitForURL(`${base}index.html`);
     assert.ok(await page.locator('#screen-start').isVisible());
-    // Тренировка начата, но ответов ещё нет — терять нечего, подтверждение не нужно.
-    await pick(page, 'section', 'ECO');
-    await page.click('#start-btn');
-    await page.waitForSelector('#screen-quiz:not([hidden])');
+    // Практикум начат, но ответов ещё нет — терять нечего, подтверждение не нужно.
+    await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
     await navLink(page, 'Олимпиады').click();
     await page.waitForURL(`${base}olympiad.html`);
     assert.deepEqual(errors, []);
     await context.close();
   });
 
-  test(`${config.name}: шапка — при начатой тренировке переход только после подтверждения`, async () => {
+  test(`${config.name}: шапка — при начатом практикуме переход только после подтверждения`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'ECO');
-    await page.click('#start-btn');
+    await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
     await answerWithKey(page, await currentKey(page));
     const before = await attemptState(page);
     assert.match(before.progress, /выполнено 1$/);
@@ -449,12 +620,11 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     await page.waitForSelector('#exit-bar:not([hidden])');
     assert.ok(await page.locator('#screen-quiz').isVisible());
     await Promise.all([page.waitForEvent('load'), page.click('#exit-confirm')]);
-    assert.equal(page.url(), base);
+    assert.equal(page.url(), `${base}index.html`);
     assert.ok(await page.locator('#screen-start').isVisible());
 
     // Подтверждение после «Олимпиады» ведёт на олимпиадную страницу.
-    await pick(page, 'section', 'ECO');
-    await page.click('#start-btn');
+    await card(page, 'OBS-ACT-P01').locator('.practicum-card__restart').click();
     await answerWithKey(page, await currentKey(page));
     await navLink(page, 'Олимпиады').click();
     await page.waitForSelector('#exit-bar:not([hidden])');
@@ -466,8 +636,7 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
 
   test(`${config.name}: логотип — прежнее подтверждение выхода на стартовый экран`, async () => {
     const { page, context, errors } = await open(config);
-    await pick(page, 'section', 'ECO');
-    await page.click('#start-btn');
+    await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
     await answerWithKey(page, await currentKey(page));
     const before = await attemptState(page);
     await page.click('#brand-home');
