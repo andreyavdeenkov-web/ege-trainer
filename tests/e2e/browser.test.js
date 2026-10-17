@@ -533,6 +533,49 @@ const attemptState = (page) => page.evaluate(() => ({
   feedbackShown: !document.getElementById('feedback').hidden
 }));
 
+/**
+ * Копия сайта во вложенной папке, как на тестовой ссылке Githack
+ * (https://raw.githack.com/владелец/репозиторий/коммит/index.html): адрес папки
+ * там отдаёт 404, поэтому ссылки шапки должны вести на файлы, а не на «./».
+ */
+test('шапка работает и на копии сайта во вложенной папке (как на Githack)', async () => {
+  const mirror = 'https://githack.test/owner/ege-trainer/0123abcd/';
+  const context = await browser.newContext({ viewport: CONFIGS[2].viewport, isMobile: true, hasTouch: true });
+  await context.route('https://githack.test/**', async (route) => {
+    const url = new URL(route.request().url());
+    const rest = url.pathname.slice(new URL(mirror).pathname.length);
+    if (!rest || rest.endsWith('/')) return route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not found' });
+    const response = await route.fetch({ url: base + rest });
+    await route.fulfill({ response });
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(String(err)));
+
+  await page.goto(mirror + 'index.html');
+  await page.waitForSelector('#screen-start:not([hidden])');
+  // «Олимпиады» и обратно «ЕГЭ» — внутри той же копии.
+  await navLink(page, 'Олимпиады').click();
+  await page.waitForURL(mirror + 'olympiad.html');
+  await navLink(page, 'ЕГЭ').click();
+  await page.waitForURL(mirror + 'index.html');
+  await page.waitForSelector('#screen-start:not([hidden])');
+  // Логотип из практикума возвращает к выбору на этой же странице.
+  await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
+  await answerWithKey(page, await currentKey(page));
+  await page.click('#brand-home');
+  await page.click('#exit-confirm');
+  await page.waitForSelector('#screen-start:not([hidden])');
+  assert.equal(page.url(), mirror + 'index.html');
+  assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').isVisible());
+  // «ЕГЭ» со страниц предпросмотра — тоже на главную копии.
+  await page.goto(mirror + 'preview-poznanie.html');
+  await navLink(page, 'ЕГЭ').click();
+  await page.waitForURL(mirror + 'index.html');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
 for (const config of [CONFIGS[0], CONFIGS[2]]) {
   test(`${config.name}: шапка — на стартовом экране переход без подтверждения`, async () => {
     const { page, context, errors } = await open(config);
@@ -540,7 +583,7 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     await page.waitForURL(`${base}olympiad.html`);
     assert.equal(await page.getAttribute('.site-nav__link[aria-current="page"]', 'href'), 'olympiad.html');
     await navLink(page, 'ЕГЭ').click();
-    await page.waitForURL(base);
+    await page.waitForURL(`${base}index.html`);
     assert.ok(await page.locator('#screen-start').isVisible());
     // Практикум начат, но ответов ещё нет — терять нечего, подтверждение не нужно.
     await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
@@ -577,7 +620,7 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     await page.waitForSelector('#exit-bar:not([hidden])');
     assert.ok(await page.locator('#screen-quiz').isVisible());
     await Promise.all([page.waitForEvent('load'), page.click('#exit-confirm')]);
-    assert.equal(page.url(), base);
+    assert.equal(page.url(), `${base}index.html`);
     assert.ok(await page.locator('#screen-start').isVisible());
 
     // Подтверждение после «Олимпиады» ведёт на олимпиадную страницу.

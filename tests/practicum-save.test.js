@@ -322,3 +322,60 @@ test('перенос при ошибке хранилища: прежняя за
   assert.equal(storage.getItem(KEY(scopeOf(ACT))), null);
   assert.equal(S.migrate(null, { from: 'a', to: 'b' }).status, 'none');
 });
+
+/* ---------- Все старые записи сразу (как в браузере ученика после обновления сайта) ---------- */
+
+/** Скрипты страницы предпросмотра (без интерфейса) в новой версии. */
+function loadPage(page) {
+  const html = fs.readFileSync(path.join(root, page), 'utf8');
+  const context = vm.createContext({});
+  context.globalThis = context;
+  for (const [, src] of html.matchAll(/<script src="([^"]+)"><\/script>/g)) {
+    if (src === 'js/app.js' || src === 'js/task-view.js') continue;
+    vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
+  }
+  return context.EGE;
+}
+
+test('попытки страниц предпросмотра, сохранённые прежней версией, продолжаются после переноса заданий в банк', () => {
+  for (const [page, scope, answered] of [
+    ['preview-poznanie.html', 'preview/preview/poznanie-19', 6],
+    ['preview-cognition.html', 'preview/preview/cognition-batch1', 4]
+  ]) {
+    const P = loadPage(page);
+    const storage = legacyStorage([scope]);
+    const result = P.attemptSave.load(storage, scope, {
+      getTask: P.getTask, attempt: P.attempt, scoring: P.scoring, now: NOW, taskIds: P.preview.taskIds
+    });
+    assert.equal(result.status, 'ok', page);
+    assert.equal(P.attempt.answeredCount(result.state.attempt), answered, page);
+    assert.deepEqual(plain(result.state.attempt.answers), LEGACY[scope].attempt.answers, `${page}: ответы и баллы прежние`);
+  }
+});
+
+test('обновление сайта: все старые записи сразу — переносятся только подходящие, ни одна не теряется', () => {
+  const scopes = Object.keys(LEGACY);
+  const storage = legacyStorage(scopes);
+  const before = new Map(storage.data);
+  // То же, что делает главная страница при открытии (js/app.js, migrateLegacyAttempts).
+  for (const p of EGE.practicums.filter((x) => x.legacyTopicAttempts && EGE.isPracticumContinuable(x))) migrateTo(storage, p);
+
+  const moved = { 'ege/OBS/OBS-ACT': 'ege/OBS/OBS-ACT/OBS-ACT-P01', 'ege/SOC/SOC-FAM': 'ege/SOC/SOC-FAM/SOC-FAM-R01' };
+  assert.equal(storage.data.size, before.size, 'число записей не изменилось');
+  for (const scope of scopes) {
+    if (moved[scope]) {
+      assert.equal(storage.getItem(KEY(scope)), null, `${scope}: перенесена`);
+      const target = moved[scope];
+      const p = EGE.getPracticum(target.split('/').pop());
+      const result = S.load(storage, target, depsOf(p, NOW));
+      assert.equal(result.status, 'ok', target);
+      assert.deepEqual(plain(result.state.attempt.answers), LEGACY[scope].attempt.answers, `${target}: ответы прежние`);
+    } else {
+      assert.equal(storage.getItem(KEY(scope)), before.get(KEY(scope)), `${scope}: не тронута`);
+    }
+  }
+  // Повторное открытие страницы ничего не меняет.
+  const after = new Map(storage.data);
+  for (const p of EGE.practicums.filter((x) => x.legacyTopicAttempts)) migrateTo(storage, p);
+  assert.deepEqual(storage.data, after);
+});

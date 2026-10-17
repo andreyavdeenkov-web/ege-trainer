@@ -1,5 +1,5 @@
 {
- "note": "Незавершённые попытки, сохранённые кодом main до появления практикумов (js/attempt-save.js, saveVersion 1). Создано скриптом один раз; не редактировать.",
+ "note": "Незавершённые попытки, сохранённые кодом main до появления практикумов (js/attempt-save.js, saveVersion 1): главная страница и страницы предпросмотра. Создано скриптом один раз; не редактировать.",
  "records": {
   "ege/OBS/OBS-ACT": {
    "format": "ege-attempt-save",
@@ -643,6 +643,323 @@
     "SOC-STR-004": "58f5b8ea",
     "SOC-STR-005": "ad4f64ae",
     "SOC-STR-006": "2d7eeef2"
+   }
+  },
+  "preview/preview/poznanie-19": {
+   "format": "ege-attempt-save",
+   "saveVersion": 1,
+   "scope": "preview/preview/poznanie-19",
+   "savedAt": "2026-10-13T09:07:00.000Z",
+   "attempt": {
+    "schemaVersion": 1,
+    "id": "legacy-poznanie-19",
+    "startedAt": "2026-10-13T09:00:00.000Z",
+    "finishedAt": null,
+    "settings": {
+     "section": "preview",
+     "topic": "poznanie-19"
+    },
+    "taskIds": [
+     "OBS-COG-031",
+     "OBS-COG-002",
+     "OBS-COG-032",
+     "OBS-COG-008",
+     "OBS-COG-033",
+     "OBS-COG-003",
+     "OBS-COG-034",
+     "OBS-COG-035",
+     "OBS-COG-039",
+     "OBS-COG-019",
+     "OBS-COG-016",
+     "OBS-COG-017",
+     "OBS-COG-036",
+     "OBS-COG-037",
+     "OBS-COG-025",
+     "OBS-COG-026",
+     "OBS-COG-006",
+     "OBS-COG-038",
+     "OBS-COG-028"
+    ],
+    "answers": [
+     {
+      "taskId": "OBS-COG-031",
+      "taskVersion": 1,
+      "position": 1,
+      "selected": [
+       1,
+       3,
+       4
+      ],
+      "correct": [
+       1,
+       3,
+       4
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-13T09:01:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-002",
+      "taskVersion": 1,
+      "position": 2,
+      "selected": [
+       1,
+       2,
+       3,
+       3,
+       1
+      ],
+      "correct": [
+       1,
+       2,
+       3,
+       3,
+       1
+      ],
+      "points": 1,
+      "maxPoints": 1,
+      "answeredAt": "2026-10-13T09:02:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-032",
+      "taskVersion": 1,
+      "position": 3,
+      "selected": [
+       2,
+       3,
+       5
+      ],
+      "correct": [
+       2,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-13T09:03:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-008",
+      "taskVersion": 2,
+      "position": 4,
+      "selected": [
+       1,
+       3,
+       5
+      ],
+      "correct": [
+       1,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-13T09:04:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-033",
+      "taskVersion": 1,
+      "position": 5,
+      "selected": [
+       1,
+       3,
+       2,
+       3,
+       1
+      ],
+      "correct": [
+       1,
+       3,
+       2,
+       3,
+       1
+      ],
+      "points": 1,
+      "maxPoints": 1,
+      "answeredAt": "2026-10-13T09:05:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-003",
+      "taskVersion": 1,
+      "position": 6,
+      "selected": [
+       1,
+       3,
+       4
+      ],
+      "correct": [
+       1,
+       3,
+       4
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-13T09:06:00.000Z"
+     }
+    ]
+   },
+   "viewIndex": 6,
+   "draft": null,
+   "tasks": {
+    "OBS-COG-031": "807376ce",
+    "OBS-COG-002": "687940e8",
+    "OBS-COG-032": "9504a96e",
+    "OBS-COG-008": "6f6af4bd",
+    "OBS-COG-033": "1624fa8c",
+    "OBS-COG-003": "a0c4a64a",
+    "OBS-COG-034": "c9d9fb2c",
+    "OBS-COG-035": "8475b853",
+    "OBS-COG-039": "63796397",
+    "OBS-COG-019": "5cd1543a",
+    "OBS-COG-016": "2f3ec617",
+    "OBS-COG-017": "c9e11d71",
+    "OBS-COG-036": "c5877808",
+    "OBS-COG-037": "8abee0cf",
+    "OBS-COG-025": "649bcd83",
+    "OBS-COG-026": "5eba20de",
+    "OBS-COG-006": "a1a14014",
+    "OBS-COG-038": "b42786db",
+    "OBS-COG-028": "19cca708"
+   }
+  },
+  "preview/preview/cognition-batch1": {
+   "format": "ege-attempt-save",
+   "saveVersion": 1,
+   "scope": "preview/preview/cognition-batch1",
+   "savedAt": "2026-10-13T10:05:00.000Z",
+   "attempt": {
+    "schemaVersion": 1,
+    "id": "legacy-cognition-batch1",
+    "startedAt": "2026-10-13T10:00:00.000Z",
+    "finishedAt": null,
+    "settings": {
+     "section": "preview",
+     "topic": "cognition-batch1"
+    },
+    "taskIds": [
+     "OBS-COG-002",
+     "OBS-COG-003",
+     "OBS-COG-006",
+     "OBS-COG-008",
+     "OBS-COG-016",
+     "OBS-COG-017",
+     "OBS-COG-019",
+     "OBS-COG-025",
+     "OBS-COG-026",
+     "OBS-COG-028",
+     "OBS-SCI-004",
+     "OBS-SCI-007",
+     "OBS-SCI-010",
+     "OBS-SCI-013",
+     "OBS-SCI-016",
+     "OBS-SCI-017",
+     "OBS-SCI-025",
+     "OBS-SCI-027",
+     "OBS-SCI-029",
+     "OBS-SCI-030"
+    ],
+    "answers": [
+     {
+      "taskId": "OBS-COG-002",
+      "taskVersion": 1,
+      "position": 1,
+      "selected": [
+       1,
+       2,
+       3,
+       3,
+       1
+      ],
+      "correct": [
+       1,
+       2,
+       3,
+       3,
+       1
+      ],
+      "points": 1,
+      "maxPoints": 1,
+      "answeredAt": "2026-10-13T10:01:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-003",
+      "taskVersion": 1,
+      "position": 2,
+      "selected": [
+       3,
+       4
+      ],
+      "correct": [
+       1,
+       3,
+       4
+      ],
+      "points": 1,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-13T10:02:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-006",
+      "taskVersion": 1,
+      "position": 3,
+      "selected": [
+       1,
+       3,
+       5
+      ],
+      "correct": [
+       1,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-13T10:03:00.000Z"
+     },
+     {
+      "taskId": "OBS-COG-008",
+      "taskVersion": 2,
+      "position": 4,
+      "selected": [
+       1,
+       3,
+       5
+      ],
+      "correct": [
+       1,
+       3,
+       5
+      ],
+      "points": 2,
+      "maxPoints": 2,
+      "answeredAt": "2026-10-13T10:04:00.000Z"
+     }
+    ]
+   },
+   "viewIndex": 4,
+   "draft": null,
+   "tasks": {
+    "OBS-COG-002": "687940e8",
+    "OBS-COG-003": "a0c4a64a",
+    "OBS-COG-006": "a1a14014",
+    "OBS-COG-008": "6f6af4bd",
+    "OBS-COG-016": "2f3ec617",
+    "OBS-COG-017": "c9e11d71",
+    "OBS-COG-019": "5cd1543a",
+    "OBS-COG-025": "649bcd83",
+    "OBS-COG-026": "5eba20de",
+    "OBS-COG-028": "19cca708",
+    "OBS-SCI-004": "35919274",
+    "OBS-SCI-007": "72ff5626",
+    "OBS-SCI-010": "2351a11c",
+    "OBS-SCI-013": "b0e7a7ed",
+    "OBS-SCI-016": "f7d2d9ec",
+    "OBS-SCI-017": "bbae3e8d",
+    "OBS-SCI-025": "b08afe17",
+    "OBS-SCI-027": "55a0c4b0",
+    "OBS-SCI-029": "8b61b3a8",
+    "OBS-SCI-030": "f5bee266"
    }
   }
  }
