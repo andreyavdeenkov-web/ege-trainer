@@ -176,15 +176,16 @@ for (const config of CONFIGS) {
     // Сначала виден только выбор раздела.
     assert.ok(await page.locator('#topic-field').isHidden());
     assert.ok(await page.locator('#practicum-field').isHidden());
-    assert.equal(await noteOf(page, 'section', 'OBS'), '2 темы');
+    assert.equal(await noteOf(page, 'section', 'OBS'), '3 темы');
     assert.equal(await noteOf(page, 'section', 'ECO'), 'Практикумы готовятся');
     await assertNoHorizontalScroll(page, 'старт');
     await shot(page, config, '1-start');
 
     // Раздел → темы (только с практикумами, без «Общих вопросов»).
     await pick(page, 'section', 'OBS');
-    assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG']);
+    assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG', 'OBS-SCK']);
     assert.equal(await noteOf(page, 'topic', 'OBS-COG'), '1 практикум');
+    assert.equal(await noteOf(page, 'topic', 'OBS-SCK'), '2 практикума');
     assert.ok(await page.locator('#practicum-field').isHidden(), 'практикумы — после выбора темы');
 
     // Тема → практикумы.
@@ -196,6 +197,16 @@ for (const config of CONFIGS) {
     assert.equal(await card(page, 'OBS-COG-P01').locator('.practicum-card__start').textContent(), 'Начать практикум');
     await assertNoHorizontalScroll(page, 'практикумы');
     await shot(page, config, '2-practicums');
+
+    // «Научное познание» — отдельная тема с двумя практикумами.
+    await pick(page, 'topic', 'OBS-SCK');
+    assert.equal(await page.textContent('#practicum-title'), 'Практикумы по теме «Научное познание»');
+    assert.deepEqual(await page.locator('.practicum-card').evaluateAll((list) => list.map((c) => c.dataset.practicum)),
+      ['OBS-SCK-P01', 'OBS-SCK-P02']);
+    for (const id of ['OBS-SCK-P01', 'OBS-SCK-P02']) {
+      assert.equal(await card(page, id).locator('.practicum-card__meta').textContent(), '25 заданий · максимум 39 баллов', id);
+    }
+    await assertNoHorizontalScroll(page, 'практикумы «Научного познания»');
 
     // Другая тема — карточки обновляются.
     await pick(page, 'topic', 'OBS-ACT');
@@ -469,6 +480,71 @@ for (const config of CONFIGS) {
       await page.click('#home-btn');
     }
     assert.equal(seen.size, 31, 'вместе — все 31 задание темы, без повторов');
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: «Научное познание» — оба практикума: порядок, объяснения, баллы, итоги, повтор`, async () => {
+    const { page, context, errors } = await open(config);
+    for (const [id, number] of [['OBS-SCK-P01', 1], ['OBS-SCK-P02', 2]]) {
+      await openPracticum(page, 'OBS', 'OBS-SCK', id);
+      assert.equal(await page.textContent('#quiz-title'), `Научное познание · Практикум № ${number}`);
+      const order = await page.evaluate((pid) => Array.from(EGE.getPracticum(pid).taskIds), id);
+      assert.equal(order.length, 25);
+      let lost = 0;
+      const wrongAt = new Set([0, 1, 2]);
+      for (let i = 0; i < 25; i++) {
+        assert.match(await page.textContent('#progress-label'), new RegExp(`^Задание ${i + 1} из 25 `));
+        const task = await currentKey(page);
+        assert.equal(task.id, order[i], `${id}: позиция ${i + 1}`);
+        assert.ok(task.hasSource, task.id);
+        let expected = task.maxPoints;
+        if (wrongAt.has(i)) {
+          // Ошибка в одну позицию: соответствие (модель задания 3) и «два лишних» — 0 баллов, выбор — 1 балл.
+          const key = task.key.slice();
+          if (task.type === 'matching') key[0] = key[0] === 1 ? 2 : 1;
+          else if (task.type === 'exclude-two') key[1] = [1, 2, 3, 4, 5, 6].find((n) => !task.key.includes(n));
+          else key.pop();
+          await answerWithKey(page, { type: task.type, key });
+          expected = task.type === 'multiple' ? 1 : 0;
+          lost += task.maxPoints - expected;
+        } else {
+          await answerWithKey(page, task);
+        }
+        assert.equal(await page.textContent('.points__value'),
+          await page.evaluate(([p, m]) => EGE.scoring.formatPointsOutOf(p, m), [expected, task.maxPoints]), task.id);
+        // После ответа у каждого варианта и каждой позиции — объяснение.
+        const parts = task.type === 'matching' ? 5 : await page.locator('#statements .statement').count();
+        assert.equal(await page.locator('#screen-quiz .statement__explanation').count(), parts, `${task.id}: объяснения`);
+        if (task.hasFeature) assert.ok(await page.locator('#task-notes').isVisible(), `${task.id}: общий признак ряда`);
+        if (i === 0 || task.type === 'matching') await assertNoHorizontalScroll(page, `${task.id}, разбор`);
+        if (i < 4) await shot(page, config, `sck-${number}-${task.id}`);
+        await page.click('#next-btn');
+      }
+      await page.waitForSelector('#screen-result:not([hidden])');
+      const score = 39 - lost;
+      assert.equal(await page.textContent('#result-score'),
+        await page.evaluate((s) => EGE.scoring.formatPointsOutOf(s, 39), score));
+      assert.equal(await page.textContent('#result-percent'), `${Math.round(score / 39 * 100)}%`);
+      assert.equal(await page.textContent('#result-context'), `Научное познание · Практикум № ${number}`);
+      // Разбор: по умолчанию — задания с ошибками, можно показать все и раскрыть объяснения.
+      assert.equal(await page.textContent('#filter-mistakes-label'), 'Только с ошибками (3)');
+      assert.equal(await page.locator('#review-list .review-item').count(), 3);
+      await page.locator('#review-filter label:has(input[value="all"])').click();
+      assert.equal(await page.locator('#review-list .review-item').count(), 25);
+      await page.click('#expand-all-btn');
+      assert.ok(await page.locator('#review-list .statement__explanation').count() >= 125, 'объяснения всех вариантов в разборе');
+      await assertNoHorizontalScroll(page, `${id}: итоги`);
+      await shot(page, config, `sck-${number}-result`);
+      // Пройти ещё раз — тот же практикум с начала.
+      await page.click('#restart-btn');
+      await page.waitForSelector('#screen-quiz:not([hidden])');
+      assert.match(await page.textContent('#progress-label'), /^Задание 1 из 25 · выполнено 0$/);
+      assert.equal((await currentKey(page)).id, order[0]);
+      await page.click('#brand-home');
+      await page.click('#exit-confirm');
+      await page.waitForSelector('#screen-start:not([hidden])');
+    }
     assert.deepEqual(errors, []);
     await context.close();
   });
