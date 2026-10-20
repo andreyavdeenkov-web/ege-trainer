@@ -50,6 +50,16 @@ const PUBLISHED = {
       'OBS-COG-034', 'OBS-COG-035', 'OBS-COG-039', 'OBS-COG-019', 'OBS-COG-016', 'OBS-COG-017', 'OBS-COG-036',
       'OBS-COG-037', 'OBS-COG-025', 'OBS-COG-026', 'OBS-COG-006', 'OBS-COG-038', 'OBS-COG-028']
   },
+  'OBS-SCK-P01': {
+    topic: 'OBS-SCK', number: 1, shuffle: false, max: 39,
+    taskIds: [34, 17, 21, 22, 1, 13, 19, 35, 15, 25, 33, 28, 40, 3, 11, 7, 45, 41, 10, 27, 9, 43, 39, 31, 50]
+      .map((n) => 'OBS-SCK-' + String(n).padStart(3, '0'))
+  },
+  'OBS-SCK-P02': {
+    topic: 'OBS-SCK', number: 2, shuffle: false, max: 39,
+    taskIds: [2, 4, 26, 23, 5, 20, 12, 32, 24, 36, 29, 8, 37, 14, 49, 38, 6, 42, 16, 30, 48, 46, 47, 44, 18]
+      .map((n) => 'OBS-SCK-' + String(n).padStart(3, '0'))
+  },
   'SOC-FAM-P01': {
     topic: 'SOC-FAM', number: 1, shuffle: true, max: 29,
     taskIds: ['SOC-FAM-001', 'SOC-FAM-004', 'SOC-FAM-005', 'SOC-FAM-012', 'SOC-FAM-014', 'SOC-FAM-017', 'SOC-FAM-019', 'SOC-FAM-022', 'SOC-FAM-024', 'SOC-FAM-031', 'SOC-FAM-032', 'SOC-FAM-034', 'SOC-FAM-037', 'SOC-FAM-038', 'SOC-FAM-041', 'SOC-FAM-042']
@@ -62,11 +72,11 @@ const PUBLISHED = {
 
 /* ---------- Темы раздела «Человек и общество» ---------- */
 
-test('«Человек и общество»: 14 тем кодификатора в заданном порядке, ID постоянные', () => {
+test('«Человек и общество»: 14 тем кодификатора и «Научное познание» в заданном порядке, ID постоянные', () => {
   const topics = EGE.getSection('OBS').topics.filter((t) => t.id !== 'OBS-GEN');
   assert.deepEqual([...topics.map((t) => t.title)], [
     'Человек и личность', 'Мировоззрение и сознание', 'Деятельность', 'Познание',
-    'Общество как система', 'Социальные институты', 'Типы обществ',
+    'Научное познание', 'Общество как система', 'Социальные институты', 'Типы обществ',
     'Общественное развитие и глобализация', 'Культура', 'Мораль',
     'Наука и научное познание', 'Образование', 'Религия', 'Искусство'
   ]);
@@ -74,6 +84,8 @@ test('«Человек и общество»: 14 тем кодификатора
   assert.equal(EGE.getTopic('OBS-ACT').title, 'Деятельность');
   assert.equal(EGE.getTopic('OBS-COG').title, 'Познание');
   assert.equal(EGE.getTopic('OBS-SCI').title, 'Наука и научное познание');
+  // «Научное познание» — отдельная тема, не связанная с «Познанием».
+  assert.equal(EGE.getTopic('OBS-SCK').title, 'Научное познание');
   // Новые ID — по схеме РАЗДЕЛ-ТЕМА и уникальны во всём реестре.
   const all = EGE.sections.flatMap((s) => s.topics.map((t) => t.id));
   assert.equal(new Set(all).size, all.length);
@@ -116,7 +128,7 @@ test('у каждого практикума: постоянный уникал�
   }
 });
 
-test('опубликованы ровно четыре практикума с утверждённым составом', () => {
+test('опубликованы ровно шесть практикумов с утверждённым составом', () => {
   const published = EGE.practicums.filter((p) => p.status === 'published');
   assert.deepEqual(ids(published).sort(), Object.keys(PUBLISHED).sort());
   for (const [id, want] of Object.entries(PUBLISHED)) {
@@ -206,7 +218,7 @@ test('задание входит не больше чем в один дейс�
 /* ---------- Видимость для ученика ---------- */
 
 test('ученик видит только темы и разделы с опубликованными практикумами', () => {
-  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG']);
+  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG', 'OBS-SCK']);
   assert.deepEqual(ids(EGE.getAvailableTopics('SOC')), ['SOC-FAM']);
   for (const section of ['ECO', 'POL', 'LAW']) assert.deepEqual(ids(EGE.getAvailableTopics(section)), [], section);
   assert.deepEqual(ids(EGE.getAvailableSections()), ['OBS', 'SOC']);
@@ -272,4 +284,34 @@ test('реестр практикумов подключён после всех
   assert.ok(at('data/practicums.js') > 0);
   for (const s of scripts.filter((x) => x.startsWith('data/tasks/'))) assert.ok(at(s) < at('data/practicums.js'), s);
   assert.ok(at('data/practicums.js') < at('js/app.js'));
+});
+
+test('«Научное познание»: два самостоятельных практикума из всех 50 заданий, без повторов', () => {
+  const p1 = EGE.getPracticum('OBS-SCK-P01');
+  const p2 = EGE.getPracticum('OBS-SCK-P02');
+  assert.equal(p1.taskIds.length, 25);
+  assert.equal(p2.taskIds.length, 25);
+  assert.ok(p1.taskIds.every((id) => !p2.taskIds.includes(id)), 'задания не повторяются');
+  const all = Array.from({ length: 50 }, (_, i) => 'OBS-SCK-' + String(i + 1).padStart(3, '0'));
+  assert.deepEqual([...p1.taskIds, ...p2.taskIds].sort(), all, 'все 50 заданий документа');
+  assert.deepEqual([...ids(EGE.getTasksByTopic('OBS-SCK'))].sort(), all);
+  // Близкие по содержанию задания — в разных практикумах.
+  const where = (n) => (p1.taskIds.includes('OBS-SCK-' + String(n).padStart(3, '0')) ? 1 : 2);
+  for (const [a, b] of [[32, 33], [19, 20], [24, 25], [28, 29], [21, 26], [22, 23], [30, 43], [31, 44], [41, 42], [42, 45], [7, 14], [5, 13], [9, 46], [3, 37], [2, 34], [47, 50], [39, 44]]) {
+    assert.notEqual(where(a), where(b), `задания ${a} и ${b} — в разных практикумах`);
+  }
+  // Все четыре формата части 1 (позиции КИМ 1–4), все уровни сложности, без длинных серий одного формата.
+  for (const [p, kim] of [[p1, { 1: 3, 2: 9, 3: 8, 4: 5 }], [p2, { 1: 2, 2: 10, 3: 9, 4: 4 }]]) {
+    const tasks = EGE.getPracticumTasks(p);
+    const count = {};
+    for (const t of tasks) count[t.kimTask] = (count[t.kimTask] || 0) + 1;
+    assert.deepEqual(count, kim, p.id);
+    assert.deepEqual([...new Set(tasks.map((t) => t.difficulty))].sort(), [1, 2, 3], `${p.id}: сложность 1–3`);
+    tasks.forEach((t, i) => {
+      if (i < 2) return;
+      assert.ok(!(t.kimTask === tasks[i - 1].kimTask && t.kimTask === tasks[i - 2].kimTask), `${p.id}: три задания одного формата подряд (${t.id})`);
+    });
+    assert.ok(!p.shuffle, `${p.id}: порядок постоянный`);
+  }
+  assert.deepEqual(ids(EGE.getPublishedPracticums('OBS-SCK')), ['OBS-SCK-P01', 'OBS-SCK-P02']);
 });

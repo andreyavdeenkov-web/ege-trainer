@@ -231,7 +231,7 @@ test('тема «Деятельность» в разделе «Человек �
   assert.equal(EGE.getSection('OBS').title, 'Человек и общество');
   assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
   // «Общие вопросы» ученику не показываются: в них нет практикумов.
-  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-ACT', 'OBS-COG']);
+  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-ACT', 'OBS-COG', 'OBS-SCK']);
 });
 
 test('ключи проверенных заданий темы «Деятельность»', () => {
