@@ -541,8 +541,9 @@ for (const config of CONFIGS) {
       await page.waitForSelector('#screen-quiz:not([hidden])');
       assert.match(await page.textContent('#progress-label'), /^Задание 1 из 25 · выполнено 0$/);
       assert.equal((await currentKey(page)).id, order[0]);
+      // Ответов в новой попытке ещё нет — выход без подтверждения.
       await page.click('#brand-home');
-      await page.click('#exit-confirm');
+      if (await page.locator('#exit-confirm').isVisible()) await page.click('#exit-confirm');
       await page.waitForSelector('#screen-start:not([hidden])');
     }
     assert.deepEqual(errors, []);
