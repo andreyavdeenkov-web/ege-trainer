@@ -8,6 +8,10 @@
  *   #/hp/SOC/all               по всем темам дисциплины         { name: 'setup', …, topic: 'all' }
  *   #/hp/SOC/SOC-CAR/train     тренировка                       { name: 'train', … }
  *   #/hp/SOC/SOC-CAR/result    итоги                            { name: 'result', … }
+ *   #/hp/mock                  пробные туры олимпиады           { name: 'mock', olympiad: 'HP' }
+ *   #/hp/mock/hp-diag-1        старт пробного тура              { name: 'mock-start', …, variant: 'HP-DIAG-1' }
+ *   #/hp/mock/hp-diag-1/run    прохождение                      { name: 'mock-run', … }
+ *   #/hp/mock/hp-diag-1/result результаты и разбор              { name: 'mock-result', … }
  *
  * Предмет в адресе не указывается: платформа посвящена обществознанию, и
  * предмет берётся из олимпиады. Если платформа станет многопредметной,
@@ -29,6 +33,7 @@
     });
     var route = { olympiad: parts[0].toUpperCase() };
     if (parts.length === 1) { route.name = 'olympiad'; return route; }
+    if (parts[1].toLowerCase() === 'mock') return parseMock(route, parts);
     route.discipline = parts[1].toUpperCase();
     if (parts.length === 2) { route.name = 'discipline'; return route; }
     route.topic = parts[2].toLowerCase() === 'all' ? 'all' : parts[2].toUpperCase();
@@ -37,10 +42,24 @@
     return { name: 'unknown' };
   }
 
+  var MOCK_STEPS = { run: 'mock-run', result: 'mock-result' };
+
+  function parseMock(route, parts) {
+    if (parts.length === 2) { route.name = 'mock'; return route; }
+    route.variant = parts[2].toUpperCase();
+    if (parts.length === 3) { route.name = 'mock-start'; return route; }
+    if (parts.length === 4 && MOCK_STEPS[parts[3]]) { route.name = MOCK_STEPS[parts[3]]; return route; }
+    return { name: 'unknown' };
+  }
+
   function format(route) {
     if (!route || route.name === 'home') return '#/';
     var path = '#/' + route.olympiad.toLowerCase();
     if (route.name === 'olympiad') return path;
+    if (route.name === 'mock') return path + '/mock';
+    if (route.name === 'mock-start') return path + '/mock/' + route.variant.toLowerCase();
+    if (route.name === 'mock-run') return path + '/mock/' + route.variant.toLowerCase() + '/run';
+    if (route.name === 'mock-result') return path + '/mock/' + route.variant.toLowerCase() + '/result';
     path += '/' + route.discipline;
     if (route.name === 'discipline') return path;
     path += '/' + route.topic;

@@ -170,12 +170,13 @@
 
   /* ---------- short-text: краткий текстовый ответ ---------- */
 
-  var SHORT_TEXT_NORMALIZE_KEYS = ['yo'];
+  var SHORT_TEXT_NORMALIZE_KEYS = ['yo', 'punctuation'];
 
   register('short-text', {
     /**
      * acceptedAnswers — все допустимые ответы, их задаёт преподаватель;
-     * normalize — необязательные дополнительные настройки: { yo: true } — ё = е.
+     * normalize — необязательные дополнительные настройки: { yo: true } — ё = е;
+     * { punctuation: true } — кавычки и знаки препинания по краям ответа не учитываются.
      */
     validateTask: function (task) {
       var errors = [];
@@ -238,9 +239,16 @@
   var EPSILON = 1e-9;
 
   register('numeric', {
-    /** answer — число; tolerance — допустимое отклонение (по умолчанию 0); unit — подпись. */
+    /**
+     * answer — число; tolerance — допустимое отклонение (по умолчанию 0); unit — подпись;
+     * unitSuffixes — приписки единиц, которые ученик может добавить к числу («млрд»).
+     */
     validateTask: function (task) {
       var errors = [];
+      if (task.unitSuffixes !== undefined &&
+          (!Array.isArray(task.unitSuffixes) || task.unitSuffixes.length === 0 || !task.unitSuffixes.every(isText))) {
+        errors.push('unitSuffixes должно быть непустым списком строк');
+      }
       if (typeof task.answer !== 'number' || !isFinite(task.answer)) errors.push('answer должно быть числом');
       if (task.tolerance !== undefined &&
           (typeof task.tolerance !== 'number' || !isFinite(task.tolerance) || task.tolerance < 0)) {
@@ -251,14 +259,14 @@
     },
     emptyResponse: function () { return ''; },
     isEmpty: function (task, response) { return isBlank(response); },
-    isComplete: function (task, response) { return normalize.parseNumber(response) !== null; },
+    isComplete: function (task, response) { return normalize.parseNumber(response, task.unitSuffixes) !== null; },
     cleanResponse: function (task, response) {
       if (typeof response !== 'string') throw new Error('Ответ должен быть строкой');
       return response;
     },
     /** Ввод, который не удалось прочитать как число, — неверный ответ (details.value = null). */
     check: function (task, response) {
-      var value = normalize.parseNumber(response);
+      var value = normalize.parseNumber(response, task.unitSuffixes);
       var ok = value !== null && Math.abs(value - task.answer) <= (task.tolerance || 0) + EPSILON;
       return { verdict: ok ? 'correct' : 'incorrect', details: { value: value } };
     },
@@ -275,6 +283,8 @@
      * items — позиции А, Б, В… ({ text, match, explanation? }), match — номер
      * варианта из options (с 1); oneToOne — каждый вариант используется один раз.
      * Формат совпадает с заданиями matching тренажёра ЕГЭ.
+     * labels: 'numbers-letters' — позиции нумеруются цифрами, варианты буквами
+     * (как в «Высшей пробе»); по умолчанию позиции — буквы, варианты — цифры.
      */
     validateTask: function (task) {
       var errors = [];
@@ -291,6 +301,7 @@
           errors.push(name + ': match должен быть номером варианта от 1 до ' + task.options.length);
         } else if (!isOptionalText(item.explanation)) errors.push(name + ': explanation должно быть строкой');
       });
+      if (task.labels !== undefined && task.labels !== 'numbers-letters') errors.push('labels может быть только numbers-letters');
       if (errors.length === 0 && task.oneToOne) {
         var matches = task.items.map(function (item) { return item.match; });
         if (new Set(matches).size !== matches.length) errors.push('oneToOne: номера в ключе повторяются');
@@ -337,8 +348,12 @@
     },
     formatResponse: function (task, response) {
       if (!Array.isArray(response) || response.length === 0) return '—';
+      var lettersRight = task.labels === 'numbers-letters';
       return response.map(function (n, i) {
-        return letter(i + 1) + ' — ' + (n === null || n === undefined ? '?' : n);
+        var empty = n === null || n === undefined;
+        return lettersRight
+          ? (i + 1) + ' — ' + (empty ? '?' : letter(n))
+          : letter(i + 1) + ' — ' + (empty ? '?' : n);
       }).join(', ');
     }
   });

@@ -1,5 +1,5 @@
 /*
- * ЧЕРНОВИК НА СОГЛАСОВАНИИ, НЕ ВХОДИТ В БАНК.
+ * Исходные данные пробного тура (утверждены преподавателем 23.10.2026).
  * «Высшая проба» — диагностический вариант № 1, часть 3: открытый ответ (11–15).
  *
  * Тексты условий — дословно из документа для учеников. Строка с форматом
@@ -30,9 +30,9 @@ module.exports = [
     answerFormat: 'Формат ответа: «A — …, B — …, C — …».',
     answerFormatUi: 'Для каждого жителя выберите: рыцарь или лжец.',
     fields: [
-      { id: 'A', label: 'A', kind: 'choice', options: ['рыцарь', 'лжец'], answer: 'рыцарь' },
-      { id: 'B', label: 'B', kind: 'choice', options: ['рыцарь', 'лжец'], answer: 'лжец' },
-      { id: 'C', label: 'C', kind: 'choice', options: ['рыцарь', 'лжец'], answer: 'лжец' }
+      { id: 'A', label: 'A', title: 'Житель A', kind: 'choice', options: ['рыцарь', 'лжец'], answer: 'рыцарь' },
+      { id: 'B', label: 'B', title: 'Житель B', kind: 'choice', options: ['рыцарь', 'лжец'], answer: 'лжец' },
+      { id: 'C', label: 'C', title: 'Житель C', kind: 'choice', options: ['рыцарь', 'лжец'], answer: 'лжец' }
     ],
     keyDisplay: 'A — рыцарь, B — лжец, C — лжец',
     feedback: {
@@ -79,8 +79,8 @@ module.exports = [
       { text: 'инкорпорированному культурному капиталу', basis: 'form' },
       { text: 'инкорпорированным культурным капиталом', basis: 'form' },
       { text: 'инкорпорированном культурном капитале', basis: 'form' },
-      { text: 'cultural capital', basis: 'proposed' },
-      { text: 'воплощённый культурный капитал', basis: 'proposed' }
+      { text: 'cultural capital', basis: 'decision' },
+      { text: 'воплощённый культурный капитал', basis: 'decision' }
     ],
     rejected: ['социальный капитал', 'символический капитал', 'человеческий капитал', 'габитус', 'экономический капитал', 'культурный', 'интеллектуальный капитал'],
     feedback: {
@@ -116,10 +116,10 @@ module.exports = [
     answerFormat: 'Запишите четыре целых числа через дефис в порядке A–B–C–D (например: 2–2–1–1).',
     answerFormatUi: 'Укажите число мандатов каждой партии целым числом.',
     fields: [
-      { id: 'A', label: 'A', kind: 'integer', answer: 3 },
-      { id: 'B', label: 'B', kind: 'integer', answer: 2 },
-      { id: 'C', label: 'C', kind: 'integer', answer: 1 },
-      { id: 'D', label: 'D', kind: 'integer', answer: 0 }
+      { id: 'A', label: 'A', title: 'Партия A', kind: 'integer', answer: 3 },
+      { id: 'B', label: 'B', title: 'Партия B', kind: 'integer', answer: 2 },
+      { id: 'C', label: 'C', title: 'Партия C', kind: 'integer', answer: 1 },
+      { id: 'D', label: 'D', title: 'Партия D', kind: 'integer', answer: 0 }
     ],
     keyDisplay: '3–2–1–0',
     feedback: {
@@ -221,7 +221,7 @@ module.exports = [
       { text: 'состоянию крайней необходимости', basis: 'form' },
       { text: 'состоянием крайней необходимости', basis: 'form' },
       { text: 'состоянии крайней необходимости', basis: 'form' },
-      { text: 'причинение вреда в состоянии крайней необходимости', basis: 'proposed' }
+      { text: 'причинение вреда в состоянии крайней необходимости', basis: 'decision' }
     ],
     rejected: ['необходимая оборона', 'обоснованный риск', 'причинение вреда при задержании лица, совершившего преступление', 'необходимость', 'крайняя мера', 'исполнение приказа'],
     feedback: {

@@ -74,7 +74,10 @@
       'OLY.ui.format.practicumScopeLabel': u && u.format && u.format.practicumScopeLabel,
       '#setup-status': document.getElementById('setup-status'),
       '#setup-warning': document.getElementById('setup-warning'),
-      '#result-note': document.getElementById('result-note')
+      '#result-note': document.getElementById('result-note'),
+      'OLY.mock': O && O.mock,
+      'OLY.ui.mockApp': u && u.mockApp,
+      '#screen-mock-run': document.getElementById('screen-mock-run')
     };
     return Object.keys(checks).filter(function (name) { return !checks[name]; });
   }
@@ -111,7 +114,7 @@
     { value: '20', label: '20' },
     { value: 'all', label: 'Все' }
   ];
-  var SCREENS = ['home', 'olympiad', 'discipline', 'setup', 'train', 'result'];
+  var SCREENS = ['home', 'olympiad', 'discipline', 'setup', 'train', 'result', 'mock-start', 'mock-run', 'mock-result'];
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -125,7 +128,14 @@
     olympiadTitle: $('olympiad-title'),
     olympiadLead: $('olympiad-lead'),
     modeSwitch: $('mode-switch'),
+    modeTopic: $('mode-topic'),
+    modeMock: $('mode-mock'),
+    modeMockLabel: $('mode-mock-label'),
+    modeMockSoon: $('mode-mock-soon'),
+    disciplineListTitle: $('discipline-list-title'),
     disciplineList: $('discipline-list'),
+    mockBlock: $('mock-block'),
+    mockList: $('mock-list'),
     disciplineEyebrow: $('discipline-eyebrow'),
     disciplineTitle: $('discipline-title'),
     disciplineLead: $('discipline-lead'),
@@ -215,6 +225,24 @@
     confirm: null,      // { kind: 'exit' | 'finish', route? }
     reviewFilter: 'all'
   };
+
+  /* Пробный тур: экраны строит js/olymp/mock/ui.js, маршруты и переходы — здесь. */
+  var mock = ui.mockApp.create({
+    el: el,
+    format: fmt,
+    storage: ui.storage,
+    screens: { start: dom.screens['mock-start'], run: dom.screens['mock-run'], result: dom.screens['mock-result'] },
+    go: function (route, replace) { go(route, replace); },
+    formatRoute: function (route) { return router.format(route); },
+    setTitle: function (parts) { setTitle(parts); },
+    olympiadTitle: function (id) { var o = OLY.getOlympiad(id); return o ? o.title : id; },
+    disciplineColor: function (id) { return fmt.disciplineColor('social', id); },
+    notifyFinish: function (attempt) { notifyStore('onFinish', [JSON.parse(JSON.stringify(attempt))]); }
+  });
+
+  function isMockRoute(route) {
+    return route.name === 'mock' || route.name === 'mock-start' || route.name === 'mock-run' || route.name === 'mock-result';
+  }
 
   function saveSettings() {
     ui.storage.write(STORAGE_KEY, settings);
@@ -369,6 +397,8 @@
   function showRouteUnsafe(route) {
     var olympiad = route.olympiad ? OLY.getOlympiad(route.olympiad) : null;
     if (route.name === 'unknown' || (route.name !== 'home' && !olympiad)) return showRouteUnsafe({ name: 'home' });
+    mock.leave(route);
+    if (isMockRoute(route)) return showMockRoute(route, olympiad);
 
     var up = null;
     if (route.name === 'discipline' || route.name === 'setup' || route.name === 'train' || route.name === 'result') {
@@ -418,6 +448,31 @@
     }
   }
 
+  /** Экраны пробного тура: список (экран олимпиады в режиме «Пробный тур»), старт, прохождение, результаты. */
+  function showMockRoute(route, olympiad) {
+    if (OLY.isPracticum(olympiad) || !mock.hasVariants(olympiad.id)) {
+      return showRouteUnsafe({ name: 'olympiad', olympiad: route.olympiad });
+    }
+    if (route.name !== 'mock' && !(mock.variantExists(route.variant) && OLY.mock.getVariant(route.variant).olympiad === olympiad.id)) {
+      return showRouteUnsafe({ name: 'mock', olympiad: route.olympiad });
+    }
+    var screen = route.name === 'mock' ? 'olympiad' : route.name;
+    var changedScreen = !state.route || state.route.name !== route.name;
+    state.route = route;
+    hideConfirm();
+    SCREENS.forEach(function (name) { dom.screens[name].hidden = name !== screen; });
+    renderCrumbs(route);
+    renderAuthorBadges(route);
+    if (changedScreen) {
+      releaseFocus();
+      window.scrollTo(0, 0);
+    }
+    if (route.name === 'mock') renderOlympiad(route);
+    else if (route.name === 'mock-start') mock.renderStart(route);
+    else if (route.name === 'mock-run') mock.renderRun(route);
+    else mock.renderResult(route);
+  }
+
   /** Плашка «Авторский практикум · Андрей Авдеенков» — на всех экранах практикума. */
   function renderAuthorBadges(route) {
     var show = !!route.olympiad && isPracticum(route);
@@ -442,7 +497,7 @@
 
   function renderCrumbs(route) {
     dom.crumbsList.textContent = '';
-    var show = route.name !== 'home' && route.name !== 'train';
+    var show = route.name !== 'home' && route.name !== 'train' && route.name !== 'mock-run';
     dom.crumbs.hidden = !show;
     if (!show) return;
 
@@ -457,6 +512,14 @@
       items.push({ route: router.withName(route, 'setup'), text: topicTitle(route) });
     }
     if (route.name === 'result') items.push({ route: route, text: 'Итоги' });
+    if (isMockRoute(route)) {
+      items.push({ route: { name: 'mock', olympiad: route.olympiad }, text: 'Пробный тур' });
+      if (route.variant) {
+        items.push({ route: { name: 'mock-start', olympiad: route.olympiad, variant: route.variant },
+          text: mock.variantTitle(route.variant) });
+      }
+      if (route.name === 'mock-result') items.push({ route: route, text: 'Результаты' });
+    }
 
     items.forEach(function (item, i) {
       var li = el('li');
@@ -557,6 +620,23 @@
       : '';
     dom.olympiadLead.hidden = !practicum;
     dom.modeSwitch.hidden = practicum;
+    // Режим «Пробный тур» доступен, если у олимпиады есть пробные туры.
+    var mockMode = route.name === 'mock';
+    var hasMock = !practicum && mock.hasVariants(olympiad.id);
+    dom.modeMock.disabled = !hasMock;
+    dom.modeMockLabel.classList.toggle('is-soon', !hasMock);
+    dom.modeMockLabel.title = hasMock ? '' : 'Появится позже';
+    dom.modeMockSoon.hidden = hasMock;
+    dom.modeTopic.checked = !mockMode;
+    dom.modeMock.checked = mockMode;
+    dom.disciplineListTitle.hidden = mockMode;
+    dom.disciplineList.hidden = mockMode;
+    dom.mockBlock.hidden = !mockMode;
+    if (mockMode) {
+      setTitle(['Пробный тур', olympiad.title]);
+      mock.renderList(dom.mockList, olympiad.id);
+      return;
+    }
     dom.disciplineList.textContent = '';
     subject.disciplines.forEach(function (discipline) {
       var scope = { olympiad: olympiad.id, subject: subject.id, discipline: discipline.id };
@@ -1379,6 +1459,11 @@
     settings.filters = {};
     saveSettings();
     renderFilters(state.route);
+  });
+
+  dom.modeSwitch.addEventListener('change', function (e) {
+    if (e.target.name !== 'mode' || !state.route || !state.route.olympiad) return;
+    go(e.target.value === 'mock' ? { name: 'mock', olympiad: state.route.olympiad } : { name: 'olympiad', olympiad: state.route.olympiad });
   });
 
   dom.prevBtn.addEventListener('click', function () { goTo(state.viewIndex - 1); });

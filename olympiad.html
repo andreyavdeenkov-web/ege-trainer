@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/olymp.css">
   <link rel="stylesheet" href="css/olymp-nrm.css">
+  <link rel="stylesheet" href="css/olymp-mock.css">
 </head>
 <body class="olymp">
   <header class="topbar">
@@ -62,13 +63,18 @@
           <input type="radio" name="mode" id="mode-topic" value="topic" checked>
           <span>Тематическая тренировка</span>
         </label>
-        <label class="segmented__item is-soon" title="Появится позже">
+        <label class="segmented__item is-soon" title="Появится позже" id="mode-mock-label">
           <input type="radio" name="mode" id="mode-mock" value="mock" disabled>
-          <span>Пробный тур <small class="soon-badge">скоро</small></span>
+          <span>Пробный тур <small class="soon-badge" id="mode-mock-soon">скоро</small></span>
         </label>
       </div>
-      <h2 class="field__label list-title">Дисциплины</h2>
+      <h2 class="field__label list-title" id="discipline-list-title">Дисциплины</h2>
       <div class="topic-grid card-grid" id="discipline-list"></div>
+      <div id="mock-block" hidden>
+        <h2 class="field__label list-title">Пробные туры</h2>
+        <p class="muted mock-block__lead">Полный вариант с таймером: ответы можно менять до завершения, правильные ответы и подробный разбор открываются после него.</p>
+        <div class="topic-grid card-grid" id="mock-list"></div>
+      </div>
     </section>
 
     <!-- Дисциплина: темы -->
@@ -229,6 +235,11 @@
       </div>
     </section>
 
+    <!-- Пробный тур: старт, прохождение, результаты (содержимое строит js/olymp/mock/ui.js) -->
+    <section class="screen mock-screen" id="screen-mock-start" hidden></section>
+    <section class="screen mock-screen" id="screen-mock-run" hidden aria-label="Прохождение пробного тура"></section>
+    <section class="screen mock-screen" id="screen-mock-result" hidden aria-label="Результаты пробного тура"></section>
+
     <noscript>
       <div class="panel">Для работы раздела включите JavaScript в браузере.</div>
     </noscript>
@@ -247,6 +258,11 @@
   <script src="js/olymp/types/nrm-rows.js"></script>
   <script src="js/olymp/types/analysis-grid.js"></script>
   <script src="js/olymp/rules/components.js"></script>
+  <!-- Пробный тур: типы «несколько полей» и «мини-эссе», авторские правила оценивания, движок -->
+  <script src="js/olymp/types/multi-field.js"></script>
+  <script src="js/olymp/types/essay.js"></script>
+  <script src="js/olymp/rules/author-hp.js"></script>
+  <script src="js/olymp/mock/engine.js"></script>
 
   <!-- Данные: предметы → олимпиады → задания → источники -->
   <script src="data/olympiads/subjects/social.js"></script>
@@ -259,6 +275,8 @@
   <script src="data/olympiads/hp/social/law/family.js"></script>
   <script src="data/olympiads/hp/sources/2026-27-demo-9-1.js"></script>
   <script src="data/olympiads/hp/sources/author-pol-pow.js"></script>
+  <!-- Пробный тур: условия без ключей (ключи и разборы загружаются после завершения попытки) -->
+  <script src="data/olympiads/hp/mock/diag-1.js"></script>
   <script src="data/olympiads/practicum/practicum.js"></script>
   <script src="data/olympiads/practicum/social/law/concept.js"></script>
   <script src="data/olympiads/practicum/social/law/nkl/classify.js"></script>
@@ -274,6 +292,7 @@
   <script src="js/olymp/ui/views/matching.js"></script>
   <script src="js/olymp/ui/views/nrm-common.js"></script>
   <script src="js/olymp/ui/views/grid.js"></script>
+  <script src="js/olymp/mock/ui.js"></script>
   <script src="js/olymp/ui/filters.js"></script>
   <script src="js/olymp/ui/session.js"></script>
   <script src="js/olymp/ui/progress.js"></script>
