@@ -74,7 +74,16 @@
 .mock-timer__clock { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .mock-timer.is-low .mock-timer__clock { color: var(--wrong); }
 
-.mock-confirm .exit-bar { margin: 8px 0; }
+.mock-confirm .exit-bar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  max-width: 720px;
+  margin: 0 auto;
+  box-shadow: 0 12px 40px rgba(20, 24, 60, .25);
+}
 
 .mock-nav { margin: 6px 0 14px; }
 @media (min-width: 721px) { .mock-nav .task-nav__list { flex-wrap: wrap; overflow: visible; } }

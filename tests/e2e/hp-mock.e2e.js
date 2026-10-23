@@ -238,6 +238,43 @@ async function main() {
       assert.equal(await page.evaluate(() => OLY.mock.hasKey('HP-DIAG-1')), false);
     });
 
+    await step('регрессия: «Завершить пробник» внизу после мини-эссе открывает видимое подтверждение', async () => {
+      await openTask(page, 21);
+      const before = await page.locator('#mock-essay-21').inputValue();
+      await page.locator('#mock-essay-21').fill(before + ' Доверие снижает транзакционные издержки.');
+      const btn = page.getByRole('button', { name: 'Завершить пробник' });
+      await btn.scrollIntoViewIfNeeded();
+      await btn.click();
+      await page.waitForTimeout(250);
+      const shown = await page.evaluate(() => {
+        const bar = document.querySelector('#mock-confirm .exit-bar');
+        if (!bar) return { exists: false };
+        const r = bar.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { exists: true, inViewport: r.top >= 0 && r.bottom <= innerHeight, visible: !!(hit && hit.closest('#mock-confirm')) };
+      });
+      assert.deepEqual(shown, { exists: true, inViewport: true, visible: true });
+      assert.ok(await page.locator('#mock-confirm').getByRole('button', { name: 'Вернуться к заданиям' }).evaluate((b) => b === document.activeElement));
+      // Эссе сохранено до завершения.
+      assert.match((await stored(page)).responses['21'].value, /Доверие снижает транзакционные издержки\.$/);
+      // Повторное нажатие не закрывает и не дублирует подтверждение.
+      await btn.click();
+      assert.equal(await page.locator('#mock-confirm .exit-bar').count(), 1);
+      // Escape закрывает подтверждение.
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#mock-confirm .exit-bar').count(), 0);
+    });
+
+    await step('регрессия: после перехода к другому заданию кнопка завершения снова работает', async () => {
+      await page.getByRole('button', { name: 'Завершить', exact: true }).first().click();
+      assert.equal(await page.locator('#mock-confirm .exit-bar').count(), 1);
+      await openTask(page, 20);   // подтверждение исчезает вместе с экраном задания
+      await openTask(page, 21);
+      await page.getByRole('button', { name: 'Завершить пробник' }).click();
+      assert.equal(await page.locator('#mock-confirm .exit-bar').count(), 1, 'кнопка не реагирует после перехода');
+      await page.getByRole('button', { name: 'Вернуться к заданиям' }).click();
+    });
+
     await step('досрочное завершение с подтверждением', async () => {
       await page.getByRole('button', { name: 'Завершить', exact: true }).first().click();
       await page.waitForTimeout(150);
@@ -263,7 +300,7 @@ async function main() {
       assert.match(stats, /Полностью верно/);
       assert.match(stats, /С ошибками\s*6|6\s*С ошибками/);
       assert.match(stats, /не оценивалось/);
-      assert.match(await page.locator('.mock-alt summary').innerText(), /Диагностическая схема \(альтернативная\): 57 из 90/);
+      assert.match(await page.locator('.mock-alt summary').innerText(), /Авторская диагностическая схема: 57 из 90/);
       const disc = await page.locator('.mock-disc').innerText();
       for (const [d, v] of [['Философия', '18 из 18'], ['Социология', '5 из 18'], ['Политология', '9 из 18'], ['Экономика', '9 из 18'], ['Право', '9 из 18']]) {
         assert.ok(new RegExp(d + '[\\s\\S]*?' + v).test(disc), d + ': ' + v);
@@ -280,7 +317,7 @@ async function main() {
       assert.ok(r.includes('(задание 4, без ответа)'));
     });
 
-    await step('разбор: твой ответ, правильный ответ, варианты, пары, шаги, ошибки', async () => {
+    await step('разбор: ваш ответ, правильный ответ, варианты, пары, шаги, ошибки', async () => {
       await page.getByRole('button', { name: 'Развернуть все' }).click();
       const item = (n) => page.locator('#mock-review-' + n);
       const t2 = await item(2).innerText();
@@ -289,19 +326,22 @@ async function main() {
       assert.ok(at('субъект суждения') !== -1 && at('не познающий субъект') !== -1, '№ 1: нет объяснения субъекта суждения');
       assert.ok(at('субъект суждения') < at('аналитические и синтетические') && at('аналитические и синтетические') < at('a priori и a posteriori'), '№ 1: порядок объяснения');
       assert.ok(t1.includes('Разбор каждого варианта') && t1.includes('«Золото — жёлтый металл»'));
-      for (const s of ['Твой ответ', '1, 2, 3', 'Правильный ответ', '1, 2, 3, 6', 'Верный — пропущен', 'Пропущены верные варианты: 6',
+      for (const s of ['Ваш ответ', '1, 2, 3', 'Правильный ответ', '1, 2, 3, 6', 'Верный — пропущен', 'Пропущены верные варианты: 6',
         'Почему это правильно', 'мятеж', 'В чём могла заключаться ошибка', 'Что нужно запомнить', 'Что повторить',
-        'По диагностической (альтернативной) схеме: 2 из 4']) assert.ok(t2.includes(s), '№ 2: ' + s);
+        'По авторской диагностической схеме: 2 из 4']) assert.ok(t2.includes(s), '№ 2: ' + s);
       const t10 = await item(10).innerText();
       assert.ok(t10.includes('бланкитным') && t10.includes('Все засчитываемые формы ответа'));
       const t13 = await item(13).innerText();
       assert.ok(t13.includes('Частные по методу Д\'Онта') && t13.includes('23 500 (3)') && t13.includes('Решение по шагам'));
       const t17 = await item(17).innerText();
-      assert.ok(t17.includes('Твой выбор: Г — Групповая мобильность') && t17.includes('Правильно: А — Структурная мобильность'));
+      assert.ok(t17.includes('Ваш выбор: Г — Групповая мобильность') && t17.includes('Правильно: А — Структурная мобильность'));
       assert.ok(t17.includes('Лишние элементы правого ряда'));
       const t6 = await item(6).innerText();
       assert.ok(t6.includes('Языковые игры') || t6.includes('Языковые  игры'));
       assert.ok(t6.includes('Верно · 4 из 4'));
+      const all = await text(page);
+      assert.ok(!/Твой|Твоя|не официальная система оценивания олимпиады|выберите букву/.test(all), 'остались прежние формулировки');
+      assert.ok(t17.includes('Правильный ответ') && /1\s—\sВ, 2\s—\sЕ, 3\s—\sД, 4\s—\sА, 5\s—\sГ/.test(t17), '№ 17: запись правильного ответа');
       // Фильтр «Без ответа»
       await page.locator('input[name="mock-review-filter"][value="unanswered"]').check({ force: true });
       assert.equal(await page.locator('.mock-review .review-item').count(), 3);
@@ -412,7 +452,14 @@ async function main() {
           if (n === 16 || n === 13) await shot(m, name + '-run-' + n);
         }
         await match(m, 16, ['Е', 'Г', 'В', 'Д', 'Б']);
-        await m.getByRole('button', { name: 'Завершить', exact: true }).first().click();
+        await openTask(m, 21);
+        await m.locator('#mock-essay-21').fill('Короткий текст эссе.');
+        await m.getByRole('button', { name: 'Завершить пробник' }).click();
+        const ok = await m.evaluate(() => {
+          const b = document.querySelector('#mock-confirm .exit-bar').getBoundingClientRect();
+          return b.top >= 0 && b.bottom <= innerHeight;
+        });
+        assert.ok(ok, name + ': подтверждение завершения вне экрана');
         await m.locator('#mock-confirm').getByRole('button', { name: 'Завершить' }).click();
         await m.waitForTimeout(600);
         const overflow = await m.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
