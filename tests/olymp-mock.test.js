@@ -329,6 +329,17 @@ test('разборы начинаются с пояснения специаль
   assert.equal(task(21).key.feedback.concepts.length, 6);
 });
 
+test('№ 6: семейное сходство — без утверждения, что общего признака нет; № 21: институты Норта ≠ организации', () => {
+  const t6 = task(6).key.feedback.why.join(' ');
+  assert.doesNotMatch(t6, /нет одного общего признака/);
+  assert.match(t6, /не обязательно объединены единой общей сущностью/);
+  assert.match(t6, /частично пересекающиеся сходства/);
+  const inst = task(21).key.feedback.concepts.find((c) => c.term === 'Институт').text;
+  assert.match(inst, /«правила игры»/);
+  assert.match(inst, /Организации .* не институты, а «игроки»/);
+  assert.match(inst, /определения социального института у разных авторов различаются/);
+});
+
 test('типы ядра: кавычки и знаки по краям, приписка единиц, мини-эссе и подсчёт слов', () => {
   const N = OLY.normalize;
   assert.equal(N.normalizeText(' «Ёлка». ', { yo: true, punctuation: true }), 'елка');
