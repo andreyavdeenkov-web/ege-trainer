@@ -39,6 +39,8 @@ async function waitServer() {
 
 const text = (page) => page.locator('main').innerText();
 const stored = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}')['HP-DIAG-1'] || null, KEY);
+/** Обращение к ученику на «ты» в интерфейсе (на «вы» — по решению преподавателя). */
+const INFORMAL = /(^|[^А-Яа-яЁё])(ты|тебя|тебе|тобой|твой|твоя|твоё|твои|твоего|твоей|твоих|твою)(?=[^А-Яа-яЁё]|$)/i;
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name + '.png'), fullPage: true }); };
 
 async function openTask(page, n) {
@@ -136,6 +138,7 @@ async function main() {
       for (const s of ['Высшая проба — диагностический вариант № 1', 'Обществознание · Второй тур отборочного этапа',
         '21', '80 минут', '100 баллов', 'Инструкция для участника', 'Отметьте все верные варианты',
         'Авторский диагностический вариант']) assert.ok(t.includes(s), 'нет «' + s + '»');
+      assert.ok(!INFORMAL.test(t), 'обращение на «ты» на старте');
       await shot(page, 'start');
       await page.getByRole('button', { name: 'Начать пробник' }).click();
       await page.waitForTimeout(200);
@@ -178,6 +181,11 @@ async function main() {
 
     await step('ответы на все типы заданий; навигация отмечает отвеченные', async () => {
       await answerAll(page);
+      for (let n = 1; n <= 21; n++) {
+        await openTask(page, n);
+        const t = await text(page);
+        assert.ok(!INFORMAL.test(t), 'обращение на «ты» в задании ' + n);
+      }
       assert.equal(await page.locator('#mock-answered').innerText(), 'Отвечено: 18 из 21');
       assert.equal(await page.locator('#mock-nav .is-answered').count(), 18);
       assert.match(await page.locator('#mock-nav button').nth(3).getAttribute('aria-label'), /без ответа/);
@@ -340,7 +348,8 @@ async function main() {
       assert.ok(t6.includes('Языковые игры') || t6.includes('Языковые  игры'));
       assert.ok(t6.includes('Верно · 4 из 4'));
       const all = await text(page);
-      assert.ok(!/Твой|Твоя|не официальная система оценивания олимпиады|выберите букву/.test(all), 'остались прежние формулировки');
+      assert.ok(!/не официальная система оценивания олимпиады|выберите букву/.test(all), 'остались прежние формулировки');
+      assert.ok(!INFORMAL.test(all), 'обращение на «ты» в результатах: ' + (all.match(INFORMAL) || [])[0]);
       assert.ok(t17.includes('Правильный ответ') && /1\s—\sВ, 2\s—\sЕ, 3\s—\sД, 4\s—\sА, 5\s—\sГ/.test(t17), '№ 17: запись правильного ответа');
       // Фильтр «Без ответа»
       await page.locator('input[name="mock-review-filter"][value="unanswered"]').check({ force: true });
