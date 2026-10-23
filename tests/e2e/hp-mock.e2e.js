@@ -188,6 +188,20 @@ async function main() {
       await shot(page, 'run-knights');
     });
 
+    await step('при прокрутке панель таймера остаётся видимой под шапкой сайта', async () => {
+      await openTask(page, 11);
+      await page.evaluate(() => window.scrollTo(0, 600));
+      await page.waitForTimeout(200);
+      const r = await page.evaluate(() => {
+        const bar = document.querySelector('.mock-bar').getBoundingClientRect();
+        const header = document.querySelector('.topbar').getBoundingClientRect();
+        const hit = document.elementFromPoint(bar.left + 20, bar.top + bar.height / 2);
+        return { top: Math.round(bar.top), header: Math.round(header.bottom), visible: !!(hit && hit.closest('.mock-bar')) };
+      });
+      assert.equal(r.visible, true, 'панель таймера закрыта шапкой');
+      assert.equal(r.top, r.header);
+    });
+
     await step('после перезагрузки ответы восстановлены, таймер продолжается', async () => {
       const before = await stored(page);
       await page.reload();
@@ -386,6 +400,15 @@ async function main() {
           await openTask(m, n);
           const overflow = await m.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
           assert.ok(overflow <= 0, name + ', задание ' + n + ': горизонтальная прокрутка ' + overflow + 'px');
+          await m.evaluate(() => window.scrollTo(0, 800));
+          await m.waitForTimeout(150);
+          const bar = await m.evaluate(() => {
+            const b = document.querySelector('.mock-bar').getBoundingClientRect();
+            const hit = document.elementFromPoint(b.left + 20, b.top + b.height / 2);
+            return { visible: !!(hit && hit.closest('.mock-bar')), height: Math.round(b.height) };
+          });
+          assert.ok(bar.visible, name + ', задание ' + n + ': панель таймера не видна при прокрутке');
+          if (w < 500) assert.ok(bar.height <= 64, name + ': панель таймера выше одной строки (' + bar.height + 'px)');
           if (n === 16 || n === 13) await shot(m, name + '-run-' + n);
         }
         await match(m, 16, ['Е', 'Г', 'В', 'Д', 'Б']);

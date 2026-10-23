@@ -133,6 +133,13 @@
       return b;
     }
 
+    /** Панель таймера закрепляется под шапкой сайта: её высота разная на компьютере и телефоне. */
+    function syncHeaderHeight() {
+      var header = document.querySelector('.topbar');
+      var h = header ? header.getBoundingClientRect().height : 0;
+      document.documentElement.style.setProperty('--mock-header-h', Math.round(h) + 'px');
+    }
+
     function stopTimer() {
       if (state.timer) clearInterval(state.timer);
       state.timer = null;
@@ -311,6 +318,7 @@
       bar.appendChild(answered);
       bar.appendChild(button('Завершить', 'btn--ghost btn--sm mock-finish', requestFinish));
       box.appendChild(bar);
+      syncHeaderHeight();
 
       var live = el('p', 'visually-hidden');
       live.id = 'mock-live';
@@ -1172,6 +1180,8 @@
       p.appendChild(review);
       return p;
     }
+
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', syncHeaderHeight);
 
     return {
       renderList: renderList,

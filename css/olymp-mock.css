@@ -57,7 +57,8 @@
 /* ===== Прохождение ===== */
 .mock-bar {
   position: sticky;
-  top: 0;
+  /* Под закреплённой шапкой сайта; высоту шапки измеряет js/olymp/mock/ui.js. */
+  top: var(--mock-header-h, 0px);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -260,6 +261,11 @@
 @media (max-width: 560px) {
   .mock-q { font-size: 16px; }
   .mock-timer__clock { font-size: 20px; }
+  /* Панель таймера в одну строку: подпись «Осталось» остаётся для экранных чтецов. */
+  .mock-bar { flex-wrap: nowrap; gap: 8px; }
+  .mock-timer__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .mock-answered { font-size: 13px; padding: 4px 10px; }
+  .mock-finish { flex: 0 0 auto; }
   .mock-fields--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mock-choice__label { min-width: 0; width: 100%; }
   .mock-task__points { margin-left: 0; }
