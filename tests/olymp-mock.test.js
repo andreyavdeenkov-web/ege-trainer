@@ -340,6 +340,29 @@ test('№ 6: семейное сходство — без утверждения
   assert.match(inst, /определения социального института у разных авторов различаются/);
 });
 
+test('уточнения после публикации: № 5 (вариант 2) и № 20 (позиция 4); ключи прежние; других изменений текста нет', () => {
+  assert.equal(V.tasks[4].options[1].text, 'Продать дорогостоящий смартфон, подаренный ему бабушкой, за 80 000 рублей, без согласия родителей.');
+  assert.deepEqual(KEYS[5], [1, 3, 4, 6]);
+  assert.equal(grade(5, [1, 3, 4, 6]).verdict, 'correct');
+  assert.equal(grade(5, [1, 2, 3, 4, 6]).verdict, 'incorrect');
+  assert.equal(task(5).options[1].correct, false);
+  assert.match(task(5).options[1].explanation, /80 000 рублей — и не мелкая бытовая сделка/);
+  assert.equal(V.tasks[19].items[3].text, 'Если ребёнок родился у лиц, состоящих в браке между собой, отцом ребёнка признаётся супруг матери, если не доказано иное.');
+  assert.equal(grade(20, KEYS[20]).verdict, 'correct');
+  const t20 = JSON.stringify(task(20));
+  assert.doesNotMatch(t20, /пока не доказано иное|записывается/);
+  assert.match(t20, /«если не доказано иное»/);
+  assert.match(t20, /Проверочный вопрос для разграничения акта и поступка/);
+  // Исходные формулировки DOCX сохранены в исходных данных; изменены только две.
+  const edited = SRC.tasks.flatMap((t) => [...(t.options || []), ...(t.items || [])]).filter((o) => o && o.originalText);
+  assert.equal(edited.length, 2);
+});
+
+test('авторская диагностическая схема: название и описание', () => {
+  assert.equal(V.scoring.schemes.diagnostic.title, 'Авторская диагностическая схема');
+  assert.doesNotMatch(V.scoring.schemes.diagnostic.note, /не официальная система оценивания/);
+});
+
 test('типы ядра: кавычки и знаки по краям, приписка единиц, мини-эссе и подсчёт слов', () => {
   const N = OLY.normalize;
   assert.equal(N.normalizeText(' «Ёлка». ', { yo: true, punctuation: true }), 'елка');

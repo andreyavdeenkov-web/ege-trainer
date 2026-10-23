@@ -133,6 +133,13 @@
       return b;
     }
 
+    /** Панель таймера закрепляется под шапкой сайта: её высота разная на компьютере и телефоне. */
+    function syncHeaderHeight() {
+      var header = document.querySelector('.topbar');
+      var h = header ? header.getBoundingClientRect().height : 0;
+      document.documentElement.style.setProperty('--mock-header-h', Math.round(h) + 'px');
+    }
+
     function stopTimer() {
       if (state.timer) clearInterval(state.timer);
       state.timer = null;
@@ -311,14 +318,17 @@
       bar.appendChild(answered);
       bar.appendChild(button('Завершить', 'btn--ghost btn--sm mock-finish', requestFinish));
       box.appendChild(bar);
+      syncHeaderHeight();
 
       var live = el('p', 'visually-hidden');
       live.id = 'mock-live';
       live.setAttribute('aria-live', 'polite');
       box.appendChild(live);
 
+      state.confirm = false;
       var confirmBox = el('div', 'mock-confirm');
       confirmBox.id = 'mock-confirm';
+      confirmBox.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideConfirm(); });
       box.appendChild(confirmBox);
 
       // Навигация по номерам.
@@ -554,7 +564,7 @@
         text.appendChild(el('span', null, item.text));
         var sel = el('select', 'mock-select');
         sel.id = id;
-        var empty = el('option', null, '— выберите букву —');
+        var empty = el('option', null, 'Выберите вариант');
         empty.value = '';
         sel.appendChild(empty);
         task.options.forEach(function (o, i) {
@@ -648,9 +658,20 @@
       }
     }
 
+    /**
+     * Подтверждение завершения — панель, закреплённая внизу экрана: она видна при любой
+     * прокрутке (кнопка «Завершить пробник» находится внизу длинного задания, а верх
+     * страницы закрыт закреплёнными шапкой и панелью таймера). Открыто ли подтверждение,
+     * определяется по самой панели: после перехода к другому заданию её уже нет.
+     */
     function requestFinish() {
       var box = document.getElementById('mock-confirm');
-      if (!box || state.confirm) return;
+      if (!box) return;
+      var open = box.querySelector('.exit-bar');
+      if (open) {
+        open.querySelector('button').focus();
+        return;
+      }
       state.confirm = true;
       var unanswered = state.variant.tasks.length - M.answeredCount(state.attempt, state.variant);
       var bar = el('div', 'exit-bar');
@@ -667,7 +688,6 @@
       acts.appendChild(button('Завершить', 'btn--primary', function () { finishNow(); }));
       bar.appendChild(acts);
       box.appendChild(bar);
-      bar.scrollIntoView && bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       cancel.focus({ preventScroll: true });
     }
 
@@ -938,7 +958,7 @@
       }
       body.appendChild(answersBlock(task, r));
       if (r.scored && r.altPoints !== r.points) {
-        body.appendChild(el('p', 'muted', 'По диагностической (альтернативной) схеме: ' + r.altPoints + ' из ' + r.maxPoints + '.'));
+        body.appendChild(el('p', 'muted', 'По авторской диагностической схеме: ' + r.altPoints + ' из ' + r.maxPoints + '.'));
       }
       var fb = task.key.feedback;
       body.appendChild(section('Почему это правильно', fb.why));
@@ -980,19 +1000,20 @@
       return s;
     }
 
-    /** «Твой ответ» и «Правильный ответ» — отдельно от условия, без подстановки в пропуск. */
+    /** «Ваш ответ» и «Правильный ответ» — отдельно от условия, без подстановки в пропуск. */
     function answersBlock(task, r) {
       var type = OLY.types.get(task.type);
       var box = el('div', 'mock-answers');
       var mine = el('div', 'mock-answers__row');
-      mine.appendChild(el('span', 'mock-answers__label', 'Твой ответ'));
+      mine.appendChild(el('span', 'mock-answers__label', 'Ваш ответ'));
       var mineText = r.verdict === 'unanswered' ? 'нет ответа' : type.formatResponse(task, r.response);
       if (task.type === 'matching' && r.verdict !== 'unanswered') mineText = matchingLine(task, r.response);
       mine.appendChild(el('span', 'mock-answers__value ' + (r.verdict === 'correct' ? 'text-right' : 'text-wrong'), mineText));
       box.appendChild(mine);
       var right = el('div', 'mock-answers__row');
       right.appendChild(el('span', 'mock-answers__label', 'Правильный ответ'));
-      var key = task.key.keyDisplay || type.formatResponse(task, r.correct);
+      // Соотнесение — в той же записи, что и ответ ученика: «1 — Г, 2 — В, …».
+      var key = task.type === 'matching' ? matchingLine(task, r.correct) : (task.key.keyDisplay || type.formatResponse(task, r.correct));
       right.appendChild(el('span', 'mock-answers__value text-right', key));
       box.appendChild(right);
       if (task.type === 'short-text') {
@@ -1056,7 +1077,7 @@
         var li = el('li', 'mock-pair ' + (ok ? 'is-right' : 'is-wrong'));
         li.appendChild(el('p', 'mock-pair__text', (i + 1) + '. ' + item.text));
         var lines = el('p', 'mock-pair__answer');
-        lines.appendChild(el('span', null, 'Твой выбор: '));
+        lines.appendChild(el('span', null, 'Ваш выбор: '));
         lines.appendChild(el('strong', ok ? 'text-right' : 'text-wrong',
           given[i] ? M.letter(given[i]) + ' — ' + task.options[given[i] - 1] : 'не выбран'));
         if (!ok) {
@@ -1115,7 +1136,7 @@
       renderQuestion(q, task);
       p.appendChild(q);
 
-      p.appendChild(heading(3, 'Твой текст', 'mock-fb__title'));
+      p.appendChild(heading(3, 'Ваш текст', 'mock-fb__title'));
       if (r.verdict === 'unanswered') p.appendChild(para('Текст не написан.', 'mock-essay-text is-empty'));
       else {
         p.appendChild(el('div', 'mock-essay-text', r.response));
@@ -1172,6 +1193,8 @@
       p.appendChild(review);
       return p;
     }
+
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', syncHeaderHeight);
 
     return {
       renderList: renderList,
