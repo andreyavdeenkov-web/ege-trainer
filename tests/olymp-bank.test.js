@@ -41,8 +41,11 @@ test('olympiad.html: сначала ядро в нужном порядке, з�
   const files = listJsFiles(path.join(root, 'data/olympiads'))
     .map((f) => path.relative(root, f).split(path.sep).join('/'));
   assert.ok(files.length > 0);
+  // Ключи пробных туров загружаются только после завершения попытки и в странице не подключаются.
+  const onDemand = ['data/olympiads/hp/mock/diag-1-key.js'];
   for (const f of files) {
-    assert.ok(dataScripts.includes(f), `Файл ${f} не подключён в olympiad.html`);
+    if (onDemand.includes(f)) assert.ok(!dataScripts.includes(f), `Ключи ${f} не должны подключаться в olympiad.html`);
+    else assert.ok(dataScripts.includes(f), `Файл ${f} не подключён в olympiad.html`);
   }
 });
 
