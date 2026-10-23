@@ -304,6 +304,31 @@ test('уточнения преподавателя: № 9 — инфляция 
   assert.match(t20, /доктринальн/);
 });
 
+test('№ 1: сначала субъект и предикат суждения (не путать с познающим субъектом), затем аналитические/синтетические, затем a priori/a posteriori; разбор шести вариантов сохранён', () => {
+  const why = task(1).key.feedback.why.join(' ');
+  const at = (s) => why.indexOf(s);
+  for (const s of ['субъект суждения', 'предикат суждения', 'не познающий субъект', 'Все тела протяжённы']) assert.ok(at(s) !== -1, s);
+  assert.ok(at('предикат суждения') < at('аналитические и синтетические'));
+  assert.ok(at('аналитические и синтетические') < at('a priori и a posteriori'));
+  assert.ok(at('a priori и a posteriori') < at('синтетические суждения a priori: они'));
+  assert.equal(task(1).options.filter((o) => o.explanation).length, 6);
+  assert.equal(task(1).options[5].explanation, SRC.tasks[0].options[5].explanation);
+});
+
+test('стартовая страница: «Авторский диагностический вариант.»', () => {
+  assert.equal(V.disclaimer, 'Авторский диагностический вариант.');
+});
+
+test('разборы начинаются с пояснения специальных терминов', () => {
+  const first = (n) => task(n).key.feedback.why[0];
+  for (const [n, term] of [[4, 'эластичность'], [5, 'Дееспособность'], [7, 'интеграция'], [9, 'Мультипликатор'], [11, 'посылкой'],
+    [13, 'квоту'], [14, 'Рабочая сила'], [16, 'Эмпиризм'], [18, 'Естественное состояние'], [19, 'неисключаемо']]) {
+    assert.ok(task(n).key.feedback.why.slice(0, 2).join(' ').includes(term), `№ ${n}: «${term}»`);
+  }
+  assert.ok(first(17).startsWith('Социальная мобильность —'));
+  assert.equal(task(21).key.feedback.concepts.length, 6);
+});
+
 test('типы ядра: кавычки и знаки по краям, приписка единиц, мини-эссе и подсчёт слов', () => {
   const N = OLY.normalize;
   assert.equal(N.normalizeText(' «Ёлка». ', { yo: true, punctuation: true }), 'елка');

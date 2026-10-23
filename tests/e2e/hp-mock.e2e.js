@@ -132,9 +132,10 @@ async function main() {
       await page.goto(START);
       await page.waitForTimeout(200);
       const t = await text(page);
+      assert.ok(!t.includes('не официальный вариант'), 'на старте осталась прежняя формулировка');
       for (const s of ['Высшая проба — диагностический вариант № 1', 'Обществознание · Второй тур отборочного этапа',
         '21', '80 минут', '100 баллов', 'Инструкция для участника', 'Отметьте все верные варианты',
-        'не официальный вариант организаторов']) assert.ok(t.includes(s), 'нет «' + s + '»');
+        'Авторский диагностический вариант']) assert.ok(t.includes(s), 'нет «' + s + '»');
       await shot(page, 'start');
       await page.getByRole('button', { name: 'Начать пробник' }).click();
       await page.waitForTimeout(200);
@@ -163,6 +164,8 @@ async function main() {
       await type(page, 6, 'речевыми актами');
       await type(page, 6, '');
       await match(page, 16, ['Б']);
+      // Буква варианта отделена от имени автора: «Е — Г. В. Лейбниц».
+      assert.equal(await page.locator('#mock-16-row-1 option[value="6"]').innerText(), 'Е — Г. В. Лейбниц');
       // Буква используется один раз: в других строках она недоступна и подписана.
       assert.equal(await page.locator('#mock-16-row-2 option[value="2"]').isDisabled(), true);
       assert.match(await page.locator('#mock-16-row-2 option[value="2"]').innerText(), /выбрано для 1/);
@@ -267,6 +270,11 @@ async function main() {
       await page.getByRole('button', { name: 'Развернуть все' }).click();
       const item = (n) => page.locator('#mock-review-' + n);
       const t2 = await item(2).innerText();
+      const t1 = await item(1).innerText();
+      const at = (s) => t1.indexOf(s);
+      assert.ok(at('субъект суждения') !== -1 && at('не познающий субъект') !== -1, '№ 1: нет объяснения субъекта суждения');
+      assert.ok(at('субъект суждения') < at('аналитические и синтетические') && at('аналитические и синтетические') < at('a priori и a posteriori'), '№ 1: порядок объяснения');
+      assert.ok(t1.includes('Разбор каждого варианта') && t1.includes('«Золото — жёлтый металл»'));
       for (const s of ['Твой ответ', '1, 2, 3', 'Правильный ответ', '1, 2, 3, 6', 'Верный — пропущен', 'Пропущены верные варианты: 6',
         'Почему это правильно', 'мятеж', 'В чём могла заключаться ошибка', 'Что нужно запомнить', 'Что повторить',
         'По диагностической (альтернативной) схеме: 2 из 4']) assert.ok(t2.includes(s), '№ 2: ' + s);
@@ -275,7 +283,7 @@ async function main() {
       const t13 = await item(13).innerText();
       assert.ok(t13.includes('Частные по методу Д\'Онта') && t13.includes('23 500 (3)') && t13.includes('Решение по шагам'));
       const t17 = await item(17).innerText();
-      assert.ok(t17.includes('Твой выбор: Г. Групповая мобильность') && t17.includes('Правильно: А. Структурная мобильность'));
+      assert.ok(t17.includes('Твой выбор: Г — Групповая мобильность') && t17.includes('Правильно: А — Структурная мобильность'));
       assert.ok(t17.includes('Лишние элементы правого ряда'));
       const t6 = await item(6).innerText();
       assert.ok(t6.includes('Языковые игры') || t6.includes('Языковые  игры'));
@@ -291,7 +299,7 @@ async function main() {
       const e = await page.locator('.mock-essay-result').innerText();
       for (const s of ['Не оценивалось', 'По Гоббсу, без государства', 'Критерии оценивания', 'К1. Понимание проблемы',
         'Образцы показывают возможные варианты рассуждения, а не единственно правильные ответы',
-        'Образец хорошего ответа № 1', 'Вопросы для самопроверки']) assert.ok(e.includes(s), 'эссе: ' + s);
+        'Образец хорошего ответа № 1', 'Вопросы для самопроверки', 'Ключевые понятия набора', 'Транзакционные издержки']) assert.ok(e.includes(s), 'эссе: ' + s);
       assert.ok(!/\d+ из 10\b/.test(e), 'эссе получило баллы');
     });
 

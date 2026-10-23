@@ -140,6 +140,12 @@ for (const t of V.tasks) {
   p(quote(questionText(t)));
   p();
   if (t.type === 'essay') {
+    if (f.concepts) {
+      p('**Ключевые понятия набора**');
+      p();
+      f.concepts.forEach((c) => p(`- **${c.term}** — ${c.text}`));
+      p();
+    }
     p(`**Проблема, которую отражает набор терминов.** ${f.problem}`);
     p();
     p(`**Критерии.** ${f.rubricNote}`);

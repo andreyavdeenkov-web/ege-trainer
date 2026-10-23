@@ -538,7 +538,7 @@
             var usedBy = current.indexOf(n);
             var taken = usedBy !== -1 && usedBy !== row;
             opt.disabled = taken;
-            opt.textContent = M.letter(n) + '. ' + task.options[n - 1] + (taken ? ' (выбрано для ' + (usedBy + 1) + ')' : '');
+            opt.textContent = M.letter(n) + ' — ' + task.options[n - 1] + (taken ? ' (выбрано для ' + (usedBy + 1) + ')' : '');
           });
           sel.value = current[row] ? String(current[row]) : '';
           sel.closest('.mock-match__row').classList.toggle('is-filled', !!current[row]);
@@ -1058,10 +1058,10 @@
         var lines = el('p', 'mock-pair__answer');
         lines.appendChild(el('span', null, 'Твой выбор: '));
         lines.appendChild(el('strong', ok ? 'text-right' : 'text-wrong',
-          given[i] ? M.letter(given[i]) + '. ' + task.options[given[i] - 1] : 'не выбран'));
+          given[i] ? M.letter(given[i]) + ' — ' + task.options[given[i] - 1] : 'не выбран'));
         if (!ok) {
           lines.appendChild(el('span', null, ' · Правильно: '));
-          lines.appendChild(el('strong', 'text-right', M.letter(item.match) + '. ' + task.options[item.match - 1]));
+          lines.appendChild(el('strong', 'text-right', M.letter(item.match) + ' — ' + task.options[item.match - 1]));
         }
         li.appendChild(lines);
         li.appendChild(para(item.explanation, 'mock-pair__expl'));
@@ -1076,7 +1076,7 @@
         keys.forEach(function (l) {
           var n = 'АБВГДЕЖЗИК'.indexOf(l) + 1;
           var li = el('li');
-          li.appendChild(el('strong', null, l + '. ' + task.options[n - 1] + '. '));
+          li.appendChild(el('strong', null, l + ' — ' + task.options[n - 1] + '. '));
           li.appendChild(document.createTextNode(extra[l]));
           ul.appendChild(li);
         });
@@ -1133,6 +1133,17 @@
       self.appendChild(sl);
       p.appendChild(self);
 
+      if (fb.concepts) {
+        var cs = el('div', 'mock-fb__section');
+        cs.appendChild(heading(3, 'Ключевые понятия набора', 'mock-fb__title'));
+        var dl = el('dl', 'mock-concepts');
+        fb.concepts.forEach(function (c) {
+          dl.appendChild(el('dt', null, c.term));
+          dl.appendChild(el('dd', null, c.text));
+        });
+        cs.appendChild(dl);
+        p.appendChild(cs);
+      }
       p.appendChild(section('Проблема, которую отражает набор терминов', [fb.problem]));
       var crit = el('div', 'mock-fb__section');
       crit.appendChild(heading(3, 'Критерии оценивания', 'mock-fb__title'));
