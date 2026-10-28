@@ -263,7 +263,7 @@ test('главная: «Познание» — через Практикум №
     sci: EGE.getTasksByTopic('OBS-SCI').length
   }));
   assert.equal(state.preview, 'undefined', 'набор предпросмотра на главной не подключён');
-  assert.deepEqual(state.topics, ['OBS-ACT', 'OBS-COG', 'OBS-SCK']);
+  assert.deepEqual(state.topics, ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
   assert.equal(state.sci, 10, 'задания «Науки» сохранены в банке');
   await page.locator('label.topic-option:has(input[name="section"][value="OBS"])').click();
   assert.deepEqual(await page.locator('#topic-options .topic-option__title').allTextContents(), ['Деятельность', 'Познание', 'Научное познание']);
