@@ -78,7 +78,7 @@ test('главная страница: наборы предпросмотра �
   // Задания «Науки и научного познания» сохранены, но неполный набор не публикуется.
   assert.equal(EGE.getTasksByTopic('OBS-SCI').length, 10);
   assert.equal(EGE.getPracticumsByTopic('OBS-SCI').length, 0);
-  assert.deepEqual(Array.from(EGE.getAvailableTopics('OBS'), (t) => t.id), ['OBS-ACT', 'OBS-COG', 'OBS-SCK']);
+  assert.deepEqual(Array.from(EGE.getAvailableTopics('OBS'), (t) => t.id), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
 });
 
 test('набор: ровно 20 утверждённых заданий в постоянном порядке, ключи не изменились', () => {

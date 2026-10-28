@@ -60,6 +60,14 @@ const PUBLISHED = {
     taskIds: [2, 4, 26, 23, 5, 20, 12, 32, 24, 36, 29, 8, 37, 14, 49, 38, 6, 42, 16, 30, 48, 46, 47, 44, 18]
       .map((n) => 'OBS-SCK-' + String(n).padStart(3, '0'))
   },
+  'OBS-SYS-P01': {
+    topic: 'OBS-SYS', number: 1, shuffle: false, max: 32,
+    taskIds: Array.from({ length: 18 }, (_, i) => 'OBS-SYS-' + String(i + 1).padStart(3, '0'))
+  },
+  'OBS-SYS-P02': {
+    topic: 'OBS-SYS', number: 2, shuffle: false, max: 31,
+    taskIds: Array.from({ length: 18 }, (_, i) => 'OBS-SYS-' + String(i + 19).padStart(3, '0'))
+  },
   'SOC-FAM-P01': {
     topic: 'SOC-FAM', number: 1, shuffle: true, max: 29,
     taskIds: ['SOC-FAM-001', 'SOC-FAM-004', 'SOC-FAM-005', 'SOC-FAM-012', 'SOC-FAM-014', 'SOC-FAM-017', 'SOC-FAM-019', 'SOC-FAM-022', 'SOC-FAM-024', 'SOC-FAM-031', 'SOC-FAM-032', 'SOC-FAM-034', 'SOC-FAM-037', 'SOC-FAM-038', 'SOC-FAM-041', 'SOC-FAM-042']
@@ -76,7 +84,7 @@ test('«Человек и общество»: 14 тем кодификатора
   const topics = EGE.getSection('OBS').topics.filter((t) => t.id !== 'OBS-GEN');
   assert.deepEqual([...topics.map((t) => t.title)], [
     'Человек и личность', 'Мировоззрение и сознание', 'Деятельность', 'Познание',
-    'Научное познание', 'Общество как система', 'Социальные институты', 'Типы обществ',
+    'Научное познание', 'Общество как система. Социальные институты', 'Социальные институты', 'Типы обществ',
     'Общественное развитие и глобализация', 'Культура', 'Мораль',
     'Наука и научное познание', 'Образование', 'Религия', 'Искусство'
   ]);
@@ -128,7 +136,7 @@ test('у каждого практикума: постоянный уникал�
   }
 });
 
-test('опубликованы ровно шесть практикумов с утверждённым составом', () => {
+test('опубликованы ровно восемь практикумов с утверждённым составом', () => {
   const published = EGE.practicums.filter((p) => p.status === 'published');
   assert.deepEqual(ids(published).sort(), Object.keys(PUBLISHED).sort());
   for (const [id, want] of Object.entries(PUBLISHED)) {
@@ -218,7 +226,7 @@ test('задание входит не больше чем в один дейс�
 /* ---------- Видимость для ученика ---------- */
 
 test('ученик видит только темы и разделы с опубликованными практикумами', () => {
-  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG', 'OBS-SCK']);
+  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
   assert.deepEqual(ids(EGE.getAvailableTopics('SOC')), ['SOC-FAM']);
   for (const section of ['ECO', 'POL', 'LAW']) assert.deepEqual(ids(EGE.getAvailableTopics(section)), [], section);
   assert.deepEqual(ids(EGE.getAvailableSections()), ['OBS', 'SOC']);
