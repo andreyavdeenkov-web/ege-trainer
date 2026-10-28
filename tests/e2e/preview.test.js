@@ -266,7 +266,7 @@ test('главная: «Познание» — через Практикум №
   assert.deepEqual(state.topics, ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
   assert.equal(state.sci, 10, 'задания «Науки» сохранены в банке');
   await page.locator('label.topic-option:has(input[name="section"][value="OBS"])').click();
-  assert.deepEqual(await page.locator('#topic-options .topic-option__title').allTextContents(), ['Деятельность', 'Познание', 'Научное познание']);
+  assert.deepEqual(await page.locator('#topic-options .topic-option__title').allTextContents(), ['Деятельность', 'Познание', 'Научное познание', 'Общество как система. Социальные институты']);
   assert.ok(!(await page.content()).includes('preview-cognition'));
   assert.deepEqual(errors, []);
   await context.close();
