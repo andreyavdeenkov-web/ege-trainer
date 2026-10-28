@@ -588,7 +588,7 @@ for (const config of CONFIGS) {
           if (task.type === 'matching') key[0] = key[0] === 1 ? 2 : 1;
           else if (task.type === 'exclude-two') key[1] = wrong(0);
           else if (kind === 'one') key.pop();
-          else { key.shift(); key.push(wrong(0)); }
+          else { key.shift(); key.push(wrong(0), wrong(1)); } // замена и лишняя цифра — две ошибки
           await answerWithKey(page, { type: task.type, key });
           // Задания 1 и 3 — 1 балл только за полностью верный ответ; 2 и 4 — 1 балл за одну ошибку, 0 — за две.
           expected = task.type === 'multiple' && kind === 'one' ? 1 : 0;

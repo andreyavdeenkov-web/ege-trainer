@@ -235,6 +235,18 @@ test('ученик видит только темы и разделы с опу�
   assert.ok(!ids(EGE.getAvailableTopics('SOC')).includes('SOC-STR'));
 });
 
+test('«Социальные институты» (OBS-INS) объединены с OBS-SYS: тема в реестре, но ученику не показывается', () => {
+  // ID сохранён (на него могут ссылаться сохранённые настройки), заданий и практикумов нет.
+  assert.equal(EGE.getTopic('OBS-INS').title, 'Социальные институты');
+  assert.equal(EGE.getTasksByTopic('OBS-INS').length, 0);
+  assert.equal(EGE.getPracticumsByTopic('OBS-INS').length, 0);
+  const shown = ids(EGE.getAvailableTopics('OBS'));
+  assert.ok(!shown.includes('OBS-INS'));
+  assert.ok(shown.includes('OBS-SYS'));
+  // Счётчик тем раздела на главном экране — EGE.getAvailableTopics(...).length, то есть число карточек.
+  assert.equal(shown.length, 4);
+});
+
 test('черновик и практикум со снятым с выдачи заданием не показываются; пустых практикумов нет', () => {
   const T = loadTasksOnly();
   T.addPracticums([
