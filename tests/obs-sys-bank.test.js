@@ -209,3 +209,11 @@ test('OBS-SYS: два и четыре верных — 2 балла за пол�
   }
 });
 
+test('OBS-SYS-018 (П1-18): институты в единой форме, экономические институты вместо права, ключ 31242', () => {
+  const task = EGE.getTask('OBS-SYS-018');
+  assert.deepEqual(Array.from(task.items, (x) => x.text), ['государство', 'семья', 'религия', 'экономические институты', 'образование']);
+  assert.equal(task.options.length, 4);
+  assert.equal(keyOf(task), '31242');
+  assert.equal(S.getMaxPoints(task), 1);
+});
+
