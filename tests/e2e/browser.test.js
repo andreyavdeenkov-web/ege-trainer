@@ -567,8 +567,9 @@ for (const config of CONFIGS) {
     const title = 'Общество как система. Социальные институты';
     // Номер задания в практикуме → вид ошибки: one — одна ошибка, two — две ошибки.
     const plans = [
-      ['OBS-SYS-P01', 1, 32, { 0: 'one', 1: 'one', 2: 'two', 8: 'one' }],
-      ['OBS-SYS-P02', 2, 31, { 0: 'one', 1: 'one', 3: 'two', 9: 'one' }]
+      // П1-14 (2 верных), П1-16 (4 верных), П2-3 (2 верных), П2-7 (4 верных) — проверка оценивания при 2 и 4 верных.
+      ['OBS-SYS-P01', 1, 32, { 0: 'one', 1: 'one', 2: 'two', 8: 'one', 13: 'one', 15: 'one' }],
+      ['OBS-SYS-P02', 2, 31, { 0: 'one', 1: 'one', 2: 'one', 3: 'two', 6: 'two', 9: 'one' }]
     ];
     for (const [id, number, max, wrongAt] of plans) {
       await openPracticum(page, 'OBS', 'OBS-SYS', id);
@@ -588,7 +589,7 @@ for (const config of CONFIGS) {
           if (task.type === 'matching') key[0] = key[0] === 1 ? 2 : 1;
           else if (task.type === 'exclude-two') key[1] = wrong(0);
           else if (kind === 'one') key.pop();
-          else { key.shift(); key.push(wrong(0), wrong(1)); } // замена и лишняя цифра — две ошибки
+          else { key.splice(0, 2, wrong(0)); } // замена и пропуск — две ошибки (работает и при одном неверном варианте)
           await answerWithKey(page, { type: task.type, key });
           // Задания 1 и 3 — 1 балл только за полностью верный ответ; 2 и 4 — 1 балл за одну ошибку, 0 — за две.
           expected = task.type === 'multiple' && kind === 'one' ? 1 : 0;
@@ -615,8 +616,8 @@ for (const config of CONFIGS) {
         await page.evaluate(([s, m]) => EGE.scoring.formatPointsOutOf(s, m), [score, max]));
       assert.equal(await page.textContent('#result-percent'), `${Math.round(score / max * 100)}%`);
       assert.equal(await page.textContent('#result-context'), `${title} · Практикум № ${number}`);
-      assert.equal(await page.textContent('#filter-mistakes-label'), 'Только с ошибками (4)');
-      assert.equal(await page.locator('#review-list .review-item').count(), 4);
+      assert.equal(await page.textContent('#filter-mistakes-label'), 'Только с ошибками (6)');
+      assert.equal(await page.locator('#review-list .review-item').count(), 6);
       await page.locator('#review-filter label:has(input[value="all"])').click();
       assert.equal(await page.locator('#review-list .review-item').count(), 18);
       await page.click('#expand-all-btn');

@@ -4,7 +4,7 @@
  * Тема «Общество как система. Социальные институты» (OBS-SYS): 36 заданий двух
  * практикумов по 18. Ключи, коды и порядок — по утверждённой экспертизе
  * proposals/OBS-SYS-EXPERTISE.md (раздел 14 «Итоговые ключи»), менять только по решению
- * преподавателя. Оценивание — по действующей модели ЕГЭ (js/scoring.js).
+ * преподавателя. Ключи — после редакции 2 (раздел 16 экспертизы). Оценивание — по действующей модели ЕГЭ (js/scoring.js).
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -21,16 +21,16 @@ const PRACTICUMS = {
     codes: ['К1-1', 'В1-2', 'К1-2', 'В1-11', 'К1-5', 'В1-9', 'К1-3', 'К2-5', 'К1-8',
       'Н3', 'К1-7', 'Н1', 'К1-9', 'Н5', 'К1-4', 'В1-4', 'К2-7', 'К2-8'],
     kim: [1, 2, 4, 2, 4, 2, 4, 4, 3, 2, 4, 2, 3, 2, 4, 2, 4, 3],
-    keys: ['36', '124', '135', '124', '135', '125', '135', '156', '12432', '135', '236', '134',
-      '12313', '135', '134', '124', '134', '12332']
+    keys: ['36', '124', '135', '125', '246', '1245', '35', '156', '12432', '235', '236', '134',
+      '12313', '13', '34', '1234', '1346', '31242']
   },
   'OBS-SYS-P02': {
     max: 31,
     codes: ['В1-1', 'В2-2', 'В2-14', 'К1-6', 'В2-16', 'К2-4', 'В2-6', 'В2-1', 'К2-3',
       'В1-3', 'В2-12', 'В1-6', 'Н4', 'Н2', 'Н6', 'К2-2', 'В2-7', 'В1-7'],
     kim: [1, 2, 2, 4, 2, 4, 2, 1, 4, 3, 3, 2, 4, 2, 4, 4, 2, 3],
-    keys: ['25', '124', '134', '135', '134', '135', '124', '46', '135', '21432', '21342', '134',
-      '125', '125', '134', '125', '124', '13242']
+    keys: ['25', '124', '14', '1356', '134', '35', '1234', '46', '1345', '21432', '21342', '13',
+      '125', '135', '134', '246', '124', '13242']
   }
 };
 
@@ -115,14 +115,18 @@ test('OBS-SYS, позиции 2 и 4: 2 балла за точный ответ,
   for (const task of EGE.getTasksByTopic('OBS-SYS').filter((t) => S.getScoringModel(t) === 'multiple')) {
     const key = Array.from(S.getCorrect(task));
     const wrong = wrongOf(task);
-    assert.ok(wrong.length >= 2, task.id);
+    assert.ok(wrong.length >= 1, task.id);
     assert.equal(S.scoreTask(task, key), 2, `${task.id}: точный ответ`);
     assert.equal(S.scoreTask(task, key.slice().reverse()), 2, `${task.id}: порядок цифр не важен`);
     assert.equal(S.scoreTask(task, [...key.slice(1), wrong[0]]), 1, `${task.id}: замена`);
     assert.equal(S.scoreTask(task, key.slice(1)), 1, `${task.id}: пропуск`);
     assert.equal(S.scoreTask(task, [...key, wrong[0]]), 1, `${task.id}: лишняя цифра`);
-    assert.equal(S.scoreTask(task, [...key, wrong[0], wrong[1]]), 0, `${task.id}: две лишние`);
-    assert.equal(S.scoreTask(task, [...key.slice(1), wrong[0], wrong[1]]), 0, `${task.id}: замена и лишняя`);
+    // Две ошибки: две лишние и замена с лишней — если неверных вариантов хватает (при 4 верных из 5 он один).
+    if (wrong.length >= 2) {
+      assert.equal(S.scoreTask(task, [...key, wrong[0], wrong[1]]), 0, `${task.id}: две лишние`);
+      assert.equal(S.scoreTask(task, [...key.slice(1), wrong[0], wrong[1]]), 0, `${task.id}: замена и лишняя`);
+    }
+    assert.equal(S.scoreTask(task, [...key.slice(2), wrong[0]]), 0, `${task.id}: замена и пропуск`);
     if (key.length >= 3) assert.equal(S.scoreTask(task, key.slice(2)), 0, `${task.id}: два пропуска`);
     assert.equal(S.scoreTask(task, []), 0, `${task.id}: пустой ответ`);
   }
@@ -156,3 +160,52 @@ test('OBS-SYS, позиция 3: 1 балл только при полном с�
     assert.equal(S.scoreTask(task, key.slice(0, 4)), 0, `${task.id}: не все позиции`);
   }
 });
+
+/* ---------- Число верных ответов (редакция 2) ---------- */
+
+test('OBS-SYS: в заданиях с выбором 2, 3 или 4 верных — 6 / 15 / 6, по позициям 2 и 4 — 3 / 8 / 3 и 3 / 7 / 3', () => {
+  const count = (kim) => {
+    const c = { 2: 0, 3: 0, 4: 0 };
+    for (const t of EGE.getTasksByTopic('OBS-SYS').filter((x) => x.kimTask === kim)) c[S.getCorrect(t).length]++;
+    return c;
+  };
+  assert.deepEqual(count(2), { 2: 3, 3: 8, 4: 3 });
+  assert.deepEqual(count(4), { 2: 3, 3: 7, 4: 3 });
+  // Число вариантов не изменилось: 5 у позиции 2, 6 у позиции 4.
+  for (const t of EGE.getTasksByTopic('OBS-SYS').filter((x) => x.kimTask === 2 || x.kimTask === 4)) {
+    assert.equal(t.statements.length, t.kimTask === 2 ? 5 : 6, t.id);
+  }
+});
+
+test('OBS-SYS: ключ в практикуме повторяется не больше двух раз и не стоит в соседних заданиях', () => {
+  for (const [pid, want] of Object.entries(PRACTICUMS)) {
+    const seen = {};
+    want.keys.forEach((k, i) => {
+      seen[k] = (seen[k] || 0) + 1;
+      assert.ok(seen[k] <= 2, `${pid}: ключ ${k} — больше двух раз`);
+      if (i > 0) assert.notEqual(k, want.keys[i - 1], `${pid}, № ${i} и № ${i + 1}: одинаковые ключи`);
+    });
+  }
+});
+
+test('OBS-SYS: два и четыре верных — 2 балла за полный ответ, 1 за одну ошибку, 0 за две', () => {
+  const tasks = EGE.getTasksByTopic('OBS-SYS').filter((t) => S.getScoringModel(t) === 'multiple');
+  for (const size of [2, 4]) {
+    const list = tasks.filter((t) => S.getCorrect(t).length === size);
+    assert.equal(list.length, 6, `${size} верных`);
+    for (const task of list) {
+      const key = Array.from(S.getCorrect(task));
+      const wrong = wrongOf(task);
+      assert.equal(S.scoreTask(task, key), 2, `${task.id}: полный ответ`);
+      assert.equal(S.scoreTask(task, key.slice(1)), 1, `${task.id}: пропуск`);
+      assert.equal(S.scoreTask(task, [...key, wrong[0]]), 1, `${task.id}: лишняя`);
+      assert.equal(S.scoreTask(task, [...key.slice(1), wrong[0]]), 1, `${task.id}: замена`);
+      assert.equal(S.scoreTask(task, [...key.slice(2), wrong[0]]), 0, `${task.id}: замена и пропуск`);
+      if (wrong.length >= 2) assert.equal(S.scoreTask(task, [...key.slice(1), wrong[0], wrong[1]]), 0, `${task.id}: замена и лишняя`);
+      if (size === 4) assert.equal(S.scoreTask(task, key.slice(2)), 0, `${task.id}: два пропуска`);
+      if (size === 2) assert.equal(S.scoreTask(task, [key[0]]), 1, `${task.id}: одна верная цифра из двух`);
+      if (size === 2) assert.equal(S.scoreTask(task, [wrong[0], wrong[1]]), 0, `${task.id}: обе цифры неверные`);
+    }
+  }
+});
+
