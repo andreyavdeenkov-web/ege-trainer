@@ -127,6 +127,12 @@ async function answerByKeyboard(page, task) {
 }
 
 const card = (page, id) => page.locator(`.practicum-card[data-practicum="${id}"]`);
+
+/** «Начать практикум» и единственное подтверждение в карточке: практикум проходится один раз. */
+async function confirmStart(practicumCard) {
+  await practicumCard.locator('.practicum-card__start').click();
+  await practicumCard.locator('.practicum-card__confirm-yes').click();
+}
 const progressOf = (page, id) => card(page, id).locator('.practicum-card__progress').textContent();
 const SCOPES = {
   'OBS-ACT-P01': 'ege/OBS/OBS-ACT/OBS-ACT-P01',
@@ -140,7 +146,7 @@ const SCOPES = {
 async function startPracticum(page, section, topic, id) {
   await pick(page, 'section', section);
   await pick(page, 'topic', topic);
-  await card(page, id).locator('.practicum-card__start').click();
+  await confirmStart(card(page, id));
   await page.waitForSelector('#screen-quiz:not([hidden])');
 }
 
@@ -152,7 +158,7 @@ for (const config of CONFIGS) {
     await pick(page, 'section', 'SOC');
     await pick(page, 'topic', 'SOC-FAM');
     assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').count(), 0, 'до старта сохранения нет');
-    await card(page, 'SOC-FAM-P01').locator('.practicum-card__start').click();
+    await confirmStart(card(page, 'SOC-FAM-P01'));
 
     // Три ответа (второй — с ошибкой), третий — с клавиатуры.
     for (let i = 0; i < 3; i++) {
@@ -181,7 +187,8 @@ for (const config of CONFIGS) {
     const scoreText = pillBefore.replace('Баллы: ', 'баллы ');
     assert.match(await progressOf(page, 'SOC-FAM-P01'), new RegExp(`^Выполнено 3 из 16 · ${scoreText} · сохранено `));
     assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__continue').textContent(), 'Продолжить');
-    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__restart').textContent(), 'Начать заново');
+    // Попытка одна: незавершённый практикум можно только продолжить.
+    assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__restart').count(), 0);
     assert.equal(await card(page, 'SOC-FAM-P01').locator('.practicum-card__start').count(), 0);
     assert.match(await page.locator('label.topic-option:has(input[value="SOC-FAM"]) .topic-option__count').textContent(), /есть незавершённый/);
     await assertNoHorizontalScroll(page, 'предложение продолжить');
@@ -239,7 +246,7 @@ for (const config of CONFIGS) {
 
     // Деятельность: два ответа, затем закрытие вкладки.
     await pick(page, 'topic', 'OBS-ACT');
-    await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').click();
+    await confirmStart(card(page, 'OBS-ACT-P01'));
     for (let i = 0; i < 2; i++) {
       await answer(page, await shownTask(page, act), false);
       await page.click('#next-btn');
@@ -309,7 +316,7 @@ test('две вкладки: закрытие старой вкладки не �
   await context.close();
 });
 
-test('«Начать заново» удаляет сохранение практикума и начинает новую попытку', async () => {
+test('незавершённый практикум нельзя начать заново: только «Продолжить» ту же попытку', async () => {
   const context = await newContext(CONFIGS[0]);
   const { page, errors } = await newPage(context, base);
   const scope = SCOPES['OBS-ACT-P01'];
@@ -317,12 +324,10 @@ test('«Начать заново» удаляет сохранение прак
   await answer(page, await shownTask(page, scope), false);
   const oldId = (await savedRecord(page, scope)).attempt.id;
   await page.reload();
-  await card(page, 'OBS-ACT-P01').locator('.practicum-card__restart').click();
-  assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 · выполнено 0$/);
-  assert.equal(await page.textContent('#score-pill'), 'Баллы: 0 из 0');
-  const record = await savedRecord(page, scope);
-  assert.notEqual(record.attempt.id, oldId);
-  assert.equal(record.attempt.answers.length, 0);
+  assert.deepEqual(await card(page, 'OBS-ACT-P01').locator('button:visible').allTextContents(), ['Продолжить']);
+  await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
+  assert.match(await page.textContent('#progress-label'), /^Задание 2 из 16 · выполнено 1$/);
+  assert.equal((await savedRecord(page, scope)).attempt.id, oldId);
   assert.deepEqual(errors, []);
   await context.close();
 });
@@ -414,11 +419,11 @@ test('«Семья и брак»: прежний набор (31 задание) 
   await shot(page, config, '6-family-retired');
 
   // Новые практикумы — своя запись у каждого, прежний набор не трогают.
-  await card(page, 'SOC-FAM-P01').locator('.practicum-card__start').click();
+  await confirmStart(card(page, 'SOC-FAM-P01'));
   await answer(page, await shownTask(page, SCOPES['SOC-FAM-P01']), false);
   await page.click('#brand-home');
   await page.click('#exit-confirm');
-  await card(page, 'SOC-FAM-P02').locator('.practicum-card__start').click();
+  await confirmStart(card(page, 'SOC-FAM-P02'));
   for (let i = 0; i < 2; i++) {
     await answer(page, await shownTask(page, SCOPES['SOC-FAM-P02']), false);
     await page.click('#next-btn');
@@ -444,9 +449,10 @@ test('«Семья и брак»: прежний набор (31 задание) 
   assert.equal(await page.textContent('#result-score'), '55 из 57 баллов');
   assert.ok(await page.locator('#restart-btn').isHidden(), 'прежний набор не проходится заново');
 
-  // После завершения карточка исчезает; новые практикумы на месте.
+  // После завершения карточка прежнего набора остаётся: «Завершён» и «Посмотреть результаты»; новые практикумы на месте.
   await page.click('#home-btn');
-  assert.equal(await old.count(), 0);
+  assert.equal(await old.locator('.practicum-card__status').textContent(), 'Завершён');
+  assert.deepEqual(await old.locator('button:visible').allTextContents(), ['Посмотреть результаты']);
   assert.match(await progressOf(page, 'SOC-FAM-P01'), /^Выполнено 1 из 16 /);
   assert.match(await progressOf(page, 'SOC-FAM-P02'), /^Выполнено 2 из 15 /);
   assert.deepEqual(await savedKeys(page), [SCOPES['SOC-FAM-P01'], SCOPES['SOC-FAM-P02']].map((s) => PREFIX + s));
@@ -477,7 +483,7 @@ test('несовместимое сохранение: объяснение вм
     'Сохранённый практикум нельзя продолжить: правила оценивания или ключи заданий с тех пор изменились. Начните его заново.');
   assert.deepEqual(await savedKeys(page), []);
   await shot(page, CONFIGS[0], '5-invalid');
-  await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').click();
+  await confirmStart(card(page, 'OBS-ACT-P01'));
   assert.match(await page.textContent('#progress-label'), /выполнено 0$/);
   assert.deepEqual(errors, []);
   await context.close();
@@ -497,7 +503,7 @@ test('выход через логотип: подтверждение, зате
   await context.close();
 });
 
-test('завершённый практикум не предлагается к продолжению', async () => {
+test('завершённый практикум: ни продолжить, ни начать заново — только посмотреть результаты', async () => {
   const context = await newContext(CONFIGS[0]);
   const { page, errors } = await newPage(context, base);
   const scope = SCOPES['OBS-ACT-P01'];
@@ -508,11 +514,13 @@ test('завершённый практикум не предлагается к
   }
   await page.waitForSelector('#screen-result:not([hidden])');
   assert.deepEqual(await savedKeys(page), []);
-  await page.click('#home-btn');
   assert.equal(await page.textContent('#home-btn'), 'К выбору практикума');
-  assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').isVisible());
-  await page.reload();
-  assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').count(), 0);
+  await page.click('#home-btn');
+  for (let i = 0; i < 2; i++) {
+    assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue, .practicum-card__start, .practicum-card__restart').count(), 0);
+    assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__results').isVisible());
+    await page.reload();
+  }
   assert.deepEqual(errors, []);
   await context.close();
 });

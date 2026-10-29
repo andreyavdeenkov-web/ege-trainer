@@ -5,6 +5,11 @@
  *
  * Главная страница: раздел → тема → практикум. Ученик видит только темы
  * с опубликованными практикумами; у каждого практикума своя незавершённая попытка.
+ *
+ * Один практикум — одна попытка: прервать и продолжить можно, начать заново нельзя.
+ * После последнего ответа попытка сразу фиксируется как результат (js/attempt-save.js)
+ * вместе с копиями заданий; карточка завершённого практикума открывает итоги и полный
+ * разбор только для просмотра. Страницы предпросмотра проходятся повторно, как раньше.
  */
 (function () {
   'use strict';
@@ -107,6 +112,8 @@
     resultScore: $('result-score'),
     resultMessage: $('result-message'),
     resultContext: $('result-context'),
+    resultFixed: $('result-fixed'),
+    resultNote: $('result-note'),
     reviewTitle: $('review-title'),
     reviewFilter: $('review-filter'),
     filterAllLabel: $('filter-all-label'),
@@ -127,7 +134,13 @@
     matchRow: 0,    // matching: позиция, куда попадёт цифра с клавиатуры
     onExit: null,   // что сделать после подтверждения выхода (см. requestExit)
     resume: null,   // предпросмотр: проверенное сохранение набора (см. renderResume)
-    resumes: {}     // главная: проверенные сохранения практикумов выбранной темы по id
+    resumes: {},    // главная: проверенные сохранения практикумов выбранной темы по id
+    finish: null,   // практикум: итог фиксации после последнего ответа (см. finalizePracticum)
+    review: null,   // запись результата, по которой показываются итоги и разбор (null — предпросмотр)
+    finishNote: null, // пояснение к итогам: результат не сохранён, завершён в другой вкладке
+    // Результаты, которые не удалось записать в хранилище (недоступно, переполнено):
+    // до закрытия страницы практикум всё равно считается пройденным. По id практикума.
+    sessionResults: {}
   };
 
   /* ---------- Утилиты ---------- */
@@ -336,12 +349,13 @@
   }
 
   /**
-   * Карточка практикума: название, число заданий, максимум баллов и кнопка
-   * «Начать практикум» — или, если есть незавершённая попытка, её прогресс
-   * и кнопки «Продолжить» / «Начать заново». Сохранение проверяется при показе:
-   * запись, которую нельзя продолжить, удаляется, а ученик видит причину.
+   * Карточка практикума: название, число заданий, максимум баллов и, по состоянию
+   * (см. practicumState), «Начать практикум» с подтверждением, «Продолжить» или итог
+   * и «Посмотреть результаты». Сохранение проверяется при показе: запись, которую нельзя
+   * продолжить, удаляется, а ученик видит причину; результат не удаляется никогда.
+   *
+   * Каркас карточки: название, число заданий и максимум баллов.
    */
-  /** Каркас карточки: название, число заданий и максимум баллов. */
   function cardFrame(practicum, section) {
     var tasks = practicum.taskIds.length;
     var max = EGE.getPracticumMaxScore(practicum);
@@ -380,62 +394,160 @@
     return frame.card;
   }
 
+  /** Метка «Завершён» и итог зафиксированной попытки. */
+  function showResultSummary(frame, record) {
+    frame.head.appendChild(el('span', 'practicum-card__status practicum-card__status--done', 'Завершён'));
+    var attempt = record.attempt;
+    var score = A.totalScore(attempt);
+    var max = A.answeredMaxScore(attempt);
+    frame.card.appendChild(el('p', 'practicum-card__result',
+      'Результат: ' + scoring.formatPointsOutOf(score, max) + ' (' + scoring.percent(score, max) + '%) · завершён ' +
+      formatSavedAt(attempt.finishedAt)));
+  }
+
+  function cardNotice(frame, text) {
+    var notice = el('p', 'practicum-card__notice', text);
+    notice.setAttribute('role', 'status');
+    frame.card.appendChild(notice);
+  }
+
+  /**
+   * Состояние практикума у ученика, по порядку проверки:
+   * result — есть результат (в хранилище или, если записать не удалось, в памяти страницы);
+   * result-corrupt — запись результата есть, но не читается: практикум пройден, новой попытки нет;
+   * progress — незавершённая попытка (state — проверенное сохранение);
+   * invalid — незавершённую попытку нельзя продолжить (reason), можно начать заново;
+   * none — практикум не начинали.
+   * Сохранение, где даны все ответы (вкладку закрыли до итогов), здесь же фиксируется как результат.
+   */
+  function practicumState(practicum) {
+    var scope = practicumScope(practicum);
+    var stored = saver.loadResult(storage, scope);
+    // При результате незавершённая запись той же области устарела (другая вкладка) — удаляется.
+    if (stored.status !== 'none') saver.remove(storage, scope);
+    if (stored.status === 'ok') return { kind: 'result', result: stored.result };
+    if (stored.status === 'corrupt') return { kind: 'result-corrupt' };
+    if (state.sessionResults[practicum.id]) {
+      return { kind: 'result', result: state.sessionResults[practicum.id], unsaved: true };
+    }
+    var loaded = saver.load(storage, scope, practicumDeps(practicum));
+    if (loaded.status === 'ok' && loaded.state.complete) {
+      var attempt = loaded.state.attempt;
+      var last = attempt.answers[attempt.answers.length - 1];
+      var done = finalizePracticum(practicum, attempt, new Date(last.answeredAt));
+      return { kind: 'result', result: done.result, unsaved: done.status === 'failed' };
+    }
+    if (loaded.status === 'ok') return { kind: 'progress', state: loaded.state };
+    if (loaded.status === 'invalid') return { kind: 'invalid', reason: loaded.reason };
+    return { kind: 'none' };
+  }
+
+  /** Есть ли у практикума результат (запись в хранилище, даже нечитаемая, или в памяти страницы). */
+  function hasResult(practicum) {
+    return !!state.sessionResults[practicum.id] || saver.hasResult(storage, practicumScope(practicum));
+  }
+
+  /** Практикум уже начат или пройден: новую попытку начинать нельзя. */
+  function isPracticumTaken(practicum) {
+    return hasResult(practicum) || hasSavedAttempt(practicum);
+  }
+
+  /** Карточка пройденного практикума: итог и «Посмотреть результаты». */
+  function completedCard(frame, practicum, st) {
+    if (st.kind === 'result-corrupt') {
+      frame.head.appendChild(el('span', 'practicum-card__status practicum-card__status--done', 'Завершён'));
+      cardNotice(frame, 'Практикум пройден, но сохранённый результат не удаётся прочитать в этом браузере.');
+      return;
+    }
+    showResultSummary(frame, st.result);
+    if (st.unsaved) {
+      cardNotice(frame, 'Результат не удалось сохранить в этом браузере: он доступен, пока открыта эта страница.');
+    }
+    frame.actions.appendChild(button('btn--primary practicum-card__results', 'Посмотреть результаты', function () {
+      openResult(practicum, st.result, null);
+    }));
+  }
+
   /**
    * Карточка прежнего набора (status: 'retired'): только если у ученика есть
-   * сохранённая попытка. Её можно лишь продолжить — начать набор заново нельзя.
-   * Если запись нельзя продолжить (правила js/attempt-save.js), ученик видит
-   * причину; иначе — карточки нет (null).
+   * сохранённая или завершённая попытка. Её можно лишь продолжить или посмотреть
+   * результаты — начать набор заново нельзя. Если запись нельзя продолжить
+   * (правила js/attempt-save.js), ученик видит причину; иначе — карточки нет (null).
    */
   function retiredCard(practicum, section) {
-    var result = saver.load(storage, practicumScope(practicum), practicumDeps(practicum));
-    if (result.status === 'none') return null;
+    var st = practicumState(practicum);
+    if (st.kind === 'none') return null;
     var frame = cardFrame(practicum, section);
     frame.card.classList.add('practicum-card--retired');
-    if (result.status === 'ok') {
-      state.resumes[practicum.id] = result.state;
-      showProgress(frame, result.state);
+    if (st.kind === 'result' || st.kind === 'result-corrupt') {
+      completedCard(frame, practicum, st);
+    } else if (st.kind === 'progress') {
+      state.resumes[practicum.id] = st.state;
+      showProgress(frame, st.state);
       frame.card.appendChild(el('p', 'practicum-card__note',
         'Набор, по которому вы начали заниматься до разделения темы на практикумы. Его можно завершить; новые попытки — в практикумах ниже.'));
       frame.actions.appendChild(button('btn--primary practicum-card__continue', 'Продолжить', function () {
         resumePracticum(practicum);
       }));
     } else {
-      var notice = el('p', 'practicum-card__notice', 'Сохранённую попытку прежнего набора нельзя продолжить: ' +
-        PRACTICUM_REASONS[result.reason] + ' Выберите один из практикумов ниже.');
-      notice.setAttribute('role', 'status');
-      frame.card.appendChild(notice);
+      cardNotice(frame, 'Сохранённую попытку прежнего набора нельзя продолжить: ' +
+        PRACTICUM_REASONS[st.reason] + ' Выберите один из практикумов ниже.');
     }
     return finishCard(frame);
   }
 
+  /**
+   * Кнопка «Начать практикум» с одним подтверждением в самой карточке:
+   * попытка одна, поэтому старт — только после «Начать».
+   */
+  function startButton(frame, practicum) {
+    var actions = frame.actions;
+    var start = button('btn--primary practicum-card__start', 'Начать практикум', function () {
+      start.hidden = true;
+      confirm.hidden = false;
+      confirm.querySelector('.practicum-card__confirm-yes').focus();
+    });
+    var confirm = el('div', 'practicum-card__confirm');
+    confirm.hidden = true;
+    confirm.setAttribute('role', 'group');
+    var text = el('p', 'practicum-card__confirm-text',
+      'Практикум проходится один раз: после завершения начать его заново нельзя, результаты и разбор останутся доступны. Начать?');
+    text.id = 'practicum-' + practicum.id + '-confirm';
+    confirm.setAttribute('aria-labelledby', text.id);
+    confirm.appendChild(text);
+    var buttons = el('div', 'practicum-card__confirm-actions');
+    buttons.appendChild(button('btn--primary practicum-card__confirm-yes', 'Начать', function () {
+      startPracticum(practicum);
+    }));
+    buttons.appendChild(button('btn--ghost practicum-card__confirm-no', 'Отмена', function () {
+      confirm.hidden = true;
+      start.hidden = false;
+      start.focus();
+    }));
+    confirm.appendChild(buttons);
+    actions.appendChild(start);
+    actions.appendChild(confirm);
+  }
+
   function practicumCard(practicum, section) {
     var frame = cardFrame(practicum, section);
-    var card = frame.card;
-    var actions = frame.actions;
+    var st = practicumState(practicum);
 
-    var result = saver.load(storage, practicumScope(practicum), practicumDeps(practicum));
-    var saved = result.status === 'ok' ? result.state : null;
-
-    if (saved) {
-      state.resumes[practicum.id] = saved;
-      showProgress(frame, saved);
-      actions.appendChild(button('btn--primary practicum-card__continue', 'Продолжить', function () {
+    if (st.kind === 'result' || st.kind === 'result-corrupt') {
+      completedCard(frame, practicum, st);
+    } else if (st.kind === 'progress') {
+      state.resumes[practicum.id] = st.state;
+      showProgress(frame, st.state);
+      frame.actions.appendChild(button('btn--primary practicum-card__continue', 'Продолжить', function () {
         resumePracticum(practicum);
       }));
-      actions.appendChild(button('btn--ghost practicum-card__restart', 'Начать заново', function () {
-        saver.remove(storage, practicumScope(practicum));
-        startPracticum(practicum);
-      }));
     } else {
-      if (result.status === 'invalid') {
-        var notice = el('p', 'practicum-card__notice', 'Сохранённый практикум нельзя продолжить: ' +
-          PRACTICUM_REASONS[result.reason] + ' Начните его заново.');
-        notice.setAttribute('role', 'status');
-        card.appendChild(notice);
+      if (st.kind === 'invalid') {
+        cardNotice(frame, 'Сохранённый практикум нельзя продолжить: ' +
+          PRACTICUM_REASONS[st.reason] + ' Начните его заново.');
       }
-      actions.appendChild(button('btn--primary practicum-card__start', 'Начать практикум', function () {
-        startPracticum(practicum);
-      }));
+      frame.card.appendChild(el('p', 'practicum-card__note', 'Одна попытка. Прерваться и продолжить можно в любой момент.'));
+      startButton(frame, practicum);
     }
     return finishCard(frame);
   }
@@ -469,6 +581,9 @@
 
   /** Попытка с заданным порядком заданий: начало практикума или набора предпросмотра. */
   function beginAttempt(attemptSettings, taskIds) {
+    state.review = null;
+    state.finish = null;
+    state.finishNote = null;
     state.attempt = A.createAttempt({ settings: attemptSettings, taskIds: taskIds });
     state.viewIndex = 0;
     state.draft = null;
@@ -480,7 +595,8 @@
 
   /** Новая попытка практикума: состав фиксирован, порядок — по practicum.shuffle. */
   function startPracticum(practicum) {
-    if (!EGE.isPracticumReady(practicum)) {
+    // Карточка могла устареть: практикум уже начат или завершён (другая вкладка).
+    if (!EGE.isPracticumReady(practicum) || isPracticumTaken(practicum)) {
       showStart();
       return;
     }
@@ -490,11 +606,10 @@
       practicum.shuffle ? shuffle(practicum.taskIds) : practicum.taskIds.slice());
   }
 
-  /** Повторное прохождение: тот же практикум или набор предпросмотра заново. */
+  /** Повторное прохождение — только набор предпросмотра; практикум проходится один раз. */
   function startSession() {
     if (!preview) {
-      if (state.practicum) startPracticum(state.practicum);
-      else showStart();
+      showStart();
       return;
     }
     var pool = currentPool(); // предпросмотр — в заданном порядке
@@ -527,7 +642,10 @@
     return {
       getTask: EGE.getTask, attempt: A, scoring: scoring,
       taskIds: practicum.taskIds,
-      anyOrder: !!practicum.shuffle
+      anyOrder: !!practicum.shuffle,
+      // Попытка одна: незавершённая не устаревает; запись со всеми ответами — завершённая попытка.
+      expires: false,
+      allowComplete: true
     };
   }
 
@@ -612,13 +730,19 @@
   /** Главная: продолжение практикума из сохранения, проверенного при показе карточки. */
   function resumePracticum(practicum) {
     var saved = state.resumes[practicum.id];
-    if (!saved) return;
+    if (!saved || hasResult(practicum)) {
+      showStart();
+      return;
+    }
     state.resumes = {};
     state.practicum = practicum;
     continueAttempt(saved);
   }
 
   function continueAttempt(saved) {
+    state.review = null;
+    state.finish = null;
+    state.finishNote = null;
     state.attempt = saved.attempt;
     state.viewIndex = saved.viewIndex;
     state.draft = saved.draft;
@@ -639,6 +763,15 @@
 
   function taskAt(index) {
     return EGE.getTask(state.attempt.taskIds[index]);
+  }
+
+  /**
+   * Задание для разбора в итогах: у практикума — из записи результата (текущее задание,
+   * если оно не менялось, иначе копия, которую видел ученик), у предпросмотра — из банка.
+   */
+  function reviewTaskAt(index) {
+    if (!state.review) return taskAt(index);
+    return saver.reviewTask(state.review, state.attempt.taskIds[index], EGE.getTask);
   }
 
   function viewedAnswer() {
@@ -893,11 +1026,21 @@
     if (state.viewIndex !== A.currentIndex(attempt)) return;
     var task = taskAt(state.viewIndex);
     if (!isDraftReady(task, currentDraft())) return;
+    // Практикум завершён в другой вкладке: ответ не засчитывается, показывается сохранённый результат.
+    if (state.practicum && hasResult(state.practicum)) {
+      openStoredResult(state.practicum, 'Практикум уже завершён в другой вкладке — показан сохранённый результат.');
+      return;
+    }
 
     var answer = A.recordAnswer(attempt, task, state.draft);
     state.draft = null;
     persist();
     notifyStore('onAnswer', [A.snapshot(answer), A.snapshot(attempt)]);
+    // Последний ответ практикума: результат фиксируется сразу, а не по кнопке итогов —
+    // закрытая после ответа вкладка не оставляет практикум незавершённым.
+    if (state.practicum && A.isComplete(attempt)) {
+      state.finish = finalizePracticum(state.practicum, attempt);
+    }
 
     renderView();
     ui.nextBtn.focus({ preventScroll: true });
@@ -915,11 +1058,67 @@
 
   /* ---------- Итоги ---------- */
 
+  /**
+   * Фиксирует завершённую попытку практикума как результат: сначала записывается результат
+   * (с копиями заданий), и только потом удаляется незавершённая запись. Результат {status, result}:
+   * saved — записан; exists — у практикума уже есть результат (другая вкладка): показывается он,
+   * этот не записывается; failed — хранилище недоступно или переполнено: незавершённая запись
+   * со всеми ответами остаётся (при следующем открытии фиксация повторится), а до закрытия
+   * страницы практикум считается пройденным по результату в памяти.
+   */
+  function finalizePracticum(practicum, attempt, now) {
+    A.finishAttempt(attempt, now);
+    var scope = attemptScope(attempt);
+    var record = saver.buildResult({ scope: scope, attempt: attempt, getTask: EGE.getTask });
+    var status = saver.writeResult(storage, record);
+    if (status === 'exists') {
+      saver.remove(storage, scope);
+      var stored = saver.loadResult(storage, scope);
+      return { status: status, result: stored.status === 'ok' ? stored.result : record };
+    }
+    if (status === 'saved') {
+      saver.remove(storage, scope);
+      delete state.sessionResults[practicum.id];
+    } else {
+      state.sessionResults[practicum.id] = record;
+    }
+    notifyStore('onFinish', [A.snapshot(attempt)]);
+    return { status: status, result: record };
+  }
+
+  /** Итоги и разбор зафиксированного результата — только для просмотра. */
+  function openResult(practicum, record, note) {
+    state.practicum = practicum;
+    state.attempt = record.attempt;
+    state.review = record;
+    state.finishNote = note;
+    state.draft = null;
+    showResults();
+  }
+
+  /** Результат практикума из хранилища (или памяти страницы); если его не прочитать — стартовый экран. */
+  function openStoredResult(practicum, note) {
+    var st = practicumState(practicum);
+    if (st.kind === 'result') openResult(practicum, st.result, note);
+    else showStart();
+  }
+
   function showResults() {
     var attempt = state.attempt;
-    if (!attempt.finishedAt) {
+    if (state.practicum && !state.review) {
+      // Практикум, только что пройденный в этой вкладке: результат уже зафиксирован после последнего ответа.
+      var finish = state.finish || finalizePracticum(state.practicum, attempt);
+      state.finish = null;
+      state.review = finish.result;
+      state.attempt = attempt = finish.result.attempt;
+      state.finishNote = finish.status === 'failed'
+        ? 'Результат не удалось сохранить в этом браузере (хранилище недоступно или переполнено): он доступен, пока открыта эта страница.'
+        : finish.status === 'exists'
+          ? 'Практикум уже был завершён в другой вкладке — показан сохранённый результат.'
+          : null;
+    } else if (!attempt.finishedAt) {
+      // Предпросмотр: набор можно пройти заново, завершённая попытка просто удаляется.
       A.finishAttempt(attempt);
-      // Завершённая попытка больше не предлагается к продолжению.
       saver.remove(storage, attemptScope(attempt));
       notifyStore('onFinish', [A.snapshot(attempt)]);
     }
@@ -933,11 +1132,19 @@
     ui.resultRing.className = 'result__ring ' + (pct >= 80 ? 'is-high' : pct >= 50 ? 'is-mid' : 'is-low');
     ui.resultScore.textContent = scoring.formatPointsOutOf(score, max);
     ui.resultMessage.textContent = resultMessage(pct);
-    // Прежний набор заново не проходится: после завершения — только к выбору практикума.
-    ui.restartBtn.hidden = !!state.practicum && state.practicum.status === 'retired';
+    // Практикум проходится один раз: «Пройти ещё раз» — только на страницах предпросмотра.
+    ui.restartBtn.hidden = !!state.practicum;
     if (ui.resultContext) {
       ui.resultContext.hidden = !state.practicum;
       ui.resultContext.textContent = state.practicum ? practicumLabel(state.practicum) : '';
+    }
+    if (ui.resultFixed) {
+      ui.resultFixed.hidden = !state.practicum;
+      ui.resultFixed.textContent = state.practicum ? 'Результат зафиксирован ' + formatSavedAt(attempt.finishedAt) : '';
+    }
+    if (ui.resultNote) {
+      ui.resultNote.hidden = !state.finishNote;
+      ui.resultNote.textContent = state.finishNote || '';
     }
 
     var mistakes = A.mistakeIndexes(attempt).length;
@@ -970,7 +1177,7 @@
     }
 
     indexes.forEach(function (i) {
-      var task = taskAt(i);
+      var task = reviewTaskAt(i);
       var answer = A.getAnswer(attempt, i);
       var li = el('li', 'review-item');
       var details = el('details', 'review-item__details');
@@ -1061,6 +1268,11 @@
     ui.resumeContinue.addEventListener('click', resumeSession);
     ui.resumeRestart.addEventListener('click', restartSession);
   }
+  // Другая вкладка начала или завершила практикум: карточки на стартовом экране обновляются.
+  window.addEventListener('storage', function (e) {
+    if (preview || ui.screens.start.hidden || !e.key) return;
+    if (e.key.indexOf(saver.KEY_PREFIX) === 0 || e.key.indexOf(saver.RESULT_PREFIX) === 0) renderStart();
+  });
   // Закрытие вкладки, переход в другое приложение на телефоне: сохраняем последнее состояние.
   window.addEventListener('pagehide', function () { persist(); });
   document.addEventListener('visibilitychange', function () {
@@ -1096,7 +1308,7 @@
   // Общее для логотипа и ссылок «ЕГЭ | Олимпиады» в шапке: при начатой тренировке
   // (есть хотя бы один ответ) сначала спрашиваем, иначе выходим сразу.
   function isInProgress() {
-    return !ui.screens.quiz.hidden && !!state.attempt && A.answeredCount(state.attempt) > 0;
+    return !ui.screens.quiz.hidden && !!state.attempt && !state.attempt.finishedAt && A.answeredCount(state.attempt) > 0;
   }
 
   function requestExit(onExit) {
