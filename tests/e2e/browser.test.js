@@ -140,6 +140,12 @@ async function advanceTo(page, type) {
 }
 
 const card = (page, id) => page.locator(`.practicum-card[data-practicum="${id}"]`);
+
+/** «Начать практикум» и единственное подтверждение в карточке: практикум проходится один раз. */
+async function confirmStart(practicumCard) {
+  await practicumCard.locator('.practicum-card__start').click();
+  await practicumCard.locator('.practicum-card__confirm-yes').click();
+}
 const noteOf = (page, name, value) =>
   page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"]) .topic-option__count`).textContent();
 const values = (page, name) => page.locator(`input[name="${name}"]`).evaluateAll((list) => list.map((i) => i.value));
@@ -148,7 +154,7 @@ const values = (page, name) => page.locator(`input[name="${name}"]`).evaluateAll
 async function openPracticum(page, section, topic, id) {
   await pick(page, 'section', section);
   await pick(page, 'topic', topic);
-  await card(page, id).locator('.practicum-card__start').click();
+  await confirmStart(card(page, id));
   await page.waitForSelector('#screen-quiz:not([hidden])');
 }
 
@@ -280,7 +286,7 @@ for (const config of CONFIGS) {
       const { page, context, errors } = await open(config, { storage });
       assert.ok(await radio(page, 'topic', 'OBS-ACT').isChecked());
       assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__meta').textContent(), '16 заданий · максимум 31 балл', format);
-      await card(page, 'OBS-ACT-P01').locator('.practicum-card__start').click();
+      await confirmStart(card(page, 'OBS-ACT-P01'));
       assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 /);
       assert.equal(await page.locator('#task-nav .task-nav__item').count(), 16);
       assert.deepEqual(errors, []);
@@ -359,7 +365,7 @@ for (const config of CONFIGS) {
     await context.close();
   });
 
-  test(`${config.name}: выбор нескольких ответов, итоги практикума, повторное прохождение и возврат к выбору`, async () => {
+  test(`${config.name}: выбор нескольких ответов, итоги практикума без повторного прохождения и возврат к выбору`, async () => {
     const { page, context, errors } = await open(config);
     await openPracticum(page, 'OBS', 'OBS-ACT', 'OBS-ACT-P01');
 
@@ -392,21 +398,16 @@ for (const config of CONFIGS) {
     await assertNoHorizontalScroll(page, 'итоги');
     await shot(page, config, '8-result');
 
-    // «Пройти ещё раз» — тот же практикум заново.
-    await page.click('#restart-btn');
-    await page.waitForSelector('#screen-quiz:not([hidden])');
-    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 · выполнено 0$/);
-    assert.equal(await page.textContent('#quiz-title'), 'Деятельность · Практикум № 1');
-    assert.ok(await page.locator('#feedback').isHidden());
-    assert.equal(await page.locator('#statements .statement.is-selected, .match-choice.is-selected').count(), 0);
-    await answerWithKey(page, await currentKey(page));
+    // Практикум проходится один раз: «Пройти ещё раз» нет, результат зафиксирован.
+    assert.ok(await page.locator('#restart-btn').isHidden());
+    assert.match(await page.textContent('#result-fixed'), /^Результат зафиксирован \d\d\.\d\d в \d\d:\d\d$/);
 
-    // Возврат к выбору: через логотип (с подтверждением) — та же тема, карточка предлагает продолжить.
+    // Возврат к выбору: логотип без подтверждения (попытка завершена) — та же тема, карточка «Завершён».
     await page.click('#brand-home');
-    await page.click('#exit-confirm');
     await page.waitForSelector('#screen-start:not([hidden])');
     assert.ok(await radio(page, 'topic', 'OBS-ACT').isChecked());
-    assert.ok(await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').isVisible());
+    assert.equal(await card(page, 'OBS-ACT-P01').locator('.practicum-card__status').textContent(), 'Завершён');
+    assert.deepEqual(await card(page, 'OBS-ACT-P01').locator('button:visible').allTextContents(), ['Посмотреть результаты']);
     assert.deepEqual(errors, []);
     await context.close();
   });
@@ -416,7 +417,7 @@ for (const config of CONFIGS) {
     await pick(page, 'section', 'SOC');
     await pick(page, 'topic', 'SOC-GRP');
     assert.equal(await card(page, 'SOC-GRP-P01').locator('.practicum-card__meta').textContent(), '2 задания · максимум 3 балла');
-    await card(page, 'SOC-GRP-P01').locator('.practicum-card__start').click();
+    await confirmStart(card(page, 'SOC-GRP-P01'));
 
     // В тестовой теме два задания — exclude-two и matching — в случайном порядке.
     for (let i = 0; i < 2; i++) {
@@ -496,7 +497,7 @@ for (const config of CONFIGS) {
     await context.close();
   });
 
-  test(`${config.name}: «Научное познание» — оба практикума: порядок, объяснения, баллы, итоги, повтор`, async () => {
+  test(`${config.name}: «Научное познание» — оба практикума: порядок, объяснения, баллы, итоги, просмотр результатов`, async () => {
     const { page, context, errors } = await open(config);
     for (const [id, number] of [['OBS-SCK-P01', 1], ['OBS-SCK-P02', 2]]) {
       await openPracticum(page, 'OBS', 'OBS-SCK', id);
@@ -548,14 +549,15 @@ for (const config of CONFIGS) {
       assert.ok(await page.locator('#review-list .statement__explanation').count() >= 125, 'объяснения всех вариантов в разборе');
       await assertNoHorizontalScroll(page, `${id}: итоги`);
       await shot(page, config, `sck-${number}-result`);
-      // Пройти ещё раз — тот же практикум с начала.
-      await page.click('#restart-btn');
-      await page.waitForSelector('#screen-quiz:not([hidden])');
-      assert.match(await page.textContent('#progress-label'), /^Задание 1 из 25 · выполнено 0$/);
-      assert.equal((await currentKey(page)).id, order[0]);
-      // Ответов в новой попытке ещё нет — выход без подтверждения.
-      await page.click('#brand-home');
-      if (await page.locator('#exit-confirm').isVisible()) await page.click('#exit-confirm');
+      // Повторного прохождения нет; к выбору — без подтверждения, карточка открывает те же итоги.
+      assert.ok(await page.locator('#restart-btn').isHidden());
+      await page.click('#home-btn');
+      await page.waitForSelector('#screen-start:not([hidden])');
+      await card(page, id).locator('.practicum-card__results').click();
+      await page.waitForSelector('#screen-result:not([hidden])');
+      assert.equal(await page.textContent('#result-score'),
+        await page.evaluate((s) => EGE.scoring.formatPointsOutOf(s, 39), score));
+      await page.click('#home-btn');
       await page.waitForSelector('#screen-start:not([hidden])');
     }
     assert.deepEqual(errors, []);
@@ -674,6 +676,9 @@ test('клавиатура: раздел, тема и практикум выб�
   assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Начать практикум');
   const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
   assert.notEqual(outline, 'none', 'видимый фокус');
+  // Enter — подтверждение в карточке, фокус на «Начать»; ещё Enter — практикум начинается.
+  await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Начать');
   await page.keyboard.press('Enter');
   await page.waitForSelector('#screen-quiz:not([hidden])');
   assert.equal(await page.textContent('#quiz-title'), 'Познание · Практикум № 1');
@@ -784,7 +789,9 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     assert.ok(await page.locator('#screen-start').isVisible());
 
     // Подтверждение после «Олимпиады» ведёт на олимпиадную страницу.
-    await card(page, 'OBS-ACT-P01').locator('.practicum-card__restart').click();
+    // Попытка одна: продолжаем ту же (на экране — последнее выполненное задание) и отвечаем на текущее.
+    await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
+    await page.click('#next-btn');
     await answerWithKey(page, await currentKey(page));
     await navLink(page, 'Олимпиады').click();
     await page.waitForSelector('#exit-bar:not([hidden])');

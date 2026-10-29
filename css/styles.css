@@ -364,7 +364,23 @@ button, input { font: inherit; color: inherit; }
   font-size: 13px;
   font-weight: 600;
 }
+.practicum-card__status--done { background: var(--right-bg); color: var(--right); }
 .practicum-card__meta { color: var(--text-muted); font-size: 15px; }
+.practicum-card__result { font-size: 15px; font-weight: 600; }
+/* Подтверждение старта: практикум проходится один раз */
+.practicum-card__confirm {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--primary-soft);
+}
+.practicum-card__confirm-text { font-size: 14px; }
+.practicum-card__confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.practicum-card__confirm-actions .btn { flex: 1 1 auto; }
 .practicum-card__progress { font-size: 14px; color: var(--text-muted); }
 .practicum-card__notice {
   padding: 8px 12px;
@@ -830,6 +846,16 @@ kbd {
 .result__context:empty { display: none; }
 .result__score { margin-top: 6px; font-size: 20px; font-weight: 700; color: var(--primary); }
 .result__message { margin-top: 8px; color: var(--text-muted); }
+.result__fixed { margin-top: 8px; font-size: 14px; color: var(--text-muted); }
+.result__note {
+  margin: 10px auto 0;
+  max-width: 560px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn-border);
+  border-radius: 10px;
+  background: var(--warn-bg);
+  font-size: 14px;
+}
 .result__actions {
   margin-top: 22px;
   display: flex;
