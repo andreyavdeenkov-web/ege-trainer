@@ -265,9 +265,29 @@
       renderResume();
       return;
     }
+    finalizeClosedAttempts();
     renderSectionOptions();
     renderTopicOptions();
     renderPracticums();
+  }
+
+  /**
+   * Попытки, в которых даны все ответы, но итоги не открыты (вкладку закрыли после
+   * последнего ответа), фиксируются как результат до показа тем: иначе у темы была бы
+   * отметка «есть незавершённый». Остальные записи не трогаются — их проверяет карточка
+   * (и объясняет ученику, если продолжить нельзя).
+   */
+  function finalizeClosedAttempts() {
+    if (!storage) return;
+    EGE.practicums.forEach(function (practicum) {
+      if (!hasSavedAttempt(practicum) || hasResult(practicum)) return;
+      var record;
+      try { record = JSON.parse(storage.getItem(saver.storageKey(practicumScope(practicum)))); } catch (e) { return; }
+      var restored = saver.restore(record, practicumScope(practicum), practicumDeps(practicum));
+      if (!restored.ok || !restored.complete) return;
+      var attempt = restored.attempt;
+      finalizePracticum(practicum, attempt, new Date(attempt.answers[attempt.answers.length - 1].answeredAt));
+    });
   }
 
   /** Карточки разделов. У раздела без готовых практикумов — пометка «Практикумы готовятся». */

@@ -256,7 +256,10 @@ test('вкладку закрыли после последнего ответа
   await seed(page, 'complete');
   assert.deepEqual(await keys(page), [ATTEMPT_KEY]);
   await page.reload();
-  await openTopic(page);
+  await pick(page, 'section', 'OBS');
+  // Попытка зафиксирована до показа тем: отметки «есть незавершённый» у темы нет.
+  assert.equal(await page.locator('label.topic-option:has(input[value="OBS-COG"]) .topic-option__badge').count(), 0);
+  await pick(page, 'topic', 'OBS-COG');
   assert.equal(await card(page).locator('.practicum-card__status').textContent(), 'Завершён');
   assert.deepEqual(await visibleButtons(page), ['Посмотреть результаты']);
   assert.deepEqual(await keys(page), [RESULT_KEY], 'сначала записан результат, затем удалена незавершённая запись');
