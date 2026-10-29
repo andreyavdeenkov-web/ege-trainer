@@ -163,11 +163,18 @@
   }
 
   /**
-   * Заполняет блок пояснений к заданию после ответа: общий признак ряда
-   * (exclude-two, поле commonFeature) и источник. Возвращает true, если блок не пуст.
+   * Заполняет блок пояснений к заданию после ответа: «Как решать» (необязательное
+   * поле solution), общий признак ряда (exclude-two, поле commonFeature) и источник.
+   * Возвращает true, если блок не пуст.
    */
   function renderTaskNotes(box, task) {
     box.textContent = '';
+    if (task.solution) {
+      var solution = el('div', 'task-notes__feature');
+      solution.appendChild(el('span', 'statement__tag', 'Как решать'));
+      solution.appendChild(el('p', 'task-notes__text', task.solution));
+      box.appendChild(solution);
+    }
     if (scoring.getTaskType(task) === 'exclude-two' && task.commonFeature) {
       var feature = el('div', 'task-notes__feature');
       feature.appendChild(el('span', 'statement__tag', 'Общий признак ряда'));

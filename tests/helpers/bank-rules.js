@@ -49,6 +49,7 @@ function metadataErrors(EGE, task) {
     }
   }
 
+  if (task.solution !== undefined && !isText(task.solution)) errors.push('solution — непустая строка');
   if (task.commonFeature !== undefined) {
     if (type !== 'exclude-two') errors.push('commonFeature бывает только у exclude-two');
     else if (!isText(task.commonFeature)) errors.push('commonFeature — непустая строка');
