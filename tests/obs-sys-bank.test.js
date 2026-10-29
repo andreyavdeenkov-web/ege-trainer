@@ -42,7 +42,8 @@ test('OBS-SYS: 36 заданий, OBS-SYS-001…036, все в теме OBS-SYS'
   assert.deepEqual(Array.from(tasks, (t) => t.id), Array.from({ length: 36 }, (_, i) => id(i + 1)));
   const topic = EGE.getTopic('OBS-SYS');
   assert.equal(topic.title, 'Общество как система. Социальные институты');
-  assert.equal(topic.subtitle, 'Темы 1.6–1.7 кодификатора ЕГЭ');
+  // Подзаголовка с номерами кодификатора у темы нет: в карточке — только название и число практикумов.
+  assert.equal(topic.subtitle, undefined);
   assert.equal(topic.section, 'OBS');
 });
 

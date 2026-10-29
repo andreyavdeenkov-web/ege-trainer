@@ -293,11 +293,8 @@
       var practicums = EGE.getPublishedPracticums(topic.id);
       var n = practicums.length;
       var unfinished = practicums.concat(EGE.getRetiredPracticums(topic.id)).some(hasSavedAttempt);
-      // subtitle — необязательный подзаголовок темы (например, пункты кодификатора).
-      var note = n + ' ' + plural(n, 'практикум', 'практикума', 'практикумов');
-      if (topic.subtitle) note = topic.subtitle + ' · ' + note;
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
-        note,
+        n + ' ' + plural(n, 'практикум', 'практикума', 'практикумов'),
         section.color, settings.topic === topic.id, unfinished ? 'есть незавершённый' : null));
     });
   }
@@ -309,8 +306,7 @@
     var topic = isValidTopic(settings.section, settings.topic) ? EGE.getTopic(settings.topic) : null;
     ui.practicumField.hidden = !topic;
     if (!topic) return;
-    ui.practicumTitle.textContent = 'Практикумы по теме «' + topic.title + '»' +
-      (topic.subtitle ? ' · ' + topic.subtitle : '');
+    ui.practicumTitle.textContent = 'Практикумы по теме «' + topic.title + '»';
     var section = EGE.getSection(topic.section);
     // Прежние наборы — первыми и только при сохранённой попытке (иначе карточки нет).
     EGE.getRetiredPracticums(topic.id).forEach(function (practicum) {

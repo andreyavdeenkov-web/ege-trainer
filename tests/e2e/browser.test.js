@@ -186,7 +186,7 @@ for (const config of CONFIGS) {
     assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
     assert.equal(await noteOf(page, 'topic', 'OBS-COG'), '1 практикум');
     assert.equal(await noteOf(page, 'topic', 'OBS-SCK'), '2 практикума');
-    assert.equal(await noteOf(page, 'topic', 'OBS-SYS'), 'Темы 1.6–1.7 кодификатора ЕГЭ · 2 практикума');
+    assert.equal(await noteOf(page, 'topic', 'OBS-SYS'), '2 практикума');
     assert.ok(await page.locator('#practicum-field').isHidden(), 'практикумы — после выбора темы');
 
     // Тема → практикумы.
@@ -209,10 +209,10 @@ for (const config of CONFIGS) {
     }
     await assertNoHorizontalScroll(page, 'практикумы «Научного познания»');
 
-    // «Общество как система. Социальные институты» — два практикума, подзаголовок темы.
+    // «Общество как система. Социальные институты» — два практикума, без номеров кодификатора.
     await pick(page, 'topic', 'OBS-SYS');
     assert.equal(await page.textContent('#practicum-title'),
-      'Практикумы по теме «Общество как система. Социальные институты» · Темы 1.6–1.7 кодификатора ЕГЭ');
+      'Практикумы по теме «Общество как система. Социальные институты»');
     assert.deepEqual(await page.locator('.practicum-card').evaluateAll((list) => list.map((c) => c.dataset.practicum)),
       ['OBS-SYS-P01', 'OBS-SYS-P02']);
     assert.equal(await card(page, 'OBS-SYS-P01').locator('.practicum-card__meta').textContent(), '18 заданий · максимум 32 балла');
