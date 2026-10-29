@@ -326,7 +326,9 @@ test('незавершённый практикум нельзя начать з
   await page.reload();
   assert.deepEqual(await card(page, 'OBS-ACT-P01').locator('button:visible').allTextContents(), ['Продолжить']);
   await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
-  assert.match(await page.textContent('#progress-label'), /^Задание 2 из 16 · выполнено 1$/);
+  // Та же попытка: на экране — выполненное задание с разбором, ответ засчитан.
+  assert.match(await page.textContent('#progress-label'), /^Задание 1 из 16 · выполнено 1$/);
+  assert.ok(await page.isVisible('#feedback'));
   assert.equal((await savedRecord(page, scope)).attempt.id, oldId);
   assert.deepEqual(errors, []);
   await context.close();
@@ -457,7 +459,7 @@ test('«Семья и брак»: прежний набор (31 задание) 
   assert.match(await progressOf(page, 'SOC-FAM-P02'), /^Выполнено 2 из 15 /);
   assert.deepEqual(await savedKeys(page), [SCOPES['SOC-FAM-P01'], SCOPES['SOC-FAM-P02']].map((s) => PREFIX + s));
   await page.reload();
-  assert.equal(await old.count(), 0);
+  assert.equal(await old.locator('.practicum-card__status').textContent(), 'Завершён', 'и после обновления страницы');
   assert.deepEqual(errors, []);
   await context.close();
 });

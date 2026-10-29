@@ -593,6 +593,9 @@ test('клавиатура: раздел, тема и практикум выб�
   assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Начать практикум');
   const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
   assert.notEqual(outline, 'none', 'видимый фокус');
+  // Enter — подтверждение в карточке, фокус на «Начать»; ещё Enter — практикум начинается.
+  await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Начать');
   await page.keyboard.press('Enter');
   await page.waitForSelector('#screen-quiz:not([hidden])');
   assert.equal(await page.textContent('#quiz-title'), 'Познание · Практикум № 1');
@@ -703,7 +706,9 @@ for (const config of [CONFIGS[0], CONFIGS[2]]) {
     assert.ok(await page.locator('#screen-start').isVisible());
 
     // Подтверждение после «Олимпиады» ведёт на олимпиадную страницу.
+    // Попытка одна: продолжаем ту же (на экране — последнее выполненное задание) и отвечаем на текущее.
     await card(page, 'OBS-ACT-P01').locator('.practicum-card__continue').click();
+    await page.click('#next-btn');
     await answerWithKey(page, await currentKey(page));
     await navLink(page, 'Олимпиады').click();
     await page.waitForSelector('#exit-bar:not([hidden])');
