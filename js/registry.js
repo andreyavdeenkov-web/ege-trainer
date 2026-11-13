@@ -122,6 +122,29 @@
   /** Виды источника задания (поле source.kind). */
   EGE.SOURCE_KINDS = ['original', 'author'];
 
+  /**
+   * Разметка ошибок-ловушек у неверных позиций (поле trap задания, тема «Типы обществ»):
+   * trap: { tags: ['ПТ'], combine: 'or' | 'and', actual: ['industrial'], comment? } —
+   * теги ошибки и тип общества, к которому признак относится на самом деле.
+   */
+  EGE.TRAP_TAGS = {
+    'ПТ': 'подмена типа общества',
+    'СП': 'смешение понятий',
+    'ПС': 'ложная причинно-следственная связь',
+    'ЧО': 'чрезмерное обобщение',
+    'ФП': 'неверный фактор производства или неверная ведущая сфера экономики'
+  };
+
+  /** Типы обществ (поля societyTypes и trap.actual): название и форма «признак … общества». */
+  EGE.SOCIETY_TYPES = {
+    traditional: { title: 'Традиционное', genitive: 'традиционного' },
+    industrial: { title: 'Индустриальное', genitive: 'индустриального' },
+    postindustrial: { title: 'Постиндустриальное', genitive: 'постиндустриального' }
+  };
+
+  /** Режимы практикума (поле modes, см. js/mode-session.js). */
+  EGE.PRACTICUM_MODES = ['learn', 'exam'];
+
   /** Формат постоянного ID задания: РАЗДЕЛ-ТЕМА-НОМЕР, например SOC-STR-001. */
   EGE.TASK_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-\d{3,4}$/;
   /** Формат id темы: РАЗДЕЛ-ТЕМА, например SOC-STR. */
@@ -289,6 +312,10 @@
    *   taskIds  — ID заданий: состав задаётся явно и не меняется от попытки к попытке;
    *   shuffle  — необязательно: true — задания показываются в случайном порядке,
    *              иначе — в порядке taskIds;
+   *   modes    — необязательно: ['learn', 'exam'] — практикум проходится в режимах «Обучение»
+   *              и «Экзамен» (js/mode-session.js) вместо одной попытки; порядок постоянный;
+   *   criteria — необязательно: [{ id, title }] — критерии учебной аналитики режимов
+   *              (значения — поле criteria заданий);
    *   legacyTopicAttempts — необязательно: true — незавершённая попытка, сохранённая
    *              до появления практикумов для темы целиком, продолжается в этом практикуме
    *              (если её задания совпадают с его составом). Не больше одного на тему.
@@ -311,6 +338,18 @@
       }
       if (kind === 'R' && !(typeof p.title === 'string' && p.title)) throw new Error('У прежнего набора нет названия: ' + where);
       if (kind === 'P' && p.title !== undefined) throw new Error('Название практикума — только «Практикум № N»: ' + where);
+      if (p.modes !== undefined) {
+        if (!Array.isArray(p.modes) || p.modes.length === 0 || new Set(p.modes).size !== p.modes.length ||
+            !p.modes.every(function (m) { return EGE.PRACTICUM_MODES.indexOf(m) !== -1; })) {
+          throw new Error('modes — непустой список из ' + EGE.PRACTICUM_MODES.join(', ') + ': ' + where);
+        }
+        if (kind !== 'P' || p.shuffle || p.legacyTopicAttempts) throw new Error('Режимы — только у действующего практикума с постоянным порядком: ' + where);
+      }
+      if (p.criteria !== undefined) {
+        if (!Array.isArray(p.criteria) || !p.criteria.every(function (c) { return c && typeof c.id === 'string' && typeof c.title === 'string' && c.title; })) {
+          throw new Error('criteria — список { id, title }: ' + where);
+        }
+      }
       if (!Array.isArray(p.taskIds) || p.taskIds.length === 0) throw new Error('В практикуме нет заданий: ' + where);
       if (new Set(p.taskIds).size !== p.taskIds.length) throw new Error('Задания повторяются: ' + where);
       p.taskIds.forEach(function (id) {

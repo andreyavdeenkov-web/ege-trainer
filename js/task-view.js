@@ -123,6 +123,8 @@
           details.appendChild(el('p', 'statement__explanation', statement.explanation));
         }
         appendMistake(details, statement.mistake);
+        appendTrap(details, statement.trap);
+        appendExtra(details, statement.extra);
         li.appendChild(details);
       } else {
         btn.setAttribute('role', 'checkbox');
@@ -143,6 +145,42 @@
     var p = el('p', 'statement__mistake');
     p.appendChild(el('strong', null, 'Типичная ошибка: '));
     p.appendChild(document.createTextNode(mistake));
+    parent.appendChild(p);
+  }
+
+  /**
+   * «Ловушка: подмена типа общества — признак индустриального общества» (поле trap неверной
+   * позиции, см. EGE.TRAP_TAGS). Показывается в разборе после ответа.
+   */
+  function trapText(trap) {
+    if (!trap) return null;
+    var tags = (trap.tags || []).map(function (t) { return (EGE.TRAP_TAGS || {})[t] || t; });
+    var text = tags.join(trap.combine === 'and' ? ' и ' : ' / ');
+    if (trap.comment) text += ' (' + trap.comment + ')';
+    var types = EGE.SOCIETY_TYPES || {};
+    var actual = (trap.actual || []).map(function (id) { return types[id] ? types[id].genitive : id; });
+    if (actual.length) {
+      text += (text ? '; ' : '') + 'на самом деле это признак ' + actual.join(' и ') +
+        (actual.length > 1 ? ' обществ' : ' общества');
+    }
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) + '.' : null;
+  }
+
+  function appendTrap(parent, trap) {
+    var text = trapText(trap);
+    if (!text) return;
+    var p = el('p', 'statement__trap');
+    p.appendChild(el('strong', null, 'Ловушка: '));
+    p.appendChild(document.createTextNode(text));
+    parent.appendChild(p);
+  }
+
+  /** «Дополнительно: …» — положение сверх учебной таблицы (поле extra). */
+  function appendExtra(parent, extra) {
+    if (!extra) return;
+    var p = el('p', 'statement__extra');
+    p.appendChild(el('span', 'statement__extra-tag', 'дополнительно'));
+    p.appendChild(document.createTextNode(' Положение сверх таблицы: ' + extra));
     parent.appendChild(p);
   }
 
@@ -181,9 +219,39 @@
       feature.appendChild(el('p', 'task-notes__text', task.commonFeature));
       box.appendChild(feature);
     }
+    // Методические поля банка «Типы обществ» (необязательные): пояснение ко всему заданию,
+    // проверяемое знание, типичная ошибка, опора в таблице, действие и уровень.
+    if (task.explanationNote) appendNote(box, 'Пояснение', sentence(task.explanationNote));
+    if (task.checks) appendNote(box, 'Проверяемое знание', sentence(task.checks));
+    if (task.typicalMistake) appendNote(box, 'Типичная ошибка', sentence(task.typicalMistake), 'task-notes__feature--warn');
+    var meta = taskMetaLine(task);
+    if (meta) box.appendChild(el('p', 'task-notes__source', meta));
+    if (task.basis) box.appendChild(el('p', 'task-notes__source', 'Опора: ' + task.basis));
     var source = sourceLabel(task);
     if (source) box.appendChild(el('p', 'task-notes__source', source));
     return box.childNodes.length > 0;
+  }
+
+  function sentence(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function appendNote(box, title, text, extraClass) {
+    var block = el('div', 'task-notes__feature' + (extraClass ? ' ' + extraClass : ''));
+    block.appendChild(el('span', 'statement__tag', title));
+    block.appendChild(el('p', 'task-notes__text', text));
+    box.appendChild(block);
+  }
+
+  var ACTION_TITLES = { recognition: 'узнавание', understanding: 'понимание', distinction: 'различение' };
+  var LEVEL_TITLES = { 1: 'базовый', 2: 'средний', 3: 'повышенный' };
+
+  /** «Познавательное действие: различение · Уровень: средний» — только у заданий с полем cognitiveActions. */
+  function taskMetaLine(task) {
+    if (!Array.isArray(task.cognitiveActions)) return null;
+    var line = 'Познавательное действие: ' + task.cognitiveActions.map(function (a) { return ACTION_TITLES[a] || a; }).join(', ');
+    if (LEVEL_TITLES[task.difficulty]) line += ' · Уровень: ' + LEVEL_TITLES[task.difficulty];
+    return line;
   }
 
   /** Новый блок пояснений (для экрана итогов) или null, если пояснять нечего. */
@@ -276,6 +344,7 @@
         }
         if (item.explanation) result.appendChild(el('p', 'statement__explanation', item.explanation));
         appendMistake(result, item.mistake);
+        appendExtra(result, item.extra);
         li.appendChild(result);
       } else {
         li.classList.toggle('is-filled', value !== null);
@@ -374,6 +443,8 @@
     setStatementSelected: setStatementSelected,
     renderMatching: renderMatching,
     sourceLabel: sourceLabel,
+    trapText: trapText,
+    statusLabels: statusLabels,
     renderTaskNotes: renderTaskNotes,
     createTaskNotes: createTaskNotes,
     renderFeedback: renderFeedback,

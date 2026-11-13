@@ -63,6 +63,20 @@ function metadataErrors(EGE, task) {
 }
 
 /**
+ * Начала объяснений, согласованные с ключом: [для верного варианта, для неверного].
+ * Задания утверждённого банка «Типы обществ» (поле bankFormat) сохраняют формулировки банка:
+ * в EXCL позиция ряда — «Верно.», в MULTI неверное — «Неверно.» / «Неверно:» / «Неверно по…»,
+ * в COND — «Подходит.» / «Не подходит.».
+ */
+function explanationPrefixes(EGE, task) {
+  const type = EGE.scoring.getTaskType(task);
+  if (task.bankFormat === 'EXCL') return [['Выпадает.'], ['Верно.']];
+  if (task.bankFormat === 'MULTI') return [['Верно.'], ['Неверно.', 'Неверно:', 'Неверно ']];
+  if (task.bankFormat === 'COND') return [['Подходит.'], ['Не подходит.']];
+  return type === 'exclude-two' ? [['Выпадает.'], ['Не выпадает.']] : [['Верно.'], ['Неверно.']];
+}
+
+/**
  * Строгие правила для новых заданий (не из снимка tests/fixtures/legacy-tasks.json):
  * формат ЕГЭ и содержательные объяснения всех вариантов.
  */
@@ -91,9 +105,9 @@ function newTaskErrors(EGE, task) {
     return errors;
   }
 
-  const prefixes = type === 'exclude-two' ? ['Выпадает.', 'Не выпадает.'] : ['Верно.', 'Неверно.'];
+  const prefixes = explanationPrefixes(EGE, task);
   task.statements.forEach((s, i) => {
-    const prefix = s.correct ? prefixes[0] : prefixes[1];
+    const prefix = (s.correct ? prefixes[0] : prefixes[1]).find((p) => isText(s.explanation) && s.explanation.startsWith(p));
     if (!explained(s.explanation, prefix)) errors.push(`суждение ${i + 1}: нужно содержательное объяснение`);
   });
 
@@ -103,9 +117,11 @@ function newTaskErrors(EGE, task) {
     if (correct < 2 || correct > 4) errors.push('multiple: верных вариантов 2, 3 или 4');
   } else if (type === 'exclude-two') {
     if (task.statements.length !== 6) errors.push('exclude-two: ровно 6 позиций');
-    if (!isText(task.commonFeature)) errors.push('exclude-two: нужен commonFeature — общий признак ряда');
+    // В утверждённом банке «Типы обществ» общий признак ряда назван в условии задания,
+    // отдельного поля в банке нет — придумывать его нельзя.
+    if (!task.bankFormat && !isText(task.commonFeature)) errors.push('exclude-two: нужен commonFeature — общий признак ряда');
   }
   return errors;
 }
 
-module.exports = { metadataErrors, newTaskErrors, MIN_EXPLANATION };
+module.exports = { metadataErrors, newTaskErrors, explanationPrefixes, MIN_EXPLANATION };

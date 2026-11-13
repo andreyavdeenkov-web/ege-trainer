@@ -68,6 +68,11 @@ const PUBLISHED = {
     topic: 'OBS-SYS', number: 2, shuffle: false, max: 31,
     taskIds: Array.from({ length: 18 }, (_, i) => 'OBS-SYS-' + String(i + 19).padStart(3, '0'))
   },
+  // «Типы обществ»: 25 заданий банка в его порядке; режимы «Обучение» и «Экзамен».
+  'OBS-TYP-P01': {
+    topic: 'OBS-TYP', number: 1, shuffle: false, max: 35,
+    taskIds: Array.from({ length: 25 }, (_, i) => 'OBS-TYP-' + String(i + 1).padStart(3, '0'))
+  },
   'SOC-FAM-P01': {
     topic: 'SOC-FAM', number: 1, shuffle: true, max: 29,
     taskIds: ['SOC-FAM-001', 'SOC-FAM-004', 'SOC-FAM-005', 'SOC-FAM-012', 'SOC-FAM-014', 'SOC-FAM-017', 'SOC-FAM-019', 'SOC-FAM-022', 'SOC-FAM-024', 'SOC-FAM-031', 'SOC-FAM-032', 'SOC-FAM-034', 'SOC-FAM-037', 'SOC-FAM-038', 'SOC-FAM-041', 'SOC-FAM-042']
@@ -136,7 +141,7 @@ test('у каждого практикума: постоянный уникал�
   }
 });
 
-test('опубликованы ровно восемь практикумов с утверждённым составом', () => {
+test('опубликованы ровно девять практикумов с утверждённым составом', () => {
   const published = EGE.practicums.filter((p) => p.status === 'published');
   assert.deepEqual(ids(published).sort(), Object.keys(PUBLISHED).sort());
   for (const [id, want] of Object.entries(PUBLISHED)) {
@@ -226,7 +231,7 @@ test('задание входит не больше чем в один дейс�
 /* ---------- Видимость для ученика ---------- */
 
 test('ученик видит только темы и разделы с опубликованными практикумами', () => {
-  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
+  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS', 'OBS-TYP']);
   assert.deepEqual(ids(EGE.getAvailableTopics('SOC')), ['SOC-FAM']);
   for (const section of ['ECO', 'POL', 'LAW']) assert.deepEqual(ids(EGE.getAvailableTopics(section)), [], section);
   assert.deepEqual(ids(EGE.getAvailableSections()), ['OBS', 'SOC']);
@@ -244,7 +249,7 @@ test('«Социальные институты» (OBS-INS) объединены
   assert.ok(!shown.includes('OBS-INS'));
   assert.ok(shown.includes('OBS-SYS'));
   // Счётчик тем раздела на главном экране — EGE.getAvailableTopics(...).length, то есть число карточек.
-  assert.equal(shown.length, 4);
+  assert.equal(shown.length, 5);
 });
 
 test('черновик и практикум со снятым с выдачи заданием не показываются; пустых практикумов нет', () => {
