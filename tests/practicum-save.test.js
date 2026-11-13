@@ -20,7 +20,7 @@ const LEGACY = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/legacy
 function loadMain() {
   const context = vm.createContext({});
   context.globalThis = context;
-  for (const src of scripts.filter((s) => s !== 'js/app.js' && s !== 'js/task-view.js' && s !== 'js/practicum-modes.js')) {
+  for (const src of scripts.filter((s) => s !== 'js/app.js' && s !== 'js/task-view.js' && s !== 'js/final-practicum.js')) {
     vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
   }
   return context.EGE;

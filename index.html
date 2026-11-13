@@ -166,9 +166,9 @@
       </div>
     </section>
 
-    <!-- Режимы «Обучение» и «Экзамен» (практикумы с полем modes): содержимое строит js/practicum-modes.js -->
-    <section class="screen screen--mode" id="screen-mode" hidden aria-labelledby="mode-run-title"></section>
-    <section class="screen screen--mode" id="screen-mode-result" hidden aria-labelledby="mode-result-title"></section>
+    <!-- Итоговый практикум по теме (kind: 'final'): содержимое строит js/final-practicum.js -->
+    <section class="screen screen--final" id="screen-final" hidden aria-labelledby="final-run-title"></section>
+    <section class="screen screen--final" id="screen-final-result" hidden aria-labelledby="final-result-title"></section>
 
     <noscript>
       <div class="panel">Для работы тренажёра включите JavaScript в браузере.</div>
@@ -182,7 +182,7 @@
   <script src="js/scoring.js"></script>
   <script src="js/attempt.js"></script>
   <script src="js/attempt-save.js"></script>
-  <script src="js/mode-session.js"></script>
+  <script src="js/final-session.js"></script>
 
   <!-- Банк заданий: папка раздела, по файлу на тему (см. README) -->
   <script src="data/tasks/society/general.js"></script>
@@ -206,7 +206,7 @@
 
   <!-- Интерфейс -->
   <script src="js/task-view.js"></script>
-  <script src="js/practicum-modes.js"></script>
+  <script src="js/final-practicum.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

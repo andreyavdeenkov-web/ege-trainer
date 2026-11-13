@@ -68,9 +68,10 @@ const PUBLISHED = {
     topic: 'OBS-SYS', number: 2, shuffle: false, max: 31,
     taskIds: Array.from({ length: 18 }, (_, i) => 'OBS-SYS-' + String(i + 19).padStart(3, '0'))
   },
-  // «Типы обществ»: 25 заданий банка в его порядке; режимы «Обучение» и «Экзамен».
-  'OBS-TYP-P01': {
-    topic: 'OBS-TYP', number: 1, shuffle: false, max: 35,
+  // «Итоговый практикум — Типы обществ»: 25 заданий банка в его порядке (kind: 'final').
+  'OBS-TYP-F01': {
+    topic: 'OBS-TYP', number: 1, shuffle: false, max: 35, kind: 'final',
+    title: 'Итоговый практикум — Типы обществ',
     taskIds: Array.from({ length: 25 }, (_, i) => 'OBS-TYP-' + String(i + 1).padStart(3, '0'))
   },
   'SOC-FAM-P01': {
@@ -129,7 +130,8 @@ test('у каждого практикума: постоянный уникал�
     assert.ok(!seen.has(p.id), `повтор ${p.id}`);
     seen.add(p.id);
     assert.ok(EGE.getTopic(p.topic), p.id);
-    const kind = p.status === 'retired' ? 'R' : 'P';
+    const kind = p.status === 'retired' ? 'R' : p.kind === 'final' ? 'F' : 'P';
+    assert.ok(EGE.PRACTICUM_KINDS.includes(p.kind), `${p.id}: kind training или final`);
     assert.equal(p.id, `${p.topic}-${kind}${String(p.number).padStart(2, '0')}`);
     assert.ok(EGE.PRACTICUM_STATUSES.includes(p.status), p.id);
     assert.ok(p.taskIds.length > 0, p.id);
@@ -152,8 +154,29 @@ test('опубликованы ровно девять практикумов с
     assert.deepEqual(Array.from(p.taskIds), want.taskIds, `${id}: состав и порядок`);
     assert.equal(EGE.getPracticumMaxScore(p), want.max, `${id}: максимум баллов`);
     assert.ok(EGE.isPracticumReady(p), id);
-    assert.equal(EGE.practicumTitle(p), `Практикум № ${want.number}`);
+    assert.equal(p.kind, want.kind || 'training', `${id}: назначение практикума`);
+    assert.equal(EGE.practicumTitle(p), want.title || `Практикум № ${want.number}`);
   }
+});
+
+test('итоговый практикум: kind final, ID ТЕМА-FНОМЕР, своя нумерация, в каталоге — после тренировочных', () => {
+  const T = loadTasksOnly();
+  T.addPracticums([
+    { id: 'SOC-STR-F01', topic: 'SOC-STR', number: 1, kind: 'final', status: 'published', taskIds: ['SOC-STR-001'] },
+    { id: 'SOC-STR-P01', topic: 'SOC-STR', number: 1, status: 'published', taskIds: ['SOC-STR-001'] }
+  ]);
+  assert.deepEqual(Array.from(T.getPublishedPracticums('SOC-STR'), (p) => p.id), ['SOC-STR-P01', 'SOC-STR-F01']);
+  assert.equal(T.getPracticum('SOC-STR-P01').kind, 'training', 'по умолчанию — тренировочный');
+  assert.equal(T.practicumTitle(T.getPracticum('SOC-STR-F01')), 'Итоговый практикум — Социальная стратификация');
+  const ok = { id: 'SOC-MOB-F01', topic: 'SOC-MOB', number: 1, kind: 'final', status: 'published', taskIds: ['SOC-MOB-001'] };
+  const bad = (patch) => () => T.addPracticums([Object.assign({}, ok, patch)]);
+  assert.throws(bad({ id: 'SOC-MOB-P01' }), /Номер практикума не совпадает/, 'итоговый — с буквой F');
+  assert.throws(bad({ kind: undefined }), /Номер практикума не совпадает/, 'F — только у итогового');
+  assert.throws(bad({ kind: 'exam' }), /Неизвестный kind/);
+  assert.throws(bad({ shuffle: true }), /постоянным порядком/);
+  assert.throws(bad({ criteria: [{ id: 'x' }] }), /criteria/);
+  assert.throws(() => T.addPracticums([{ id: 'SOC-MOB-P01', topic: 'SOC-MOB', number: 1, status: 'published', taskIds: ['SOC-MOB-001'], criteria: [] }]),
+    /только у итогового/);
 });
 
 test('«Деятельность», Практикум № 1 — все 16 заданий основного каталога', () => {
@@ -294,7 +317,7 @@ test('реестр отклоняет некорректные практику�
   assert.throws(bad({ status: 'retired', title: 'Прежний набор' }), /Номер практикума не совпадает/);
   assert.throws(bad({ id: 'SOC-STR-R01', status: 'retired' }), /нет названия/);
   assert.throws(bad({ id: 'SOC-STR-R01', status: 'published' }), /Номер практикума не совпадает/);
-  assert.throws(bad({ title: 'Особый практикум' }), /только «Практикум № N»/);
+  assert.throws(bad({ title: 'Особый практикум' }), /задаётся автоматически/);
   assert.throws(bad({ taskIds: ['SOC-STR-001', 'SOC-STR-001'] }), /повторяются/);
   assert.throws(bad({ taskIds: ['SOC-STR-999'] }), /Неизвестное задание/);
   assert.throws(bad({ taskIds: ['SOC-MOB-001'] }), /не из темы/);

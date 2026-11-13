@@ -125,7 +125,7 @@ test('OBS-TYP: оценивание по позиции КИМ — EXCL и MATCH
     assert.equal(t.kimTask, kim[t.bankFormat], t.id);
     assert.equal(S.getMaxPoints(t), points[t.bankFormat], t.id);
   }
-  assert.equal(EGE.getPracticumMaxScore(EGE.getPracticum('OBS-TYP-P01')), 35);
+  assert.equal(EGE.getPracticumMaxScore(EGE.getPracticum('OBS-TYP-F01')), 35);
 });
 
 test('OBS-TYP: объяснение каждой позиции согласовано с ключом (формулировки банка)', () => {
@@ -175,24 +175,19 @@ test('OBS-TYP: из условий убраны только бланковые 
   assert.match(EGE.getTask(id(21)).question, /является традиционным \(аграрным\)\?$/);
 });
 
-test('OBS-TYP: практикум с режимами «Обучение» и «Экзамен», постоянный порядок, шесть критериев', () => {
-  const p = EGE.getPracticum('OBS-TYP-P01');
-  assert.deepEqual(Array.from(p.modes), ['learn', 'exam']);
+test('OBS-TYP: итоговый практикум по теме — kind final, порядок банка, шесть критериев', () => {
+  const p = EGE.getPracticum('OBS-TYP-F01');
+  assert.equal(p.kind, 'final');
+  assert.equal(p.modes, undefined, 'выбора режимов нет');
+  assert.equal(EGE.practicumTitle(p), 'Итоговый практикум — Типы обществ');
   assert.ok(!p.shuffle);
   assert.deepEqual(Array.from(p.taskIds), PASSPORT.map((x) => id(x[0])));
   assert.deepEqual(Array.from(p.criteria, (c) => c.id), ['nature', 'factor', 'economy', 'social', 'politics', 'spiritual']);
   assert.deepEqual(Array.from(p.criteria, (c) => c.title), ['Отношение к природе', 'Основной фактор производства', 'Экономика',
     'Социальная структура', 'Политическая жизнь', 'Духовная жизнь']);
   // Каждое значение criteria заданий описано у практикума.
-  const known = new Set(p.criteria.map((c) => c.id));
+  const known = new Set(Array.from(p.criteria, (c) => c.id));
   tasks.forEach((t) => t.criteria.forEach((c) => assert.ok(known.has(c), t.id + ': ' + c)));
-});
-
-test('реестр: поле modes проверяется', () => {
-  const T = loadBank();
-  const base = { topic: 'OBS-TYP', status: 'draft', taskIds: ['OBS-TYP-001'] };
-  assert.throws(() => T.addPracticums([{ ...base, id: 'OBS-TYP-P02', number: 2, modes: ['quiz'] }]), /modes/);
-  assert.throws(() => T.addPracticums([{ ...base, id: 'OBS-TYP-P03', number: 3, modes: [] }]), /modes/);
-  assert.throws(() => T.addPracticums([{ ...base, id: 'OBS-TYP-P04', number: 4, modes: ['exam'], shuffle: true }]), /постоянным порядком/);
-  assert.throws(() => T.addPracticums([{ ...base, id: 'OBS-TYP-P05', number: 5, criteria: [{ id: 'x' }] }]), /criteria/);
+  // Тренировочные практикумы остались тренировочными.
+  for (const other of EGE.practicums.filter((x) => x.id !== p.id)) assert.equal(other.kind, 'training', other.id);
 });

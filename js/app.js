@@ -38,10 +38,10 @@
    * предпросмотр и разные практикумы основного тренажёра друг другу не мешают.
    */
   var saver = EGE.attemptSave;
-  /** Режимы практикума (js/practicum-modes.js): только на главной странице. */
-  var modes = !EGE.preview && EGE.practicumModes && hasModeScreens() ? EGE.practicumModes : null;
-  function hasModeScreens() {
-    return !!document.getElementById('screen-mode') && !!document.getElementById('screen-mode-result');
+  /** Итоговые практикумы по теме (kind: 'final', js/final-practicum.js): только на главной странице. */
+  var finals = !EGE.preview && EGE.finalPracticum && hasFinalScreens() ? EGE.finalPracticum : null;
+  function hasFinalScreens() {
+    return !!document.getElementById('screen-final') && !!document.getElementById('screen-final-result');
   }
   var SAVE_MODE = preview ? 'preview' : 'ege';
   var storage = (function () {
@@ -66,9 +66,9 @@
       start: $('screen-start'),
       quiz: $('screen-quiz'),
       result: $('screen-result'),
-      // Режимы «Обучение» и «Экзамен» (js/practicum-modes.js); на страницах предпросмотра их нет.
-      mode: $('screen-mode'),
-      modeResult: $('screen-mode-result')
+      // Итоговый практикум (js/final-practicum.js); на страницах предпросмотра этих экранов нет.
+      final: $('screen-final'),
+      finalResult: $('screen-final-result')
     },
     startForm: $('start-form'),
     sectionOptions: $('section-options'),
@@ -334,7 +334,7 @@
       var practicums = EGE.getPublishedPracticums(topic.id);
       var n = practicums.length;
       var unfinished = practicums.concat(EGE.getRetiredPracticums(topic.id)).some(function (p) {
-        return hasSavedAttempt(p) || (!!modes && modes.hasProgress(p));
+        return hasSavedAttempt(p) || (!!finals && finals.hasProgress(p));
       });
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
         n + ' ' + plural(n, 'практикум', 'практикума', 'практикумов'),
@@ -561,10 +561,10 @@
 
   function practicumCard(practicum, section) {
     var frame = cardFrame(practicum, section);
-    // Практикум с режимами «Обучение» и «Экзамен»: состояние и кнопки каждого режима —
-    // в js/practicum-modes.js; правило «одна попытка» к нему не относится.
-    if (modes && modes.hasModes(practicum)) {
-      modes.fillCard(frame);
+    // Итоговый практикум по теме (kind: 'final'): состояние и кнопки — js/final-practicum.js.
+    // Тренировочные практикумы (ниже) работают как прежде.
+    if (EGE.isFinalPracticum(practicum)) {
+      if (finals) finals.fillCard(frame);
       return finishCard(frame);
     }
     var st = practicumState(practicum);
@@ -1308,7 +1308,7 @@
   window.addEventListener('storage', function (e) {
     if (preview || ui.screens.start.hidden || !e.key) return;
     if (e.key.indexOf(saver.KEY_PREFIX) === 0 || e.key.indexOf(saver.RESULT_PREFIX) === 0 ||
-        (modes && modes.isStorageKey(e.key))) renderStart();
+        (finals && finals.isStorageKey(e.key))) renderStart();
   });
   // Закрытие вкладки, переход в другое приложение на телефоне: сохраняем последнее состояние.
   window.addEventListener('pagehide', function () { persist(); });
@@ -1414,10 +1414,10 @@
     }
   });
 
-  if (modes) {
-    modes.init({
+  if (finals) {
+    finals.init({
       storage: storage,
-      screens: { mode: ui.screens.mode, modeResult: ui.screens.modeResult },
+      screens: { run: ui.screens.final, result: ui.screens.finalResult },
       showScreen: showScreen,
       showStart: showStart,
       formatDate: formatSavedAt
