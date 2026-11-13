@@ -171,9 +171,9 @@ for (const config of CONFIGS) {
     assert.equal(await page.getAttribute('#mode-statements .statement[data-number="4"] .statement__btn', 'aria-checked'), 'true');
     assert.ok(await page.locator('#mode-nav li:nth-child(1) button.points--full').count(), 'задание 1 отмечено по последней проверке');
 
-    // Клавиатура: цифры отмечают, Enter проверяет и переходит дальше.
-    await page.keyboard.press('4');
+    // Клавиатура: цифры отмечают (4 уже отмечена до перезагрузки), Enter проверяет и переходит дальше.
     await page.keyboard.press('6');
+    assert.equal(await page.getAttribute('#mode-statements .statement[data-number="6"] .statement__btn', 'aria-checked'), 'true');
     await page.keyboard.press('Enter');
     assert.match(await page.textContent('#mode-feedback'), /1 из 1 балла/);
     await page.keyboard.press('Enter');
