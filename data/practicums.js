@@ -115,6 +115,30 @@ EGE.addPracticums([
     ]
   },
   {
+    // «Типы обществ», Практикум № 1 и № 2 — тренировочные (проверка после каждого задания):
+    // задания документов преподавателя «Типы обществ тест 1» и «тест 2» в их порядке.
+    id: 'OBS-TYP-P01',
+    topic: 'OBS-TYP',
+    number: 1,
+    status: 'published',
+    taskIds: [
+      'OBS-TYP-026', 'OBS-TYP-027', 'OBS-TYP-028', 'OBS-TYP-029', 'OBS-TYP-030',
+      'OBS-TYP-031', 'OBS-TYP-032', 'OBS-TYP-033', 'OBS-TYP-034', 'OBS-TYP-035',
+      'OBS-TYP-036', 'OBS-TYP-037', 'OBS-TYP-038', 'OBS-TYP-039', 'OBS-TYP-040'
+    ]
+  },
+  {
+    id: 'OBS-TYP-P02',
+    topic: 'OBS-TYP',
+    number: 2,
+    status: 'published',
+    taskIds: [
+      'OBS-TYP-041', 'OBS-TYP-042', 'OBS-TYP-043', 'OBS-TYP-044', 'OBS-TYP-045',
+      'OBS-TYP-046', 'OBS-TYP-047', 'OBS-TYP-048', 'OBS-TYP-049', 'OBS-TYP-050',
+      'OBS-TYP-051', 'OBS-TYP-052', 'OBS-TYP-053', 'OBS-TYP-054', 'OBS-TYP-055'
+    ]
+  },
+  {
     // «Итоговый практикум — Типы обществ»: 25 заданий утверждённого банка преподавателя в его
     // порядке (OBS-TYP-001…025 = № 1–25). Итоговая работа (kind: 'final', js/final-session.js):
     // все задания без проверки, ответы можно менять и пропускать; балл, разбор и аналитика —

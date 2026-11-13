@@ -104,15 +104,16 @@
       notice.setAttribute('role', 'status');
       frame.card.appendChild(notice);
     }
-    if (history.length) {
-      var h = history[0];
+    var sum = F.progressSummary(history);
+    if (sum) {
       frame.head.appendChild(el('span', 'practicum-card__status practicum-card__status--done', 'Выполнен'));
-      frame.card.appendChild(el('p', 'practicum-card__result', 'Последний результат: ' +
-        scoring.formatPointsOutOf(h.score, h.max) + ' (' + scoring.percent(h.score, h.max) + '%) · ' + env.formatDate(h.finishedAt)));
-      if (history.length > 1) {
-        var best = history.reduce(function (b, x) { return x.score > b.score ? x : b; }, h);
-        frame.card.appendChild(el('p', 'practicum-card__progress', 'Завершённых попыток: ' + history.length +
-          ' · лучший результат: ' + scoring.formatPointsOutOf(best.score, best.max)));
+      frame.card.appendChild(el('p', 'practicum-card__result', 'Последний результат: ' + resultText(sum.last) +
+        ' · ' + env.formatDate(sum.last.finishedAt)));
+      if (sum.count > 1) {
+        var line = el('p', 'practicum-card__progress final-card__history');
+        line.textContent = 'Попыток: ' + sum.count + ' · первая: ' + scoreText(sum.first) +
+          ' · лучшая: ' + scoreText(sum.best) + ' · ' + deltaText(sum.sinceFirst) + ' с первой попытки';
+        frame.card.appendChild(line);
       }
     }
 
@@ -135,6 +136,23 @@
         openResult(practicum, last.session, last.changed, null);
       }));
     }
+  }
+
+  /** «27 из 35 баллов (77%)» */
+  function resultText(h) {
+    return scoring.formatPointsOutOf(h.score, h.max) + ' (' + scoring.percent(h.score, h.max) + '%)';
+  }
+
+  /** «27 из 35» */
+  function scoreText(h) {
+    return h.score + ' из ' + h.max;
+  }
+
+  /** «+3 балла», «−1 балл», «без изменений» */
+  function deltaText(d) {
+    if (d === 0) return 'без изменений';
+    var n = Math.abs(d);
+    return (d > 0 ? '+' : '−') + n + ' ' + scoring.pluralPoints(n);
   }
 
   /** «Начать заново» с подтверждением: незавершённая работа удаляется (итоги прежних попыток остаются). */
@@ -579,12 +597,69 @@
       panel.appendChild(note);
     }
     var actions = el('div', 'result__actions');
-    actions.appendChild(button('btn--primary btn--lg final-result__home', 'К выбору практикума', function () { env.showStart(); }));
+    actions.appendChild(button('btn--primary btn--lg final-result__again', 'Пройти ещё раз', function () {
+      var practicum = state.practicum;
+      var saved = F.load(storage(), deps(practicum));
+      if (saved.status === 'ok') openRun(practicum, saved.session);
+      else start(practicum);
+    }));
+    actions.appendChild(button('btn--ghost btn--lg final-result__home', 'К выбору практикума', function () { env.showStart(); }));
     panel.appendChild(actions);
     root.appendChild(panel);
 
+    var hist = historyPanel(s);
+    if (hist) root.appendChild(hist);
     root.appendChild(analyticsPanel(r.analytics));
     root.appendChild(reviewPanel());
+  }
+
+  /**
+   * История попыток: первая, последняя и лучшая, изменение и все попытки по порядку
+   * (шкала — процент от максимума). Текущая попытка отмечена.
+   */
+  function historyPanel(session) {
+    var sum = F.progressSummary(F.loadHistory(storage(), session.scope));
+    if (!sum) return null;
+    var panel = el('section', 'panel final-history');
+    panel.id = 'final-history';
+    var h = el('h3', 'section-title', 'История попыток');
+    h.id = 'final-history-title';
+    panel.setAttribute('aria-labelledby', h.id);
+    panel.appendChild(h);
+
+    var tiles = el('ul', 'final-stats final-history__summary');
+    tiles.id = 'final-history-summary';
+    tiles.appendChild(statTile(scoreText(sum.first), 'первая попытка', 'final-stat--muted'));
+    tiles.appendChild(statTile(scoreText(sum.last), 'последняя попытка', 'final-stat--muted'));
+    tiles.appendChild(statTile(scoreText(sum.best), 'лучший результат', 'final-stat--muted'));
+    panel.appendChild(tiles);
+    if (sum.count > 1) {
+      panel.appendChild(el('p', 'final-history__delta', 'С первой попытки: ' + deltaText(sum.sinceFirst) +
+        ' · с предыдущей: ' + deltaText(sum.sincePrevious) + '.'));
+    }
+
+    var list = el('ol', 'meter-list final-history__list');
+    list.id = 'final-history-list';
+    sum.attempts.forEach(function (a, i) {
+      var li = el('li', 'meter' + (a.id === session.id ? ' is-current' : ''));
+      var head = el('div', 'meter__head');
+      var label = 'Попытка ' + (i + 1) + ' · ' + env.formatDate(a.finishedAt);
+      if (a.id === session.id) label += ' · эта попытка';
+      if (i === sum.bestIndex) label += ' · лучшая';
+      head.appendChild(el('span', 'meter__title', label));
+      head.appendChild(el('span', 'meter__value', scoring.formatPointsOutOf(a.score, a.max) + ' · ' + scoring.percent(a.score, a.max) + '%'));
+      li.appendChild(head);
+      var track = el('div', 'meter__track');
+      track.setAttribute('role', 'img');
+      track.setAttribute('aria-label', 'Попытка ' + (i + 1) + ': ' + scoring.percent(a.score, a.max) + '% баллов');
+      var fill = el('div', 'meter__fill');
+      fill.style.width = scoring.percent(a.score, a.max) + '%';
+      track.appendChild(fill);
+      li.appendChild(track);
+      list.appendChild(li);
+    });
+    panel.appendChild(list);
+    return panel;
   }
 
   function meterGroup(title, groups, id) {

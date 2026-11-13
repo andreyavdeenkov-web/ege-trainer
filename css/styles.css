@@ -1104,3 +1104,10 @@ kbd {
   .final-stat__value { font-size: 20px; }
   .final-finish .btn, .practicum-card__actions .btn { width: 100%; }
 }
+
+/* История попыток итогового практикума */
+.final-history__summary { margin-top: 0; }
+.final-stat--muted { border-top: 3px solid var(--primary); }
+.final-history__delta { margin-top: 10px; font-size: 14px; color: var(--text-muted); }
+.final-history__list { margin-top: 14px; }
+.final-history__list .meter.is-current .meter__title { color: var(--primary); }

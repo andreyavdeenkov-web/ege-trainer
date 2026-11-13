@@ -29,7 +29,8 @@
  * Хранилище (область — практикум; записи тренировочных практикумов не затрагиваются):
  *   ege-trainer:final:<область>          — незавершённая попытка;
  *   ege-trainer:final-result:<область>   — последняя завершённая попытка (для разбора);
- *   ege-trainer:final-history:<область>  — краткие итоги завершённых попыток (до 20).
+ *   ege-trainer:final-history:<область>  — краткие итоги завершённых попыток (до 500; первая
+ *                                          попытка не вытесняется, см. complete).
  */
 (function (root) {
   'use strict';
@@ -42,7 +43,7 @@
   var KEY_PREFIX = 'ege-trainer:final:';
   var RESULT_PREFIX = 'ege-trainer:final-result:';
   var HISTORY_PREFIX = 'ege-trainer:final-history:';
-  var HISTORY_LIMIT = 20;
+  var HISTORY_LIMIT = 500;
 
   /** Измерения учебной аналитики, общие для итоговых практикумов. */
   var FORMATS = [
@@ -475,7 +476,9 @@
       var list = hist.status === 'ok' && Array.isArray(hist.value) ? hist.value : [];
       list = list.filter(function (h) { return h && h.id !== session.id; });
       list.unshift(sum);
-      storage.setItem(historyKey(session.scope), JSON.stringify(list.slice(0, HISTORY_LIMIT)));
+      // При переполнении вытесняются промежуточные попытки, первая остаётся (для динамики).
+      while (list.length > HISTORY_LIMIT) list.splice(list.length - 2, 1);
+      storage.setItem(historyKey(session.scope), JSON.stringify(list));
     } catch (e) {
       return 'failed';
     }
@@ -498,6 +501,29 @@
       return !task || rec.fingerprints[id] !== deps.fingerprint(task);
     });
     return { status: 'ok', session: rec, changed: changed };
+  }
+
+  /**
+   * Сводка истории: число попыток, первая, последняя и лучшая (при равенстве — более ранняя)
+   * и изменение последней относительно первой и предыдущей (в баллах). null — попыток нет.
+   * history — как возвращает loadHistory: новые попытки первыми.
+   */
+  function progressSummary(history) {
+    if (!history.length) return null;
+    var chrono = history.slice().reverse();
+    var best = chrono.reduce(function (b, h) { return h.score > b.score ? h : b; }, chrono[0]);
+    var last = chrono[chrono.length - 1];
+    var prev = chrono.length > 1 ? chrono[chrono.length - 2] : null;
+    return {
+      count: chrono.length,
+      first: chrono[0],
+      last: last,
+      best: best,
+      bestIndex: chrono.indexOf(best),
+      sinceFirst: last.score - chrono[0].score,
+      sincePrevious: prev ? last.score - prev.score : null,
+      attempts: chrono
+    };
   }
 
   function loadHistory(storage, scope) {
@@ -543,7 +569,8 @@
     load: load,
     complete: complete,
     loadResult: loadResult,
-    loadHistory: loadHistory
+    loadHistory: loadHistory,
+    progressSummary: progressSummary
   };
 
   EGE.finalSession = api;

@@ -49,11 +49,13 @@ const CRIT = { 'ПР': 'nature', 'Ф': 'factor', 'Э': 'economy', 'С': 'social'
 const LEVEL = { 'Б': 1, 'С': 2, 'Пв': 3 };
 const ACT = { 'Уз': 'recognition', 'Пн': 'understanding', 'Рз': 'distinction' };
 
-const tasks = EGE.getTasksByTopic('OBS-TYP');
+/** Итоговый практикум — 25 заданий банка (в теме есть ещё 30 заданий тренировочных практикумов). */
+const tasks = EGE.getPracticumTasks(EGE.getPracticum('OBS-TYP-F01'));
 const keyOf = (task) => S.getCorrect(task).join('');
 
 test('OBS-TYP: загружены ровно 25 заданий OBS-TYP-001…025 в порядке банка', () => {
   assert.equal(tasks.length, 25);
+  assert.equal(EGE.getTasksByTopic('OBS-TYP').filter((t) => t.bankNumber).length, 25, 'задания банка — только 001…025');
   assert.deepEqual(Array.from(tasks, (t) => t.id), PASSPORT.map((p) => id(p[0])));
   tasks.forEach((t, i) => assert.equal(t.bankNumber, i + 1, t.id));
   assert.equal(EGE.getTopic('OBS-TYP').title, 'Типы обществ');

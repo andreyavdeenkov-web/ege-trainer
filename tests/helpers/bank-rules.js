@@ -73,7 +73,20 @@ function explanationPrefixes(EGE, task) {
   if (task.bankFormat === 'EXCL') return [['Выпадает.'], ['Верно.']];
   if (task.bankFormat === 'MULTI') return [['Верно.'], ['Неверно.', 'Неверно:', 'Неверно ']];
   if (task.bankFormat === 'COND') return [['Подходит.'], ['Не подходит.']];
-  return type === 'exclude-two' ? [['Выпадает.'], ['Не выпадает.']] : [['Верно.'], ['Неверно.']];
+  // «Выпадает из общего ряда» / «Не выпадает из общего ряда» — формулировки тренировочных
+  // практикумов «Типов обществ»; «Верно:» / «Неверно:» — вердикт с пояснением через двоеточие.
+  return type === 'exclude-two'
+    ? [['Выпадает.', 'Выпадает из общего ряда.'], ['Не выпадает.', 'Не выпадает из общего ряда.']]
+    : [['Верно.', 'Верно:'], ['Неверно.', 'Неверно:']];
+}
+
+/**
+ * Задания, перенесённые из утверждённых документов преподавателя дословно: их пояснения
+ * не дописываются под минимальную длину, а общий признак ряда добавляется только после
+ * утверждения формулировок (банк «Типы обществ» и тренировочные тесты 1 и 2).
+ */
+function isApprovedVerbatim(task) {
+  return !!task.bankFormat || /^Типы обществ, тест [12],/.test((task.source && task.source.ref) || '');
 }
 
 /**
@@ -88,7 +101,7 @@ function newTaskErrors(EGE, task) {
   const explained = (text, prefix) => {
     if (!isText(text)) return false;
     const body = prefix && text.startsWith(prefix) ? text.slice(prefix.length) : text;
-    return body.trim().length >= MIN_EXPLANATION;
+    return body.trim().length >= (isApprovedVerbatim(task) ? 1 : MIN_EXPLANATION);
   };
 
   if (type === 'matching') {
@@ -119,9 +132,9 @@ function newTaskErrors(EGE, task) {
     if (task.statements.length !== 6) errors.push('exclude-two: ровно 6 позиций');
     // В утверждённом банке «Типы обществ» общий признак ряда назван в условии задания,
     // отдельного поля в банке нет — придумывать его нельзя.
-    if (!task.bankFormat && !isText(task.commonFeature)) errors.push('exclude-two: нужен commonFeature — общий признак ряда');
+    if (!isApprovedVerbatim(task) && !isText(task.commonFeature)) errors.push('exclude-two: нужен commonFeature — общий признак ряда');
   }
   return errors;
 }
 
-module.exports = { metadataErrors, newTaskErrors, explanationPrefixes, MIN_EXPLANATION };
+module.exports = { metadataErrors, newTaskErrors, explanationPrefixes, isApprovedVerbatim, MIN_EXPLANATION };

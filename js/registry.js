@@ -443,14 +443,17 @@
   /**
    * Название для ученика: «Практикум № 1»; у итогового — «Итоговый практикум — Тема»
    * (с номером, если итоговых в теме несколько); у прежнего набора — его title.
+   * В теме с итоговым практикумом тренировочные тоже называются с темой —
+   * «Практикум № 1 — Тема», в одном стиле с итоговым. В остальных темах названия прежние.
    */
   EGE.practicumTitle = function (practicum) {
     if (practicum.status === 'retired') return practicum.title;
+    var topic = EGE.getTopic(practicum.topic).title;
+    var finals = EGE.practicums.filter(function (o) { return o.topic === practicum.topic && EGE.isFinalPracticum(o); });
     if (EGE.isFinalPracticum(practicum)) {
-      var several = EGE.practicums.some(function (o) { return o !== practicum && o.topic === practicum.topic && EGE.isFinalPracticum(o); });
-      return 'Итоговый практикум' + (several ? ' № ' + practicum.number : '') + ' — ' + EGE.getTopic(practicum.topic).title;
+      return 'Итоговый практикум' + (finals.length > 1 ? ' № ' + practicum.number : '') + ' — ' + topic;
     }
-    return 'Практикум № ' + practicum.number;
+    return 'Практикум № ' + practicum.number + (finals.length ? ' — ' + topic : '');
   };
 
   /** Темы раздела, в которых есть хотя бы один опубликованный практикум. */

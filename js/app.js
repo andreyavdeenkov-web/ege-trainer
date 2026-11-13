@@ -916,7 +916,10 @@
   /** Показывает задание state.viewIndex: для выбора ответа или с разбором. */
   /** «Познание · Практикум № 1» — над прогрессом и в итогах. */
   function practicumLabel(practicum) {
-    return EGE.getTopic(practicum.topic).title + ' · ' + EGE.practicumTitle(practicum);
+    var title = EGE.practicumTitle(practicum);
+    var topic = EGE.getTopic(practicum.topic).title;
+    // Название уже содержит тему («Практикум № 1 — Типы обществ») — не повторяем её.
+    return title.indexOf(' — ' + topic) !== -1 ? title : topic + ' · ' + title;
   }
 
   function renderView() {

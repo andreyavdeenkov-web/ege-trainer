@@ -68,6 +68,15 @@ const PUBLISHED = {
     topic: 'OBS-SYS', number: 2, shuffle: false, max: 31,
     taskIds: Array.from({ length: 18 }, (_, i) => 'OBS-SYS-' + String(i + 19).padStart(3, '0'))
   },
+  // «Типы обществ»: два тренировочных практикума по 15 заданий (тесты 1 и 2 преподавателя).
+  'OBS-TYP-P01': {
+    topic: 'OBS-TYP', number: 1, shuffle: false, max: 26, title: 'Практикум № 1 — Типы обществ',
+    taskIds: Array.from({ length: 15 }, (_, i) => 'OBS-TYP-' + String(i + 26).padStart(3, '0'))
+  },
+  'OBS-TYP-P02': {
+    topic: 'OBS-TYP', number: 2, shuffle: false, max: 26, title: 'Практикум № 2 — Типы обществ',
+    taskIds: Array.from({ length: 15 }, (_, i) => 'OBS-TYP-' + String(i + 41).padStart(3, '0'))
+  },
   // «Итоговый практикум — Типы обществ»: 25 заданий банка в его порядке (kind: 'final').
   'OBS-TYP-F01': {
     topic: 'OBS-TYP', number: 1, shuffle: false, max: 35, kind: 'final',
@@ -143,7 +152,7 @@ test('у каждого практикума: постоянный уникал�
   }
 });
 
-test('опубликованы ровно девять практикумов с утверждённым составом', () => {
+test('опубликованы ровно одиннадцать практикумов с утверждённым составом', () => {
   const published = EGE.practicums.filter((p) => p.status === 'published');
   assert.deepEqual(ids(published).sort(), Object.keys(PUBLISHED).sort());
   for (const [id, want] of Object.entries(PUBLISHED)) {
@@ -157,6 +166,16 @@ test('опубликованы ровно девять практикумов с
     assert.equal(p.kind, want.kind || 'training', `${id}: назначение практикума`);
     assert.equal(EGE.practicumTitle(p), want.title || `Практикум № ${want.number}`);
   }
+});
+
+test('«Типы обществ»: в каталоге Практикум № 1, Практикум № 2, затем итоговый; задания не повторяются', () => {
+  assert.deepEqual(Array.from(EGE.getPublishedPracticums('OBS-TYP'), (p) => p.id), ['OBS-TYP-P01', 'OBS-TYP-P02', 'OBS-TYP-F01']);
+  assert.deepEqual(Array.from(EGE.getPublishedPracticums('OBS-TYP'), EGE.practicumTitle),
+    ['Практикум № 1 — Типы обществ', 'Практикум № 2 — Типы обществ', 'Итоговый практикум — Типы обществ']);
+  const all = EGE.getPublishedPracticums('OBS-TYP').flatMap((p) => Array.from(p.taskIds));
+  assert.equal(new Set(all).size, 55);
+  // В темах без итогового практикума названия прежние.
+  assert.equal(EGE.practicumTitle(EGE.getPracticum('OBS-SYS-P01')), 'Практикум № 1');
 });
 
 test('итоговый практикум: kind final, ID ТЕМА-FНОМЕР, своя нумерация, в каталоге — после тренировочных', () => {

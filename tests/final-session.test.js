@@ -249,3 +249,39 @@ test('недоступное хранилище не мешает: сохран�
   F.finish(s, new Date(), EGE.getTask);
   assert.equal(F.complete(broken, s, { id: s.id }), 'failed');
 });
+
+test('повторные попытки: история хранит каждую, сводка — первая, последняя, лучшая и динамика', () => {
+  const st = memoryStorage();
+  const answers = [[], [[1, [2, 4]], [15, [1, 3, 5]]], [[1, [2, 4]]], [[1, [2, 4]], [15, [1, 3, 5]], [7, [1, 2, 1, 2, 2]]]];
+  answers.forEach((list, k) => {
+    const s = session(new Date(Date.UTC(2026, 10, 1 + k)));
+    list.forEach(([n, sel]) => F.setResponse(s, T(n), sel));
+    F.finish(s, new Date(Date.UTC(2026, 10, 1 + k, 1)), EGE.getTask);
+    F.complete(st, s, F.summary(s, F.analytics(F.results(s, EGE.getTask), P.criteria)));
+  });
+  const sum = F.progressSummary(F.loadHistory(st, SCOPE));
+  assert.equal(sum.count, 4);
+  assert.deepEqual(plain(sum.attempts.map((a) => a.score)), [0, 3, 1, 4], 'по порядку прохождения');
+  assert.equal(sum.first.score, 0);
+  assert.equal(sum.last.score, 4);
+  assert.equal(sum.best.score, 4);
+  assert.equal(sum.bestIndex, 3);
+  assert.equal(sum.sinceFirst, 4);
+  assert.equal(sum.sincePrevious, 3);
+  assert.equal(F.progressSummary([]), null);
+});
+
+test('история не теряет первую попытку при переполнении', () => {
+  const st = memoryStorage();
+  const fake = (i) => ({ id: 'a' + i, score: i, max: 35, finishedAt: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString() });
+  let list = [];
+  for (let i = 0; i < F.HISTORY_LIMIT; i++) list.unshift(fake(i));
+  st.setItem(F.historyKey(SCOPE), JSON.stringify(list));
+  const s = session();
+  F.finish(s, new Date(), EGE.getTask);
+  F.complete(st, s, F.summary(s, F.analytics(F.results(s, EGE.getTask), P.criteria)));
+  const hist = F.loadHistory(st, SCOPE);
+  assert.equal(hist.length, F.HISTORY_LIMIT);
+  assert.equal(hist[0].id, s.id, 'новая — первой в списке');
+  assert.equal(hist[hist.length - 1].id, 'a0', 'самая первая попытка сохранена');
+});

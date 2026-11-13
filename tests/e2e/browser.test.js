@@ -182,14 +182,14 @@ for (const config of CONFIGS) {
     // Сначала виден только выбор раздела.
     assert.ok(await page.locator('#topic-field').isHidden());
     assert.ok(await page.locator('#practicum-field').isHidden());
-    assert.equal(await noteOf(page, 'section', 'OBS'), '4 темы');
+    assert.equal(await noteOf(page, 'section', 'OBS'), '5 тем');
     assert.equal(await noteOf(page, 'section', 'ECO'), 'Практикумы готовятся');
     await assertNoHorizontalScroll(page, 'старт');
     await shot(page, config, '1-start');
 
     // Раздел → темы (только с практикумами, без «Общих вопросов»).
     await pick(page, 'section', 'OBS');
-    assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
+    assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS', 'OBS-TYP']);
     assert.equal(await noteOf(page, 'topic', 'OBS-COG'), '1 практикум');
     assert.equal(await noteOf(page, 'topic', 'OBS-SCK'), '2 практикума');
     assert.equal(await noteOf(page, 'topic', 'OBS-SYS'), '2 практикума');

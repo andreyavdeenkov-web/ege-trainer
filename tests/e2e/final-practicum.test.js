@@ -111,19 +111,74 @@ async function assertNothingRevealed(page, where) {
 }
 
 for (const config of CONFIGS) {
-  test(`${config.name}: каталог темы — карточка итогового практикума без выбора режимов`, async () => {
+  test(`${config.name}: каталог темы — Практикум № 1, Практикум № 2 и выделенный итоговый, без выбора режимов`, async () => {
     const { page, context, errors } = await open(config);
     await openTopic(page);
+    assert.deepEqual(await page.locator('#practicum-options .practicum-card').evaluateAll((cards) => cards.map((c) => c.dataset.practicum)),
+      ['OBS-TYP-P01', 'OBS-TYP-P02', 'OBS-TYP-F01']);
+    assert.deepEqual(await page.locator('#practicum-options .practicum-card__title').allTextContents(),
+      ['Практикум № 1 — Типы обществ', 'Практикум № 2 — Типы обществ', 'Итоговый практикум — Типы обществ']);
+    // Тренировочные — обычные карточки; итоговый — выделен.
+    for (const id of ['OBS-TYP-P01', 'OBS-TYP-P02']) {
+      const t = page.locator(`[data-practicum="${id}"]`);
+      assert.equal(await t.locator('.practicum-card__kind').count(), 0, id);
+      assert.match(await t.locator('.practicum-card__meta').textContent(), /15 заданий · максимум 26 баллов/, id);
+      assert.equal(await t.locator('.practicum-card__start').textContent(), 'Начать практикум', id);
+      assert.ok(!(await t.evaluate((n) => n.classList.contains('practicum-card--final'))), id);
+    }
     const c = card(page);
-    assert.match(await c.locator('.practicum-card__title').textContent(), /^Итоговый практикум — Типы обществ$/);
     assert.equal(await c.locator('.practicum-card__kind').textContent(), 'Итоговый');
     assert.ok(await c.evaluate((n) => n.classList.contains('practicum-card--final')));
     assert.match(await c.locator('.practicum-card__meta').textContent(), /25 заданий · максимум 35 баллов/);
     assert.equal(await page.locator('.mode-option, [data-mode]').count(), 0, 'выбора «Обучение / Экзамен» нет');
     assert.doesNotMatch(await page.textContent('#practicum-options'), /Обучение|Экзамен/);
     assert.deepEqual(await c.locator('.practicum-card__actions button:visible').allTextContents(), ['Начать итоговую работу']);
-    await assertNoHorizontalScroll(page, 'карточка');
-    await shot(page, config, 'card');
+    // Последовательность не обязательна: итоговый доступен сразу.
+    assert.ok(await c.locator('.final-card__start').isEnabled());
+    await assertNoHorizontalScroll(page, 'каталог');
+    await shot(page, config, 'catalog');
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: тренировочный Практикум № 1 — мгновенная проверка, правильный ответ и пояснения`, async () => {
+    const { page, context, errors } = await open(config);
+    await openTopic(page);
+    const t = page.locator('[data-practicum="OBS-TYP-P01"]');
+    await t.locator('.practicum-card__start').click();
+    await t.locator('.practicum-card__confirm-yes').click();
+    assert.equal(await page.textContent('#quiz-title'), 'Практикум № 1 — Типы обществ');
+    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 15/);
+    assert.equal(await page.textContent('#task-question'),
+      'Ниже приведён перечень характеристик. Все они, за исключением двух, относятся к индустриальному обществу.');
+    // № 1, ключ 3 5: ответ 3 4 — ошибка.
+    await page.click('#statements .statement[data-number="3"] .statement__btn');
+    await page.click('#statements .statement[data-number="4"] .statement__btn');
+    await page.click('#submit-btn');
+    assert.ok(await page.isVisible('#feedback'));
+    assert.match(await page.textContent('#feedback-points'), /0 из 1 балла/);
+    assert.equal(await page.textContent('#feedback-correct'), '3, 5');
+    assert.match(await page.textContent('#statements .statement[data-number="4"]'), /Ошибка — не выпадает из общего ряда/);
+    assert.match(await page.textContent('#statements .statement[data-number="4"]'), /Не выпадает из общего ряда\. Индустриальные: машинный труд\./);
+    assert.match(await page.textContent('#statements .statement[data-number="5"]'), /Пропущено — выпадает из общего ряда/);
+    assert.match(await page.textContent('#task-notes'), /Индустриальное общество: исключения/);
+    await page.click('#next-btn');
+    // № 2 (суждения), ключ 2 4 5 — верно.
+    for (const n of [2, 4, 5]) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
+    await page.click('#submit-btn');
+    assert.match(await page.textContent('#feedback-points'), /2 из 2 баллов/);
+    assert.match(await page.textContent('#statements .statement[data-number="1"]'), /Неверно: ведущий фактор традиционной экономики — земля, не капитал\./);
+    await assertNoHorizontalScroll(page, 'тренировочный практикум');
+    await shot(page, config, 'training');
+    // Результаты независимы: итоговый практикум не начат и не затронут.
+    await page.click('#brand-home');
+    if (await page.isVisible('#exit-confirm')) await page.click('#exit-confirm');
+    await openTopic(page);
+    assert.match(await page.locator('[data-practicum="OBS-TYP-P01"]').textContent(), /Выполнено 2 из 15/);
+    assert.equal(await page.locator('[data-practicum="OBS-TYP-P02"] .practicum-card__start').count(), 1);
+    assert.equal(await card(page).locator('.final-card__start').count(), 1);
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.includes('OBS-TYP')).sort());
+    assert.deepEqual(keys, ['ege-trainer:attempt:ege/OBS/OBS-TYP/OBS-TYP-P01']);
     assert.deepEqual(errors, []);
     await context.close();
   });
@@ -133,6 +188,7 @@ for (const config of CONFIGS) {
     await openTopic(page);
     await card(page).locator('.final-card__start').click();
     assert.equal(await page.textContent('#final-run-title'), 'Итоговый практикум — Типы обществ');
+    assert.equal(await page.locator('#screen-start').isHidden(), true);
     assert.match(await page.textContent('#final-progress-label'), /^Задание 1 из 25 · отвечено 0/);
     await assertNothingRevealed(page, 'начало');
     // № 1: сначала неверно, потом исправлено.
@@ -213,11 +269,39 @@ for (const config of CONFIGS) {
     await assertNoHorizontalScroll(page, 'итоги');
     await shot(page, config, 'result');
 
-    // Каталог: результат сохранён, работу можно открыть для просмотра и пройти снова.
+    assert.match(await page.textContent('#final-history'), /История попыток/);
+    assert.equal(await page.locator('#final-history-list .meter').count(), 1);
+
+    // Повторная попытка: история хранит обе, видны первая, последняя и лучшая и динамика.
+    await page.click('.final-result__again');
+    assert.match(await page.textContent('#final-progress-label'), /^Задание 1 из 25 · отвечено 0/, 'новая попытка — с чистого листа');
+    await assertNothingRevealed(page, 'повторная попытка');
+    await answer(page, await keyOf(page, 0));
+    await page.click('#final-nav li:nth-child(15) button');
+    await answer(page, await keyOf(page, 14));
+    await page.click('.final-finish__open');
+    await page.click('.final-finish__confirm');
+    assert.match(await page.textContent('#final-result-score'), /3 из 35 баллов/);
+    const summary = await page.textContent('#final-history-summary');
+    assert.match(summary, /2 из 35\s*первая попытка/);
+    assert.match(summary, /3 из 35\s*последняя попытка/);
+    assert.match(summary, /3 из 35\s*лучший результат/);
+    assert.match(await page.textContent('#final-history'), /С первой попытки: \+1 балл · с предыдущей: \+1 балл/);
+    assert.equal(await page.locator('#final-history-list .meter').count(), 2);
+    assert.match(await page.textContent('#final-history-list .meter:nth-child(2)'), /Попытка 2 .*эта попытка · лучшая/);
+    await assertNoHorizontalScroll(page, 'история попыток');
+    await shot(page, config, 'history');
+
+    // Каталог: последняя, первая и лучшая; результаты тренировочных практикумов не появились.
     await page.click('.final-result__home');
-    assert.match(await card(page).textContent(), /Последний результат: 2 из 35 баллов/);
+    const text = await card(page).textContent();
+    assert.match(text, /Последний результат: 3 из 35 баллов/);
+    assert.match(text, /Попыток: 2 · первая: 2 из 35 · лучшая: 3 из 35 · \+1 балл с первой попытки/);
+    for (const id of ['OBS-TYP-P01', 'OBS-TYP-P02']) {
+      assert.equal(await page.locator(`[data-practicum="${id}"] .practicum-card__start`).count(), 1, `${id} не затронут`);
+    }
     await card(page).locator('.final-card__results').click();
-    assert.match(await page.textContent('#final-result-score'), /2 из 35 баллов/);
+    assert.match(await page.textContent('#final-result-score'), /3 из 35 баллов/);
     assert.deepEqual(errors, []);
     await context.close();
   });
