@@ -17,6 +17,10 @@
  * пояснения и вердикты пояснений («верно»/«неверно», «относится»/«не относится», «тип 2»),
  * если не хватает вариантов или пояснений.
  *
+ * Содержательная редакция, утверждённая преподавателем 14.11.2026, хранится отдельно —
+ * scripts/society-types-training-approved.js (объяснения позиций, замена теста 2, № 10) —
+ * и применяется при каждой сборке поверх текста документов (applyApproved).
+ *
  * Изменения относительно документов — только оформление под интерфейс платформы:
  *  - из условий убраны бланковые указания («…и запишите цифры…», «Запишите цифры…»,
  *    «Запишите в таблицу выбранные цифры…», строки «Ответ:»), source.adapted: true;
@@ -31,6 +35,7 @@
  */
 const fs = require('node:fs');
 const path = require('node:path');
+const { EXPLANATIONS, REPLACED_TASKS } = require('./society-types-training-approved.js');
 
 const OUT = path.join(__dirname, '..', 'data', 'tasks', 'society', 'society-types-training.js');
 
@@ -203,7 +208,9 @@ function build(md, docNo, firstId) {
   const numbers = Object.keys(conditions).map(Number);
   if (numbers.length !== 15) fail('тест ' + docNo + ': заданий ' + numbers.length + ' вместо 15');
 
-  return numbers.map((n) => {
+  return numbers.map((n) => applyApproved(docNo, n, buildTask(n)));
+
+  function buildTask(n) {
     const where = 'тест ' + docNo + ', № ' + n;
     const cond = parseCondition(n, conditions[n].body);
     const key = keys[n] || fail(where + ': нет ключа в таблице');
@@ -309,7 +316,55 @@ function build(md, docNo, firstId) {
       return { text, correct, explanation: choiceExplanation(n, e, correct) };
     });
     return task;
+  }
+}
+
+/** Вердикт объяснения: true — «верно / выпадает», false — «неверно / не выпадает», число — тип в соответствии. */
+function verdictOf(text, matching) {
+  if (matching) {
+    const m = text.match(/^(\d) — /);
+    return m ? Number(m[1]) : null;
+  }
+  if (/^Выпадает из общего ряда\. /.test(text) || /^Верно[.:] /.test(text)) return true;
+  if (/^Не выпадает из общего ряда\. /.test(text) || /^Неверно[.: ]/.test(text)) return false;
+  return null;
+}
+
+/**
+ * Утверждённая редакция (scripts/society-types-training-approved.js): замена задания целиком
+ * и новые объяснения позиций. Ключ документа не меняется: вердикт каждого нового объяснения
+ * должен совпадать с ним, иначе сборка останавливается.
+ */
+function applyApproved(docNo, n, task) {
+  const ref = docNo + '.' + n;
+  const where = 'тест ' + docNo + ', № ' + n;
+  const replaced = REPLACED_TASKS[ref];
+  if (replaced) {
+    if (task.kimTask !== 4) fail(where + ': заменяемое задание должно быть того же формата');
+    task.question = replaced.question;
+    task.source.ref += ' (заменено по решению преподавателя от 14.11.2026)';
+    task.statements = replaced.statements.map((s) => ({ text: s.text, correct: s.correct, explanation: s.explanation }));
+    task.statements.forEach((s, i) => {
+      if (verdictOf(s.explanation, false) !== s.correct) fail(where + ', позиция ' + (i + 1) + ': вердикт расходится с ключом');
+    });
+    return task;
+  }
+  const approved = EXPLANATIONS[ref];
+  if (!approved) return task;
+  const matching = !!task.items;
+  const parts = matching ? task.items : task.statements;
+  const labels = parts.map((p, i) => (matching ? LETTERS[i] : String(i + 1)));
+  Object.keys(approved).forEach((pos) => {
+    if (labels.indexOf(pos) === -1) fail(where + ': нет позиции ' + pos);
   });
+  parts.forEach((p, i) => {
+    const text = approved[labels[i]];
+    if (!text) return;
+    const expected = matching ? p.match : p.correct;
+    if (verdictOf(text, matching) !== expected) fail(where + ', позиция ' + labels[i] + ': вердикт утверждённого объяснения расходится с ключом');
+    p.explanation = text;
+  });
+  return task;
 }
 
 /* ---------- Запись файла ---------- */
@@ -334,8 +389,9 @@ const HEADER = `/*
  * Не правьте вручную — меняйте документы преподавателя и запускайте скрипт заново.
  *
  * Источник — утверждённые документы «Типы обществ тест 1» и «Типы обществ тест 2»
- * (хранятся вне репозитория). Формулировки условий, вариантов, порядок вариантов и букв А–Д,
- * ключи и пояснения — как в документах; изменения оформления перечислены в скрипте.
+ * (хранятся вне репозитория). Формулировки условий, вариантов, порядок вариантов и букв А–Д
+ * и ключи — как в документах; объяснения и тест 2, задание 10 — в редакции, утверждённой
+ * преподавателем 14.11.2026 (scripts/society-types-training-approved.js).
  * kimTask — позиция КИМ ЕГЭ: 1 — два лишних (1 балл), 2 — суждения (2 балла),
  * 3 — соответствие (1 балл только за полностью верный ответ), 4 — выбор из списка или
  * по ситуации (2 балла). Общий признак ряда (commonFeature) у заданий на исключение —

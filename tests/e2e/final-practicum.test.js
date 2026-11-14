@@ -161,7 +161,7 @@ for (const config of CONFIGS) {
     assert.match(await page.textContent('#feedback-points'), /0 из 1 балла/);
     assert.equal(await page.textContent('#feedback-correct'), '3, 5');
     assert.match(await page.textContent('#statements .statement[data-number="4"]'), /Ошибка — не выпадает из общего ряда/);
-    assert.match(await page.textContent('#statements .statement[data-number="4"]'), /Не выпадает из общего ряда\. Индустриальные: машинный труд\./);
+    assert.match(await page.textContent('#statements .statement[data-number="4"]'), /Не выпадает из общего ряда\. Замена ручного труда машинным — суть промышленного переворота\./);
     assert.match(await page.textContent('#statements .statement[data-number="5"]'), /Пропущено — выпадает из общего ряда/);
     assert.match(await page.textContent('#task-notes'), /Индустриальное общество: исключения/);
     await page.click('#next-btn');
@@ -169,7 +169,7 @@ for (const config of CONFIGS) {
     for (const n of [2, 4, 5]) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
     await page.click('#submit-btn');
     assert.match(await page.textContent('#feedback-points'), /2 из 2 баллов/);
-    assert.match(await page.textContent('#statements .statement[data-number="1"]'), /Неверно: ведущий фактор традиционной экономики — земля, не капитал\./);
+    assert.match(await page.textContent('#statements .statement[data-number="1"]'), /Неверно\. Основной фактор производства в традиционном обществе — земля/);
     await assertNoHorizontalScroll(page, 'тренировочный практикум');
     await shot(page, config, 'training');
     // Результаты независимы: итоговый практикум не начат и не затронут.

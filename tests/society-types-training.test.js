@@ -18,7 +18,8 @@ const EGE = loadBank();
 /** Таблицы ключей документов: номер задания → ключ. */
 const KEYS = {
   'OBS-TYP-P01': ['35', '245', '234', '124', '125', '234', '136', '124', '124', '356', '126', '123', '12313', '32113', '11323'],
-  'OBS-TYP-P02': ['35', '124', '345', '234', '124', '134', '156', '125', '124', '123', '123', '234', '12312', '32131', '12313']
+  // Задание 10 заменено по решению преподавателя от 14.11.2026: ключ 135 вместо 123.
+  'OBS-TYP-P02': ['35', '124', '345', '234', '124', '134', '156', '125', '124', '135', '123', '234', '12312', '32131', '12313']
 };
 /** Позиция КИМ по формату задания документа: 1 — два лишних, 2 — суждения, 3 — соответствие, 4 — выбор из списка / по ситуации. */
 const KIM = {
@@ -41,7 +42,7 @@ const CONTENT = {
   'OBS-TYP-041': 'bfb53cfd8bc2edfd', 'OBS-TYP-042': '3be0c773c66a6126', 'OBS-TYP-043': 'ed5d1bc0f690a4b2',
   'OBS-TYP-044': '48f7ec6a68b6d9e4', 'OBS-TYP-045': 'cdb0a87692824acb', 'OBS-TYP-046': '5ff5844a0b9cdd69',
   'OBS-TYP-047': '698abe4e96f1ff41', 'OBS-TYP-048': '8f724b4ff2be3ace', 'OBS-TYP-049': '4c58417238be81ed',
-  'OBS-TYP-050': 'f62d470c5cf128b7', 'OBS-TYP-051': 'aa71a2cf5deb537d', 'OBS-TYP-052': '8097aaed7b795050',
+  'OBS-TYP-050': 'b45724b4769216ef', 'OBS-TYP-051': 'aa71a2cf5deb537d', 'OBS-TYP-052': '8097aaed7b795050',
   'OBS-TYP-053': '7168492d9e26e201', 'OBS-TYP-054': '31173d65809a6dc9', 'OBS-TYP-055': 'e5a74732a948ccb9'
 };
 
@@ -58,7 +59,8 @@ test('импортированы все 30 заданий: по 15 в Практ
     assert.equal(p.kind, 'training', pid);
     assert.ok(!p.shuffle, `${pid}: порядок документа`);
     assert.deepEqual(Array.from(p.taskIds), Array.from({ length: 15 }, (_, i) => 'OBS-TYP-' + String(first + i).padStart(3, '0')));
-    tasksOf(pid).forEach((t, i) => assert.equal(t.source.ref, `Типы обществ, тест ${pid.endsWith('1') ? 1 : 2}, задание ${i + 1}`, t.id));
+    tasksOf(pid).forEach((t, i) => assert.equal(t.source.ref, `Типы обществ, тест ${pid.endsWith('1') ? 1 : 2}, задание ${i + 1}` +
+      (t.id === 'OBS-TYP-050' ? ' (заменено по решению преподавателя от 14.11.2026)' : ''), t.id));
   }
 });
 
@@ -115,9 +117,10 @@ test('пояснения: у каждого варианта и каждой п�
       });
     }
   }
-  assert.equal(EGE.getTask('OBS-TYP-027').statements[0].explanation, 'Неверно: ведущий фактор традиционной экономики — земля, не капитал.');
-  assert.equal(EGE.getTask('OBS-TYP-042').statements[0].explanation, 'Верно. Натуральное хозяйство — характерный признак.');
-  assert.equal(EGE.getTask('OBS-TYP-026').statements[2].explanation, 'Выпадает из общего ряда. Натуральное хозяйство (традиционное).');
+  assert.equal(EGE.getTask('OBS-TYP-027').statements[0].explanation, 'Неверно. Основной фактор производства в традиционном обществе — земля, так как богатство создаётся земледелием; капитал становится главным в индустриальном обществе.');
+  assert.equal(EGE.getTask('OBS-TYP-042').statements[0].explanation, 'Верно. Большая часть продукции производится для нужд самой семьи или общины, а не для продажи.');
+  assert.equal(EGE.getTask('OBS-TYP-026').statements[2].explanation, 'Выпадает из общего ряда. Натуральное хозяйство — производство для собственного потребления — характерно для традиционного общества; индустриальная экономика производит товары для рынка.');
+  // Тест 2, задание 1, позиции 1, 2, 4, 6 — текст документа (не редактировались).
   assert.equal(EGE.getTask('OBS-TYP-041').statements[0].explanation, 'Не выпадает из общего ряда. Знания — ведущий ресурс постиндустриальной экономики.');
 });
 
@@ -153,4 +156,66 @@ test('оценивание — существующее: по 26 баллов з
   assert.equal(S.scoreTask(EGE.getTask('OBS-TYP-038'), [1, 2, 3, 1, 1]), 0);
   assert.equal(S.scoreTask(EGE.getTask('OBS-TYP-026'), [3, 5]), 1);
   assert.equal(S.scoreTask(EGE.getTask('OBS-TYP-026'), [3, 4]), 0);
+});
+
+const { EXPLANATIONS, REPLACED_TASKS } = require('../scripts/society-types-training-approved.js');
+
+test('утверждённая редакция 14.11.2026 применена: 163 объяснения из 167, новые тексты совпадают с утверждёнными', () => {
+  let applied = 0;
+  let total = 0;
+  for (const [pid, first] of [['OBS-TYP-P01', 26], ['OBS-TYP-P02', 41]]) {
+    const doc = pid.endsWith('1') ? 1 : 2;
+    tasksOf(pid).forEach((t, i) => {
+      const ref = doc + '.' + (i + 1);
+      const parts = t.statements || t.items;
+      total += parts.length;
+      if (REPLACED_TASKS[ref]) {
+        parts.forEach((p, j) => assert.equal(p.explanation, REPLACED_TASKS[ref].statements[j].explanation, `${t.id}/${j + 1}`));
+        applied += parts.length;
+        return;
+      }
+      parts.forEach((p, j) => {
+        const label = t.items ? S.letter(j + 1) : String(j + 1);
+        const text = EXPLANATIONS[ref] && EXPLANATIONS[ref][label];
+        if (text) { assert.equal(p.explanation, text, `${t.id}/${label}`); applied++; }
+      });
+    });
+  }
+  assert.equal(total, 167);
+  assert.equal(applied, 163);
+});
+
+test('тест 2, задание 10 — новое задание о политической и духовной жизни индустриального общества', () => {
+  const t = EGE.getTask('OBS-TYP-050');
+  assert.equal(t.question, 'В стране Z завершается переход к индустриальному обществу. Развивается крупное машинное производство, растёт численность городского населения. Какие изменения в политической и духовной жизни характерны для индустриального общества?');
+  assert.deepEqual(Array.from(t.statements, (s) => s.text), [
+    'распространение массовой культуры, рассчитанной на широкую аудиторию',
+    'закрепление политических прав за отдельными сословиями по праву рождения',
+    'расширение участия граждан в политической жизни, появление массовых политических партий',
+    'преобладание ручного труда в производстве',
+    'ослабление влияния религии на право, образование и повседневную жизнь',
+    'передача знаний и навыков преимущественно в семье — от старших поколений к младшим']);
+  assert.equal(S.getCorrect(t).join(''), '135');
+  assert.equal(t.kimTask, 4);
+  assert.equal(t.choiceOf, 'items');
+  assert.equal(S.getMaxPoints(t), 2);
+  assert.doesNotMatch(t.statements[4].explanation, /обязательно|отделяются от церкви/);
+  // Задание больше не повторяет тест 1, задание 12.
+  const t12 = EGE.getTask('OBS-TYP-037');
+  assert.equal(t.statements.filter((s) => t12.statements.some((o) => o.text.toLowerCase().startsWith(s.text.slice(0, 20).toLowerCase()))).length, 0);
+});
+
+test('объяснения: без категоричных формулировок, отклонённых преподавателем, и без повторов внутри задания', () => {
+  const banned = [/только в постиндустриальн/, /почти не меня/, /слабом развитии писаного/, /развиты слабо/, /большинство (работников )?переходит/,
+    /развивает рыночную экономику/, /обязательно отделяются/];
+  for (const pid of Object.keys(KEYS)) {
+    for (const t of tasksOf(pid)) {
+      const ex = Array.from(t.statements || t.items, (p) => p.explanation);
+      ex.forEach((e, j) => {
+        for (const re of banned) assert.doesNotMatch(e, re, `${t.id}/${j + 1}`);
+        assert.ok(e.length <= 400, `${t.id}/${j + 1}: объяснение длиннее 400 знаков`);
+      });
+      assert.equal(new Set(ex).size, ex.length, `${t.id}: одинаковые объяснения у разных позиций`);
+    }
+  }
 });
