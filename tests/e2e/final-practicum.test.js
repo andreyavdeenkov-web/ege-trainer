@@ -151,10 +151,12 @@ for (const config of CONFIGS) {
     assert.match(await page.textContent('#progress-label'), /^Задание 1 из 15/);
     assert.equal(await page.textContent('#task-question'),
       'Ниже приведён перечень характеристик. Все они, за исключением двух, относятся к индустриальному обществу.');
-    // № 1, ключ 3 5: ответ 3 4 — ошибка.
+    // № 1, ключ 3 5: ответ 3 4 — ошибка. Общий признак ряда — только после проверки.
     await page.click('#statements .statement[data-number="3"] .statement__btn');
     await page.click('#statements .statement[data-number="4"] .statement__btn');
+    assert.doesNotMatch(await page.locator('#screen-quiz').innerHTML(), /Общий признак ряда|признаки индустриального общества/);
     await page.click('#submit-btn');
+    assert.match(await page.textContent('#task-notes'), /Общий признак ряда\s*Преобладание промышленного производства, рост доли городского населения/);
     assert.ok(await page.isVisible('#feedback'));
     assert.match(await page.textContent('#feedback-points'), /0 из 1 балла/);
     assert.equal(await page.textContent('#feedback-correct'), '3, 5');
@@ -261,6 +263,8 @@ for (const config of CONFIGS) {
     const first = page.locator('#final-review-list details[data-task="OBS-TYP-001"]');
     await first.locator('summary').click();
     assert.match(await first.textContent(), /Средний класс \(собственники/);
+    assert.match(await first.textContent(), /Общий признак ряда\s*Ручной труд, сословная иерархия/);
+    assert.match(await first.textContent(), /Не выпадает из общего ряда\. В традиционном обществе почти нет машин/);
     assert.match(await first.textContent(), /Ловушка/);
     assert.match(await first.textContent(), /Разбор вашего ответа[\s\S]*Ошибок нет/);
     const t25 = page.locator('#final-review-list details[data-task="OBS-TYP-025"]');
