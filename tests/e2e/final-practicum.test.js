@@ -160,16 +160,22 @@ for (const config of CONFIGS) {
     assert.ok(await page.isVisible('#feedback'));
     assert.match(await page.textContent('#feedback-points'), /0 из 1 балла/);
     assert.equal(await page.textContent('#feedback-correct'), '3, 5');
-    assert.match(await page.textContent('#statements .statement[data-number="4"]'), /Ошибка — не выпадает из общего ряда/);
-    assert.match(await page.textContent('#statements .statement[data-number="4"]'), /Не выпадает из общего ряда\. Замена ручного труда машинным — суть промышленного переворота\./);
-    assert.match(await page.textContent('#statements .statement[data-number="5"]'), /Пропущено — выпадает из общего ряда/);
+    // Разбор: правильность варианта (нейтрально) и действие ученика (цвет, значок); вердикт объяснения не повторяется.
+    assert.equal(await page.textContent('#statements .statement[data-number="4"] .statement__truth'), 'Не выпадает из общего ряда');
+    assert.equal(await page.textContent('#statements .statement[data-number="4"] .statement__action'), '✕Выбрано ошибочно');
+    assert.equal(await page.textContent('#statements .statement[data-number="4"] .statement__explanation'), 'Замена ручного труда машинным — суть промышленного переворота.');
+    assert.equal(await page.textContent('#statements .statement[data-number="5"] .statement__truth'), 'Выпадает из общего ряда');
+    assert.equal(await page.textContent('#statements .statement[data-number="5"] .statement__action'), '!Пропущен верный вариант');
     assert.match(await page.textContent('#task-notes'), /Индустриальное общество: исключения/);
     await page.click('#next-btn');
     // № 2 (суждения), ключ 2 4 5 — верно.
     for (const n of [2, 4, 5]) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
     await page.click('#submit-btn');
     assert.match(await page.textContent('#feedback-points'), /2 из 2 баллов/);
-    assert.match(await page.textContent('#statements .statement[data-number="1"]'), /Неверно\. Основной фактор производства в традиционном обществе — земля/);
+    assert.equal(await page.textContent('#statements .statement[data-number="1"] .statement__truth'), 'Неверное суждение');
+    assert.equal(await page.textContent('#statements .statement[data-number="1"] .statement__action'), '✓Верно не выбрано');
+    assert.match(await page.textContent('#statements .statement[data-number="1"] .statement__explanation'), /^Основной фактор производства в традиционном обществе — земля/);
+    assert.equal(await page.textContent('#statements .statement[data-number="2"] .statement__action'), '✓Выбрано верно');
     await assertNoHorizontalScroll(page, 'тренировочный практикум');
     await shot(page, config, 'training');
     // Результаты независимы: итоговый практикум не начат и не затронут.
@@ -264,7 +270,9 @@ for (const config of CONFIGS) {
     await first.locator('summary').click();
     assert.match(await first.textContent(), /Средний класс \(собственники/);
     assert.match(await first.textContent(), /Общий признак ряда\s*Ручной труд, сословная иерархия/);
-    assert.match(await first.textContent(), /Не выпадает из общего ряда\. В традиционном обществе почти нет машин/);
+    // Разбор итоговой работы — тот же вид: метка варианта, действие ученика, объяснение без повтора вердикта.
+    assert.equal(await first.locator('.statement[data-number="1"] .statement__truth').textContent(), 'Не выпадает из общего ряда');
+    assert.equal(await first.locator('.statement[data-number="1"] .statement__explanation').textContent(), 'В традиционном обществе почти нет машин, поэтому преобладает ручной труд.');
     assert.match(await first.textContent(), /Ловушка/);
     assert.match(await first.textContent(), /Разбор вашего ответа[\s\S]*Ошибок нет/);
     const t25 = page.locator('#final-review-list details[data-task="OBS-TYP-025"]');

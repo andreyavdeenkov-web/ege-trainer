@@ -380,8 +380,9 @@ for (const config of CONFIGS) {
     assert.equal(await page.locator('#statements .statement.status-missed').count(), 1);
     // Статус в разборе выражен не только цветом: подпись и значок.
     // Задания перемешаны: первым может оказаться выбор вариантов (choiceOf: 'items') — у него своя подпись.
-    assert.match(await page.textContent('#statements .statement.status-missed .statement__tag'),
-      first.choiceOfItems ? /Пропущено — этот вариант подходит/ : /Пропущено — это суждение верное/);
+    assert.equal(await page.textContent('#statements .statement.status-missed .statement__action'), '!Пропущен верный вариант');
+    assert.equal(await page.textContent('#statements .statement.status-missed .statement__truth'),
+      first.choiceOfItems ? 'Подходит' : 'Верное суждение');
     assert.equal(await page.locator('#statements .statement.status-missed .statement__icon[aria-hidden="true"]').count(), 1);
     // У старых заданий нет source — блок пояснений скрыт.
     assert.ok(await page.locator('#task-notes').isHidden());

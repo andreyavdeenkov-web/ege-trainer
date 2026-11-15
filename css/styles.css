@@ -1111,3 +1111,27 @@ kbd {
 .final-history__delta { margin-top: 10px; font-size: 14px; color: var(--text-muted); }
 .final-history__list { margin-top: 14px; }
 .final-history__list .meter.is-current .meter__title { color: var(--primary); }
+
+/*
+ * Разбор позиции: слева — правильность самого варианта (нейтральная метка без цвета),
+ * справа — оценка действия ученика (цвет и значок). Решение преподавателя от 15.11.2026.
+ */
+.statement__verdict { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.statement__truth {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+/* Действие ученика — цветной текст со значком, без заливки: заливка остаётся у карточки. */
+.statement__verdict .statement__action { padding: 0; background: none; }
+.statement.status-hit .statement__action { color: var(--right); background: none; }
+.statement.status-wrong .statement__action { color: var(--wrong); background: none; }
+.statement.status-missed .statement__action { color: var(--warn); background: none; }
+.statement.status-skip .statement__action { color: var(--right); background: none; font-weight: 600; }
+.statement__verdict + .statement__explanation { margin-top: 8px; }
