@@ -26,6 +26,20 @@ function loadBank() {
   return context.EGE;
 }
 
+/** Файлы диагностической разметки тем (подключаются после js/diagnostics.js). */
+const diagnosticsDataScripts = fs.readdirSync(path.join(root, 'data', 'diagnostics'))
+  .filter((f) => f.endsWith('.js')).sort().map((f) => 'data/diagnostics/' + f);
+
+/** Банк заданий, реестр практикумов, модуль диагностики и разметка тем (этап 1: не подключены к страницам). */
+function loadDiagnostics() {
+  const context = vm.createContext({});
+  context.globalThis = context;
+  for (const src of ['js/registry.js', 'js/scoring.js', 'js/attempt.js', ...dataScripts, ...practicumScripts, 'js/diagnostics.js', ...diagnosticsDataScripts]) {
+    vm.runInContext(fs.readFileSync(path.join(root, src), 'utf8'), context, { filename: src });
+  }
+  return context.EGE;
+}
+
 /** Ядро и js/task-view.js (для чистых функций отрисовки, без DOM). */
 function loadWithView() {
   const context = vm.createContext({});
@@ -50,4 +64,4 @@ function contentHash(task) {
   return crypto.createHash('sha256').update(JSON.stringify(authoredContent(task))).digest('hex');
 }
 
-module.exports = { root, scripts, dataScripts, practicumScripts, loadBank, loadWithView, authoredContent, contentHash };
+module.exports = { root, scripts, dataScripts, practicumScripts, diagnosticsDataScripts, loadBank, loadWithView, loadDiagnostics, authoredContent, contentHash };
