@@ -38,6 +38,11 @@
    * предпросмотр и разные практикумы основного тренажёра друг другу не мешают.
    */
   var saver = EGE.attemptSave;
+  /** Итоговые практикумы по теме (kind: 'final', js/final-practicum.js): только на главной странице. */
+  var finals = !EGE.preview && EGE.finalPracticum && hasFinalScreens() ? EGE.finalPracticum : null;
+  function hasFinalScreens() {
+    return !!document.getElementById('screen-final') && !!document.getElementById('screen-final-result');
+  }
   var SAVE_MODE = preview ? 'preview' : 'ege';
   var storage = (function () {
     try { return window.localStorage; } catch (e) { return null; }
@@ -60,7 +65,10 @@
     screens: {
       start: $('screen-start'),
       quiz: $('screen-quiz'),
-      result: $('screen-result')
+      result: $('screen-result'),
+      // Итоговый практикум (js/final-practicum.js); на страницах предпросмотра этих экранов нет.
+      final: $('screen-final'),
+      finalResult: $('screen-final-result')
     },
     startForm: $('start-form'),
     sectionOptions: $('section-options'),
@@ -227,7 +235,7 @@
     releaseFocus();
     ui.exitBar.hidden = true;
     Object.keys(ui.screens).forEach(function (key) {
-      ui.screens[key].hidden = key !== name;
+      if (ui.screens[key]) ui.screens[key].hidden = key !== name;
     });
     window.scrollTo(0, 0);
   }
@@ -325,7 +333,9 @@
     topics.forEach(function (topic) {
       var practicums = EGE.getPublishedPracticums(topic.id);
       var n = practicums.length;
-      var unfinished = practicums.concat(EGE.getRetiredPracticums(topic.id)).some(hasSavedAttempt);
+      var unfinished = practicums.concat(EGE.getRetiredPracticums(topic.id)).some(function (p) {
+        return hasSavedAttempt(p) || (!!finals && finals.hasProgress(p));
+      });
       ui.topicOptions.appendChild(optionCard('topic', topic.id, topic.title,
         n + ' ' + plural(n, 'практикум', 'практикума', 'практикумов'),
         section.color, settings.topic === topic.id, unfinished ? 'есть незавершённый' : null));
@@ -551,6 +561,12 @@
 
   function practicumCard(practicum, section) {
     var frame = cardFrame(practicum, section);
+    // Итоговый практикум по теме (kind: 'final'): состояние и кнопки — js/final-practicum.js.
+    // Тренировочные практикумы (ниже) работают как прежде.
+    if (EGE.isFinalPracticum(practicum)) {
+      if (finals) finals.fillCard(frame);
+      return finishCard(frame);
+    }
     var st = practicumState(practicum);
 
     if (st.kind === 'result' || st.kind === 'result-corrupt') {
@@ -900,7 +916,10 @@
   /** Показывает задание state.viewIndex: для выбора ответа или с разбором. */
   /** «Познание · Практикум № 1» — над прогрессом и в итогах. */
   function practicumLabel(practicum) {
-    return EGE.getTopic(practicum.topic).title + ' · ' + EGE.practicumTitle(practicum);
+    var title = EGE.practicumTitle(practicum);
+    var topic = EGE.getTopic(practicum.topic).title;
+    // Название уже содержит тему («Практикум № 1 — Типы обществ») — не повторяем её.
+    return title.indexOf(' — ' + topic) !== -1 ? title : topic + ' · ' + title;
   }
 
   function renderView() {
@@ -1291,7 +1310,8 @@
   // Другая вкладка начала или завершила практикум: карточки на стартовом экране обновляются.
   window.addEventListener('storage', function (e) {
     if (preview || ui.screens.start.hidden || !e.key) return;
-    if (e.key.indexOf(saver.KEY_PREFIX) === 0 || e.key.indexOf(saver.RESULT_PREFIX) === 0) renderStart();
+    if (e.key.indexOf(saver.KEY_PREFIX) === 0 || e.key.indexOf(saver.RESULT_PREFIX) === 0 ||
+        (finals && finals.isStorageKey(e.key))) renderStart();
   });
   // Закрытие вкладки, переход в другое приложение на телефоне: сохраняем последнее состояние.
   window.addEventListener('pagehide', function () { persist(); });
@@ -1397,6 +1417,15 @@
     }
   });
 
+  if (finals) {
+    finals.init({
+      storage: storage,
+      screens: { run: ui.screens.final, result: ui.screens.finalResult },
+      showScreen: showScreen,
+      showStart: showStart,
+      formatDate: formatSavedAt
+    });
+  }
   if (!preview) migrateLegacyAttempts();
   showStart();
 })();

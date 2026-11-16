@@ -68,6 +68,21 @@ const PUBLISHED = {
     topic: 'OBS-SYS', number: 2, shuffle: false, max: 31,
     taskIds: Array.from({ length: 18 }, (_, i) => 'OBS-SYS-' + String(i + 19).padStart(3, '0'))
   },
+  // «Типы обществ»: два тренировочных практикума по 15 заданий (тесты 1 и 2 преподавателя).
+  'OBS-TYP-P01': {
+    topic: 'OBS-TYP', number: 1, shuffle: false, max: 26, title: 'Практикум № 1 — Типы обществ',
+    taskIds: Array.from({ length: 15 }, (_, i) => 'OBS-TYP-' + String(i + 26).padStart(3, '0'))
+  },
+  'OBS-TYP-P02': {
+    topic: 'OBS-TYP', number: 2, shuffle: false, max: 26, title: 'Практикум № 2 — Типы обществ',
+    taskIds: Array.from({ length: 15 }, (_, i) => 'OBS-TYP-' + String(i + 41).padStart(3, '0'))
+  },
+  // «Итоговый практикум — Типы обществ»: 25 заданий банка в его порядке (kind: 'final').
+  'OBS-TYP-F01': {
+    topic: 'OBS-TYP', number: 1, shuffle: false, max: 35, kind: 'final',
+    title: 'Итоговый практикум — Типы обществ',
+    taskIds: Array.from({ length: 25 }, (_, i) => 'OBS-TYP-' + String(i + 1).padStart(3, '0'))
+  },
   'SOC-FAM-P01': {
     topic: 'SOC-FAM', number: 1, shuffle: true, max: 29,
     taskIds: ['SOC-FAM-001', 'SOC-FAM-004', 'SOC-FAM-005', 'SOC-FAM-012', 'SOC-FAM-014', 'SOC-FAM-017', 'SOC-FAM-019', 'SOC-FAM-022', 'SOC-FAM-024', 'SOC-FAM-031', 'SOC-FAM-032', 'SOC-FAM-034', 'SOC-FAM-037', 'SOC-FAM-038', 'SOC-FAM-041', 'SOC-FAM-042']
@@ -124,7 +139,8 @@ test('у каждого практикума: постоянный уникал�
     assert.ok(!seen.has(p.id), `повтор ${p.id}`);
     seen.add(p.id);
     assert.ok(EGE.getTopic(p.topic), p.id);
-    const kind = p.status === 'retired' ? 'R' : 'P';
+    const kind = p.status === 'retired' ? 'R' : p.kind === 'final' ? 'F' : 'P';
+    assert.ok(EGE.PRACTICUM_KINDS.includes(p.kind), `${p.id}: kind training или final`);
     assert.equal(p.id, `${p.topic}-${kind}${String(p.number).padStart(2, '0')}`);
     assert.ok(EGE.PRACTICUM_STATUSES.includes(p.status), p.id);
     assert.ok(p.taskIds.length > 0, p.id);
@@ -136,7 +152,7 @@ test('у каждого практикума: постоянный уникал�
   }
 });
 
-test('опубликованы ровно восемь практикумов с утверждённым составом', () => {
+test('опубликованы ровно одиннадцать практикумов с утверждённым составом', () => {
   const published = EGE.practicums.filter((p) => p.status === 'published');
   assert.deepEqual(ids(published).sort(), Object.keys(PUBLISHED).sort());
   for (const [id, want] of Object.entries(PUBLISHED)) {
@@ -147,8 +163,39 @@ test('опубликованы ровно восемь практикумов с
     assert.deepEqual(Array.from(p.taskIds), want.taskIds, `${id}: состав и порядок`);
     assert.equal(EGE.getPracticumMaxScore(p), want.max, `${id}: максимум баллов`);
     assert.ok(EGE.isPracticumReady(p), id);
-    assert.equal(EGE.practicumTitle(p), `Практикум № ${want.number}`);
+    assert.equal(p.kind, want.kind || 'training', `${id}: назначение практикума`);
+    assert.equal(EGE.practicumTitle(p), want.title || `Практикум № ${want.number}`);
   }
+});
+
+test('«Типы обществ»: в каталоге Практикум № 1, Практикум № 2, затем итоговый; задания не повторяются', () => {
+  assert.deepEqual(Array.from(EGE.getPublishedPracticums('OBS-TYP'), (p) => p.id), ['OBS-TYP-P01', 'OBS-TYP-P02', 'OBS-TYP-F01']);
+  assert.deepEqual(Array.from(EGE.getPublishedPracticums('OBS-TYP'), EGE.practicumTitle),
+    ['Практикум № 1 — Типы обществ', 'Практикум № 2 — Типы обществ', 'Итоговый практикум — Типы обществ']);
+  const all = EGE.getPublishedPracticums('OBS-TYP').flatMap((p) => Array.from(p.taskIds));
+  assert.equal(new Set(all).size, 55);
+  // В темах без итогового практикума названия прежние.
+  assert.equal(EGE.practicumTitle(EGE.getPracticum('OBS-SYS-P01')), 'Практикум № 1');
+});
+
+test('итоговый практикум: kind final, ID ТЕМА-FНОМЕР, своя нумерация, в каталоге — после тренировочных', () => {
+  const T = loadTasksOnly();
+  T.addPracticums([
+    { id: 'SOC-STR-F01', topic: 'SOC-STR', number: 1, kind: 'final', status: 'published', taskIds: ['SOC-STR-001'] },
+    { id: 'SOC-STR-P01', topic: 'SOC-STR', number: 1, status: 'published', taskIds: ['SOC-STR-001'] }
+  ]);
+  assert.deepEqual(Array.from(T.getPublishedPracticums('SOC-STR'), (p) => p.id), ['SOC-STR-P01', 'SOC-STR-F01']);
+  assert.equal(T.getPracticum('SOC-STR-P01').kind, 'training', 'по умолчанию — тренировочный');
+  assert.equal(T.practicumTitle(T.getPracticum('SOC-STR-F01')), 'Итоговый практикум — Социальная стратификация');
+  const ok = { id: 'SOC-MOB-F01', topic: 'SOC-MOB', number: 1, kind: 'final', status: 'published', taskIds: ['SOC-MOB-001'] };
+  const bad = (patch) => () => T.addPracticums([Object.assign({}, ok, patch)]);
+  assert.throws(bad({ id: 'SOC-MOB-P01' }), /Номер практикума не совпадает/, 'итоговый — с буквой F');
+  assert.throws(bad({ kind: undefined }), /Номер практикума не совпадает/, 'F — только у итогового');
+  assert.throws(bad({ kind: 'exam' }), /Неизвестный kind/);
+  assert.throws(bad({ shuffle: true }), /постоянным порядком/);
+  assert.throws(bad({ criteria: [{ id: 'x' }] }), /criteria/);
+  assert.throws(() => T.addPracticums([{ id: 'SOC-MOB-P01', topic: 'SOC-MOB', number: 1, status: 'published', taskIds: ['SOC-MOB-001'], criteria: [] }]),
+    /только у итогового/);
 });
 
 test('«Деятельность», Практикум № 1 — все 16 заданий основного каталога', () => {
@@ -226,7 +273,7 @@ test('задание входит не больше чем в один дейс�
 /* ---------- Видимость для ученика ---------- */
 
 test('ученик видит только темы и разделы с опубликованными практикумами', () => {
-  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
+  assert.deepEqual(ids(EGE.getAvailableTopics('OBS')), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS', 'OBS-TYP']);
   assert.deepEqual(ids(EGE.getAvailableTopics('SOC')), ['SOC-FAM']);
   for (const section of ['ECO', 'POL', 'LAW']) assert.deepEqual(ids(EGE.getAvailableTopics(section)), [], section);
   assert.deepEqual(ids(EGE.getAvailableSections()), ['OBS', 'SOC']);
@@ -244,7 +291,7 @@ test('«Социальные институты» (OBS-INS) объединены
   assert.ok(!shown.includes('OBS-INS'));
   assert.ok(shown.includes('OBS-SYS'));
   // Счётчик тем раздела на главном экране — EGE.getAvailableTopics(...).length, то есть число карточек.
-  assert.equal(shown.length, 4);
+  assert.equal(shown.length, 5);
 });
 
 test('черновик и практикум со снятым с выдачи заданием не показываются; пустых практикумов нет', () => {
@@ -289,7 +336,7 @@ test('реестр отклоняет некорректные практику�
   assert.throws(bad({ status: 'retired', title: 'Прежний набор' }), /Номер практикума не совпадает/);
   assert.throws(bad({ id: 'SOC-STR-R01', status: 'retired' }), /нет названия/);
   assert.throws(bad({ id: 'SOC-STR-R01', status: 'published' }), /Номер практикума не совпадает/);
-  assert.throws(bad({ title: 'Особый практикум' }), /только «Практикум № N»/);
+  assert.throws(bad({ title: 'Особый практикум' }), /задаётся автоматически/);
   assert.throws(bad({ taskIds: ['SOC-STR-001', 'SOC-STR-001'] }), /повторяются/);
   assert.throws(bad({ taskIds: ['SOC-STR-999'] }), /Неизвестное задание/);
   assert.throws(bad({ taskIds: ['SOC-MOB-001'] }), /не из темы/);

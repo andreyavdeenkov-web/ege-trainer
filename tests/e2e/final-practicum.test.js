@@ -1,0 +1,346 @@
+'use strict';
+
+/**
+ * Браузерные тесты итогового практикума «Типы обществ» (OBS-TYP-F01, kind: 'final')
+ * на компьютере и смартфоне, в светлой и тёмной темах: карточка в каталоге темы без выбора
+ * режимов, свободная навигация, изменение и пропуск ответов, отсутствие ключей и разбора
+ * в разметке до завершения, продолжение после перезагрузки, итоги, разбор, учебная аналитика,
+ * клавиатура, отсутствие горизонтальной прокрутки и ошибок консоли; тренировочный практикум
+ * другой темы работает по-прежнему (проверка после каждого задания).
+ *
+ * Запуск: npm run test:e2e
+ */
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const fs = require('node:fs');
+const { spawn } = require('node:child_process');
+const { chromium } = require('playwright');
+
+const root = path.join(__dirname, '..', '..');
+const port = 19000 + Math.floor(Math.random() * 1000);
+const base = `http://localhost:${port}/`;
+const shotsDir = process.env.E2E_SCREENSHOTS || null;
+
+const CONFIGS = [
+  { name: 'desktop-light', viewport: { width: 1280, height: 900 }, colorScheme: 'light' },
+  { name: 'desktop-dark', viewport: { width: 1280, height: 900 }, colorScheme: 'dark' },
+  { name: 'mobile-light', viewport: { width: 360, height: 740 }, colorScheme: 'light', isMobile: true, hasTouch: true },
+  { name: 'mobile-dark', viewport: { width: 360, height: 740 }, colorScheme: 'dark', isMobile: true, hasTouch: true }
+];
+
+let server;
+let browser;
+
+test.before(async () => {
+  server = spawn(process.execPath, [path.join(root, 'scripts/serve.js'), String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
+  await new Promise((resolve, reject) => {
+    server.stdout.once('data', resolve);
+    server.once('error', reject);
+  });
+  browser = await chromium.launch();
+});
+
+test.after(async () => {
+  if (browser) await browser.close();
+  if (server) server.kill();
+});
+
+async function open(config) {
+  const context = await browser.newContext({
+    viewport: config.viewport,
+    colorScheme: config.colorScheme,
+    isMobile: !!config.isMobile,
+    hasTouch: !!config.hasTouch
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
+  page.on('pageerror', (err) => errors.push(String(err)));
+  await page.goto(base);
+  return { page, context, errors };
+}
+
+async function shot(page, config, name) {
+  if (!shotsDir) return;
+  fs.mkdirSync(shotsDir, { recursive: true });
+  await page.screenshot({ path: path.join(shotsDir, `${config.name}-typ-${name}.png`), fullPage: true });
+}
+
+async function assertNoHorizontalScroll(page, where) {
+  const { scroll, client } = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth
+  }));
+  assert.ok(scroll <= client, `${where}: горизонтальная прокрутка (${scroll} > ${client})`);
+}
+
+const pick = (page, name, value) => page.locator(`label.topic-option:has(input[name="${name}"][value="${value}"])`).click();
+
+async function openTopic(page) {
+  await pick(page, 'section', 'OBS');
+  await pick(page, 'topic', 'OBS-TYP');
+  await card(page).waitFor();
+}
+
+const card = (page) => page.locator('[data-practicum="OBS-TYP-F01"]');
+
+/** Ключ задания, показанного на экране режима (из банка — только для теста). */
+function keyOf(page, index) {
+  return page.evaluate((i) => {
+    const t = window.EGE.getTask(window.EGE.getPracticum('OBS-TYP-F01').taskIds[i]);
+    return { type: window.EGE.scoring.getTaskType(t), key: Array.from(window.EGE.scoring.getCorrect(t)) };
+  }, index);
+}
+
+async function answer(page, { type, key }) {
+  if (type === 'matching') {
+    for (let row = 0; row < key.length; row++) await page.click(`#final-matching .match-choice[data-row="${row}"][data-n="${key[row]}"]`);
+  } else {
+    for (const n of key) await page.click(`#final-statements .statement[data-number="${n}"] .statement__btn`);
+  }
+}
+
+/** В разметке экрана итоговой работы нет ключей, статусов и объяснений. */
+async function assertNothingRevealed(page, where) {
+  const html = await page.locator('#screen-final').innerHTML();
+  assert.doesNotMatch(html, /status-(hit|missed|wrong|skip|right)/, `${where}: статусы позиций`);
+  assert.doesNotMatch(html, /statement__explanation|statement__trap|Правильн|Разбор вашего ответа|task-notes/, `${where}: разбор`);
+  assert.doesNotMatch(html, /Средний класс \(собственники|Выпадает\.|Не подходит\./, `${where}: тексты объяснений`);
+  assert.equal(await page.locator('#screen-final .feedback, #screen-final .points').count(), 0, `${where}: блок баллов`);
+}
+
+for (const config of CONFIGS) {
+  test(`${config.name}: каталог темы — Практикум № 1, Практикум № 2 и выделенный итоговый, без выбора режимов`, async () => {
+    const { page, context, errors } = await open(config);
+    await openTopic(page);
+    assert.deepEqual(await page.locator('#practicum-options .practicum-card').evaluateAll((cards) => cards.map((c) => c.dataset.practicum)),
+      ['OBS-TYP-P01', 'OBS-TYP-P02', 'OBS-TYP-F01']);
+    assert.deepEqual(await page.locator('#practicum-options .practicum-card__title').allTextContents(),
+      ['Практикум № 1 — Типы обществ', 'Практикум № 2 — Типы обществ', 'Итоговый практикум — Типы обществ']);
+    // Тренировочные — обычные карточки; итоговый — выделен.
+    for (const id of ['OBS-TYP-P01', 'OBS-TYP-P02']) {
+      const t = page.locator(`[data-practicum="${id}"]`);
+      assert.equal(await t.locator('.practicum-card__kind').count(), 0, id);
+      assert.match(await t.locator('.practicum-card__meta').textContent(), /15 заданий · максимум 26 баллов/, id);
+      assert.equal(await t.locator('.practicum-card__start').textContent(), 'Начать практикум', id);
+      assert.ok(!(await t.evaluate((n) => n.classList.contains('practicum-card--final'))), id);
+    }
+    const c = card(page);
+    assert.equal(await c.locator('.practicum-card__kind').textContent(), 'Итоговый');
+    assert.ok(await c.evaluate((n) => n.classList.contains('practicum-card--final')));
+    assert.match(await c.locator('.practicum-card__meta').textContent(), /25 заданий · максимум 35 баллов/);
+    assert.equal(await page.locator('.mode-option, [data-mode]').count(), 0, 'выбора «Обучение / Экзамен» нет');
+    assert.doesNotMatch(await page.textContent('#practicum-options'), /Обучение|Экзамен/);
+    assert.deepEqual(await c.locator('.practicum-card__actions button:visible').allTextContents(), ['Начать итоговую работу']);
+    // Последовательность не обязательна: итоговый доступен сразу.
+    assert.ok(await c.locator('.final-card__start').isEnabled());
+    await assertNoHorizontalScroll(page, 'каталог');
+    await shot(page, config, 'catalog');
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: тренировочный Практикум № 1 — мгновенная проверка, правильный ответ и пояснения`, async () => {
+    const { page, context, errors } = await open(config);
+    await openTopic(page);
+    const t = page.locator('[data-practicum="OBS-TYP-P01"]');
+    await t.locator('.practicum-card__start').click();
+    await t.locator('.practicum-card__confirm-yes').click();
+    assert.equal(await page.textContent('#quiz-title'), 'Практикум № 1 — Типы обществ');
+    assert.match(await page.textContent('#progress-label'), /^Задание 1 из 15/);
+    assert.equal(await page.textContent('#task-question'),
+      'Ниже приведён перечень характеристик. Все они, за исключением двух, относятся к индустриальному обществу.');
+    // № 1, ключ 3 5: ответ 3 4 — ошибка. Общий признак ряда — только после проверки.
+    await page.click('#statements .statement[data-number="3"] .statement__btn');
+    await page.click('#statements .statement[data-number="4"] .statement__btn');
+    assert.doesNotMatch(await page.locator('#screen-quiz').innerHTML(), /Общий признак ряда|признаки индустриального общества/);
+    await page.click('#submit-btn');
+    assert.match(await page.textContent('#task-notes'), /Общий признак ряда\s*Преобладание промышленного производства, рост доли городского населения/);
+    assert.ok(await page.isVisible('#feedback'));
+    assert.match(await page.textContent('#feedback-points'), /0 из 1 балла/);
+    assert.equal(await page.textContent('#feedback-correct'), '3, 5');
+    // Разбор: правильность варианта (нейтрально) и действие ученика (цвет, значок); вердикт объяснения не повторяется.
+    assert.equal(await page.textContent('#statements .statement[data-number="4"] .statement__truth'), 'Не выпадает из общего ряда');
+    assert.equal(await page.textContent('#statements .statement[data-number="4"] .statement__action'), '✕Выбрано ошибочно');
+    assert.equal(await page.textContent('#statements .statement[data-number="4"] .statement__explanation'), 'Замена ручного труда машинным — суть промышленного переворота.');
+    assert.equal(await page.textContent('#statements .statement[data-number="5"] .statement__truth'), 'Выпадает из общего ряда');
+    assert.equal(await page.textContent('#statements .statement[data-number="5"] .statement__action'), '!Пропущен верный вариант');
+    assert.match(await page.textContent('#task-notes'), /Индустриальное общество: исключения/);
+    await page.click('#next-btn');
+    // № 2 (суждения), ключ 2 4 5 — верно.
+    for (const n of [2, 4, 5]) await page.click(`#statements .statement[data-number="${n}"] .statement__btn`);
+    await page.click('#submit-btn');
+    assert.match(await page.textContent('#feedback-points'), /2 из 2 баллов/);
+    assert.equal(await page.textContent('#statements .statement[data-number="1"] .statement__truth'), 'Неверное суждение');
+    assert.equal(await page.textContent('#statements .statement[data-number="1"] .statement__action'), '✓Верно не выбрано');
+    assert.match(await page.textContent('#statements .statement[data-number="1"] .statement__explanation'), /^Основной фактор производства в традиционном обществе — земля/);
+    assert.equal(await page.textContent('#statements .statement[data-number="2"] .statement__action'), '✓Выбрано верно');
+    await assertNoHorizontalScroll(page, 'тренировочный практикум');
+    await shot(page, config, 'training');
+    // Результаты независимы: итоговый практикум не начат и не затронут.
+    await page.click('#brand-home');
+    if (await page.isVisible('#exit-confirm')) await page.click('#exit-confirm');
+    await openTopic(page);
+    assert.match(await page.locator('[data-practicum="OBS-TYP-P01"]').textContent(), /Выполнено 2 из 15/);
+    assert.equal(await page.locator('[data-practicum="OBS-TYP-P02"] .practicum-card__start').count(), 1);
+    assert.equal(await card(page).locator('.final-card__start').count(), 1);
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.includes('OBS-TYP')).sort());
+    assert.deepEqual(keys, ['ege-trainer:attempt:ege/OBS/OBS-TYP/OBS-TYP-P01']);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  test(`${config.name}: итоговая работа — навигация, изменение и пропуск ответов, без раскрытия ключей, продолжение, итоги`, async () => {
+    const { page, context, errors } = await open(config);
+    await openTopic(page);
+    await card(page).locator('.final-card__start').click();
+    assert.equal(await page.textContent('#final-run-title'), 'Итоговый практикум — Типы обществ');
+    assert.equal(await page.locator('#screen-start').isHidden(), true);
+    assert.match(await page.textContent('#final-progress-label'), /^Задание 1 из 25 · отвечено 0/);
+    await assertNothingRevealed(page, 'начало');
+    // № 1: сначала неверно, потом исправлено.
+    await page.click('#final-statements .statement[data-number="2"] .statement__btn');
+    await page.click('#final-statements .statement[data-number="3"] .statement__btn');
+    await page.click('#final-statements .statement[data-number="3"] .statement__btn');
+    await page.click('#final-statements .statement[data-number="4"] .statement__btn');
+    await assertNothingRevealed(page, 'задание с ответом');
+    // Пропуск к № 7 по полосе номеров, соответствие.
+    await page.click('#final-nav li:nth-child(7) button');
+    assert.match(await page.textContent('#final-progress-label'), /^Задание 7 из 25 · отвечено 1/);
+    await answer(page, await keyOf(page, 6));
+    await assertNothingRevealed(page, 'соответствие');
+    // Возврат назад и очистка ответа.
+    await page.click('#final-prev');
+    await page.click('#final-statements .statement[data-number="1"] .statement__btn');
+    await page.click('#final-clear');
+    assert.equal(await page.getAttribute('#final-statements .statement[data-number="1"] .statement__btn', 'aria-checked'), 'false');
+    // Клавиатура: стрелка вправо — № 7; Enter — № 8; цифра отмечает.
+    await page.keyboard.press('ArrowRight');
+    assert.match(await page.textContent('#final-progress-label'), /^Задание 7 из 25/);
+    await page.keyboard.press('Enter');
+    assert.match(await page.textContent('#final-progress-label'), /^Задание 8 из 25/);
+    // № 25 (последнее): неполный ответ — оценивается как есть.
+    await page.click('#final-nav li:nth-child(25) button');
+    await page.keyboard.press('1');
+    assert.match(await page.textContent('#final-pill'), /Без ответа: 22/);
+    assert.ok(await page.locator('#final-nav li:nth-child(1) button.is-answered').count());
+    assert.equal(await page.textContent('#final-primary'), 'К завершению');
+    await assertNoHorizontalScroll(page, 'итоговая работа');
+    await shot(page, config, 'run');
+
+    // Перезагрузка — ответы на месте, кнопка «Продолжить».
+    await page.reload();
+    await openTopic(page);
+    assert.match(await card(page).textContent(), /Не завершён[\s\S]*Отвечено 3 из 25/);
+    assert.match(await page.locator('#topic-options label:has(input[value="OBS-TYP"])').textContent(), /есть незавершённый/);
+    assert.equal(await card(page).locator('.final-card__start').count(), 0);
+    await card(page).locator('.final-card__continue').click();
+    assert.match(await page.textContent('#final-progress-label'), /^Задание 25 из 25/);
+    await page.click('#final-nav li:nth-child(1) button');
+    assert.equal(await page.getAttribute('#final-statements .statement[data-number="4"] .statement__btn', 'aria-checked'), 'true');
+    assert.equal(await page.getAttribute('#final-statements .statement[data-number="3"] .statement__btn', 'aria-checked'), 'false');
+
+    // Завершение: подтверждение с номерами пропущенных заданий; отмена ничего не раскрывает.
+    await page.click('.final-finish__open');
+    assert.match(await page.textContent('#final-finish-text'), /Без ответа останутся задания: 2, 3, 4, 5, 6, 8,/);
+    await page.click('.final-finish__cancel');
+    await assertNothingRevealed(page, 'после отмены завершения');
+    await page.click('.final-finish__open');
+    await shot(page, config, 'confirm');
+    await page.click('.final-finish__confirm');
+
+    assert.match(await page.textContent('#final-result-title'), /Итоговая работа завершена/);
+    assert.match(await page.textContent('#final-result-score'), /2 из 35 баллов/);
+    const stats = await page.textContent('#final-stats');
+    assert.match(stats, /2\s*полностью верно/);
+    assert.match(stats, /23\s*0 баллов, из них без ответа: 22/);
+    assert.equal(await page.locator('#final-an-format .meter').count(), 4);
+    assert.equal(await page.locator('#final-an-criteria .meter').count(), 6);
+    assert.equal(await page.locator('#final-an-level .meter').count(), 3);
+    assert.equal(await page.locator('#final-an-action .meter').count(), 3);
+    assert.match(await page.textContent('#final-analytics'), /не диагностика/);
+    assert.match(await page.textContent('#final-an-format [data-group="EXCL"]'), /1 из 6 баллов/);
+    assert.match(await page.textContent('#final-review'), /Без ответа \(22\)/);
+    await page.click('#final-review label:has(input[value="skipped"])');
+    assert.equal(await page.locator('#final-review-list .review-item').count(), 22);
+    // Разбор после завершения: объяснения, ловушки, разбор ответа.
+    await page.click('#final-review label:has(input[value="all"])');
+    const first = page.locator('#final-review-list details[data-task="OBS-TYP-001"]');
+    await first.locator('summary').click();
+    assert.match(await first.textContent(), /Средний класс \(собственники/);
+    assert.match(await first.textContent(), /Общий признак ряда\s*Ручной труд, сословная иерархия/);
+    // Разбор итоговой работы — тот же вид: метка варианта, действие ученика, объяснение без повтора вердикта.
+    assert.equal(await first.locator('.statement[data-number="1"] .statement__truth').textContent(), 'Не выпадает из общего ряда');
+    assert.equal(await first.locator('.statement[data-number="1"] .statement__explanation').textContent(), 'В традиционном обществе почти нет машин, поэтому преобладает ручной труд.');
+    assert.match(await first.textContent(), /Ловушка/);
+    assert.match(await first.textContent(), /Разбор вашего ответа[\s\S]*Ошибок нет/);
+    const t25 = page.locator('#final-review-list details[data-task="OBS-TYP-025"]');
+    await t25.locator('summary').click();
+    assert.match(await t25.textContent(), /Б\) «превращение промышленности в ведущую сферу экономики»: номер не выбран, правильно — 2/);
+    await assertNoHorizontalScroll(page, 'итоги');
+    await shot(page, config, 'result');
+
+    assert.match(await page.textContent('#final-history'), /История попыток/);
+    assert.equal(await page.locator('#final-history-list .meter').count(), 1);
+
+    // Повторная попытка: история хранит обе, видны первая, последняя и лучшая и динамика.
+    await page.click('.final-result__again');
+    assert.match(await page.textContent('#final-progress-label'), /^Задание 1 из 25 · отвечено 0/, 'новая попытка — с чистого листа');
+    await assertNothingRevealed(page, 'повторная попытка');
+    await answer(page, await keyOf(page, 0));
+    await page.click('#final-nav li:nth-child(15) button');
+    await answer(page, await keyOf(page, 14));
+    await page.click('.final-finish__open');
+    await page.click('.final-finish__confirm');
+    assert.match(await page.textContent('#final-result-score'), /3 из 35 баллов/);
+    const summary = await page.textContent('#final-history-summary');
+    assert.match(summary, /2 из 35\s*первая попытка/);
+    assert.match(summary, /3 из 35\s*последняя попытка/);
+    assert.match(summary, /3 из 35\s*лучший результат/);
+    assert.match(await page.textContent('#final-history'), /С первой попытки: \+1 балл · с предыдущей: \+1 балл/);
+    assert.equal(await page.locator('#final-history-list .meter').count(), 2);
+    assert.match(await page.textContent('#final-history-list .meter:nth-child(2)'), /Попытка 2 .*эта попытка · лучшая/);
+    await assertNoHorizontalScroll(page, 'история попыток');
+    await shot(page, config, 'history');
+
+    // Каталог: последняя, первая и лучшая; результаты тренировочных практикумов не появились.
+    await page.click('.final-result__home');
+    const text = await card(page).textContent();
+    assert.match(text, /Последний результат: 3 из 35 баллов/);
+    assert.match(text, /Попыток: 2 · первая: 2 из 35 · лучшая: 3 из 35 · \+1 балл с первой попытки/);
+    for (const id of ['OBS-TYP-P01', 'OBS-TYP-P02']) {
+      assert.equal(await page.locator(`[data-practicum="${id}"] .practicum-card__start`).count(), 1, `${id} не затронут`);
+    }
+    await card(page).locator('.final-card__results').click();
+    assert.match(await page.textContent('#final-result-score'), /3 из 35 баллов/);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+}
+
+test('тренировочный практикум другой темы не изменился: проверка и разбор сразу после ответа', async () => {
+  const { page, context, errors } = await open(CONFIGS[0]);
+  await pick(page, 'section', 'OBS');
+  await pick(page, 'topic', 'OBS-ACT');
+  const c = page.locator('[data-practicum="OBS-ACT-P01"]');
+  assert.equal(await c.locator('.practicum-card__kind').count(), 0);
+  assert.equal(await c.locator('.practicum-card__title').textContent(), 'Практикум № 1');
+  await c.locator('.practicum-card__start').click();
+  await c.locator('.practicum-card__confirm-yes').click();
+  // Порядок заданий случайный: любой формат — первые два варианта или первый номер в каждой позиции.
+  if (await page.isVisible('#matching')) {
+    const rows = await page.locator('#matching .match-row').count();
+    const options = await page.locator('#matching .match-choice[data-row="0"]').count();
+    // Номера по кругу: во взаимно-однозначном соответствии номеров не меньше, чем позиций.
+    for (let r = 0; r < rows; r++) await page.click(`#matching .match-choice[data-row="${r}"][data-n="${r % options + 1}"]`);
+  } else {
+    await page.click('#statements .statement:nth-child(1) .statement__btn');
+    await page.click('#statements .statement:nth-child(2) .statement__btn');
+  }
+  await page.click('#submit-btn');
+  assert.ok(await page.isVisible('#feedback'), 'разбор показан сразу после ответа');
+  assert.ok(await page.isHidden('#screen-final'));
+  assert.deepEqual(errors, []);
+  await context.close();
+});

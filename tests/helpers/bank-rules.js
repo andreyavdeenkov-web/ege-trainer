@@ -63,6 +63,32 @@ function metadataErrors(EGE, task) {
 }
 
 /**
+ * Начала объяснений, согласованные с ключом: [для верного варианта, для неверного].
+ * Задания утверждённого банка «Типы обществ» (поле bankFormat) сохраняют формулировки банка:
+ * в EXCL позиция ряда — «Не выпадает из общего ряда.» (решение преподавателя от 14.11.2026), в MULTI неверное — «Неверно.» / «Неверно:» / «Неверно по…»,
+ * в COND — «Подходит.» / «Не подходит.».
+ */
+function explanationPrefixes(EGE, task) {
+  const type = EGE.scoring.getTaskType(task);
+  if (task.bankFormat === 'EXCL') return [['Выпадает.'], ['Не выпадает из общего ряда.']];
+  if (task.bankFormat === 'MULTI') return [['Верно.'], ['Неверно.', 'Неверно:', 'Неверно ']];
+  if (task.bankFormat === 'COND') return [['Подходит.'], ['Не подходит.']];
+  // «Выпадает из общего ряда» / «Не выпадает из общего ряда» — формулировки тренировочных
+  // практикумов «Типов обществ»; «Верно:» / «Неверно:» — вердикт с пояснением через двоеточие.
+  return type === 'exclude-two'
+    ? [['Выпадает.', 'Выпадает из общего ряда.'], ['Не выпадает.', 'Не выпадает из общего ряда.']]
+    : [['Верно.', 'Верно:'], ['Неверно.', 'Неверно:']];
+}
+
+/**
+ * Задания, перенесённые из утверждённых документов преподавателя дословно (банк «Типы обществ»
+ * и тренировочные тесты 1 и 2): их пояснения не дописываются под минимальную длину.
+ */
+function isApprovedVerbatim(task) {
+  return !!task.bankFormat || /^Типы обществ, тест [12],/.test((task.source && task.source.ref) || '');
+}
+
+/**
  * Строгие правила для новых заданий (не из снимка tests/fixtures/legacy-tasks.json):
  * формат ЕГЭ и содержательные объяснения всех вариантов.
  */
@@ -74,7 +100,7 @@ function newTaskErrors(EGE, task) {
   const explained = (text, prefix) => {
     if (!isText(text)) return false;
     const body = prefix && text.startsWith(prefix) ? text.slice(prefix.length) : text;
-    return body.trim().length >= MIN_EXPLANATION;
+    return body.trim().length >= (isApprovedVerbatim(task) ? 1 : MIN_EXPLANATION);
   };
 
   if (type === 'matching') {
@@ -91,9 +117,9 @@ function newTaskErrors(EGE, task) {
     return errors;
   }
 
-  const prefixes = type === 'exclude-two' ? ['Выпадает.', 'Не выпадает.'] : ['Верно.', 'Неверно.'];
+  const prefixes = explanationPrefixes(EGE, task);
   task.statements.forEach((s, i) => {
-    const prefix = s.correct ? prefixes[0] : prefixes[1];
+    const prefix = (s.correct ? prefixes[0] : prefixes[1]).find((p) => isText(s.explanation) && s.explanation.startsWith(p));
     if (!explained(s.explanation, prefix)) errors.push(`суждение ${i + 1}: нужно содержательное объяснение`);
   });
 
@@ -103,9 +129,11 @@ function newTaskErrors(EGE, task) {
     if (correct < 2 || correct > 4) errors.push('multiple: верных вариантов 2, 3 или 4');
   } else if (type === 'exclude-two') {
     if (task.statements.length !== 6) errors.push('exclude-two: ровно 6 позиций');
+    // В утверждённом банке «Типы обществ» общий признак ряда назван в условии задания,
+    // отдельного поля в банке нет — придумывать его нельзя.
     if (!isText(task.commonFeature)) errors.push('exclude-two: нужен commonFeature — общий признак ряда');
   }
   return errors;
 }
 
-module.exports = { metadataErrors, newTaskErrors, MIN_EXPLANATION };
+module.exports = { metadataErrors, newTaskErrors, explanationPrefixes, isApprovedVerbatim, MIN_EXPLANATION };

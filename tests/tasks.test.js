@@ -13,6 +13,7 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+const { explanationPrefixes } = require('./helpers/bank-rules.js');
 const dataScripts = scripts.filter((s) => s.startsWith('data/tasks/'));
 const practicumScripts = scripts.filter((s) => s === 'data/practicums.js');
 
@@ -116,7 +117,7 @@ function checkChoice(EGE, task, type, where) {
   assert.ok(task.statements.length >= 3 && task.statements.length <= 9,
     `${where}: суждений должно быть от 3 до 9 (для выбора цифрами на клавиатуре)`);
   // В exclude-two correct: true означает «выпадает из ряда».
-  const prefixes = type === 'exclude-two' ? ['Выпадает.', 'Не выпадает.'] : ['Верно.', 'Неверно.'];
+  const prefixes = explanationPrefixes(EGE, task);
 
   task.statements.forEach((s, i) => {
     const w = `${where}, суждение ${i + 1}`;
@@ -125,8 +126,8 @@ function checkChoice(EGE, task, type, where) {
     if (s.explanation !== undefined) {
       assert.ok(typeof s.explanation === 'string' && s.explanation.trim(), `${w}: пустое объяснение`);
       // Объяснение не должно противоречить ключу.
-      const prefix = s.correct ? prefixes[0] : prefixes[1];
-      assert.ok(s.explanation.startsWith(prefix), `${w}: объяснение должно начинаться с «${prefix}» — как в ключе`);
+      const allowed = s.correct ? prefixes[0] : prefixes[1];
+      assert.ok(allowed.some((p) => s.explanation.startsWith(p)), `${w}: объяснение должно начинаться с «${allowed.join('» или «')}» — как в ключе`);
     }
   });
 
@@ -231,7 +232,7 @@ test('тема «Деятельность» в разделе «Человек �
   assert.equal(EGE.getSection('OBS').title, 'Человек и общество');
   assert.equal(EGE.getTasksByTopic('OBS-ACT').length, 16);
   // «Общие вопросы» ученику не показываются: в них нет практикумов.
-  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
+  assert.deepEqual([...EGE.getAvailableTopics('OBS').map((t) => t.id)], ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS', 'OBS-TYP']);
 });
 
 test('ключи проверенных заданий темы «Деятельность»', () => {

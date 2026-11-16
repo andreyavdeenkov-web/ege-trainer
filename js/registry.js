@@ -122,6 +122,33 @@
   /** Виды источника задания (поле source.kind). */
   EGE.SOURCE_KINDS = ['original', 'author'];
 
+  /**
+   * Разметка ошибок-ловушек у неверных позиций (поле trap задания, тема «Типы обществ»):
+   * trap: { tags: ['ПТ'], combine: 'or' | 'and', actual: ['industrial'], comment? } —
+   * теги ошибки и тип общества, к которому признак относится на самом деле.
+   */
+  EGE.TRAP_TAGS = {
+    'ПТ': 'подмена типа общества',
+    'СП': 'смешение понятий',
+    'ПС': 'ложная причинно-следственная связь',
+    'ЧО': 'чрезмерное обобщение',
+    'ФП': 'неверный фактор производства или неверная ведущая сфера экономики'
+  };
+
+  /** Типы обществ (поля societyTypes и trap.actual): название и форма «признак … общества». */
+  EGE.SOCIETY_TYPES = {
+    traditional: { title: 'Традиционное', genitive: 'традиционного' },
+    industrial: { title: 'Индустриальное', genitive: 'индустриального' },
+    postindustrial: { title: 'Постиндустриальное', genitive: 'постиндустриального' }
+  };
+
+  /**
+   * Назначение практикума (поле kind): training — тренировочный (проверка и разбор после
+   * каждого задания, js/attempt.js); final — итоговый практикум по теме (все задания без
+   * проверки, разбор и аналитика после завершения, js/final-session.js). По умолчанию training.
+   */
+  EGE.PRACTICUM_KINDS = ['training', 'final'];
+
   /** Формат постоянного ID задания: РАЗДЕЛ-ТЕМА-НОМЕР, например SOC-STR-001. */
   EGE.TASK_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-\d{3,4}$/;
   /** Формат id темы: РАЗДЕЛ-ТЕМА, например SOC-STR. */
@@ -261,10 +288,10 @@
   EGE.PRACTICUM_STATUSES = ['published', 'draft', 'retired'];
 
   /**
-   * Формат постоянного ID: ТЕМА-PНОМЕР для практикума (OBS-COG-P01),
-   * ТЕМА-RНОМЕР для прежнего набора со статусом retired (SOC-FAM-R01).
+   * Формат постоянного ID: ТЕМА-PНОМЕР для тренировочного практикума (OBS-COG-P01),
+   * ТЕМА-FНОМЕР для итогового (OBS-TYP-F01), ТЕМА-RНОМЕР для прежнего набора (SOC-FAM-R01).
    */
-  EGE.PRACTICUM_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-[PR]\d{2}$/;
+  EGE.PRACTICUM_ID_PATTERN = /^[A-Z]{3}-[A-Z]{3}-[PFR]\d{2}$/;
 
   /** Все практикумы в порядке регистрации. */
   EGE.practicums = [];
@@ -289,6 +316,10 @@
    *   taskIds  — ID заданий: состав задаётся явно и не меняется от попытки к попытке;
    *   shuffle  — необязательно: true — задания показываются в случайном порядке,
    *              иначе — в порядке taskIds;
+   *   kind     — необязательно: 'training' (по умолчанию) или 'final' — итоговый практикум по
+   *              теме (id ТЕМА-FНОМЕР, своя нумерация, порядок постоянный, см. js/final-session.js);
+   *   criteria — только у итогового, необязательно: [{ id, title }] — критерии учебной аналитики
+   *              (значения — поле criteria заданий);
    *   legacyTopicAttempts — необязательно: true — незавершённая попытка, сохранённая
    *              до появления практикумов для темы целиком, продолжается в этом практикуме
    *              (если её задания совпадают с его составом). Не больше одного на тему.
@@ -305,12 +336,23 @@
       if (!topic) throw new Error('Неизвестная тема: ' + p.topic + ' (' + where + ')');
       if (topic.general) throw new Error('В «Общих вопросах» практикумов не бывает: ' + where);
       if (EGE.PRACTICUM_STATUSES.indexOf(p.status) === -1) throw new Error('Неизвестный статус: ' + where);
-      var kind = p.status === 'retired' ? 'R' : 'P';
+      if (p.kind !== undefined && EGE.PRACTICUM_KINDS.indexOf(p.kind) === -1) throw new Error('Неизвестный kind: ' + where);
+      var isFinal = p.kind === 'final';
+      if (isFinal && (p.status === 'retired' || p.shuffle || p.legacyTopicAttempts)) {
+        throw new Error('Итоговый практикум — с постоянным порядком, без shuffle и legacyTopicAttempts: ' + where);
+      }
+      var kind = p.status === 'retired' ? 'R' : isFinal ? 'F' : 'P';
       if (!Number.isInteger(p.number) || p.number < 1 || p.id !== p.topic + '-' + kind + pad2(p.number)) {
         throw new Error('Номер практикума не совпадает с id: ' + where);
       }
       if (kind === 'R' && !(typeof p.title === 'string' && p.title)) throw new Error('У прежнего набора нет названия: ' + where);
-      if (kind === 'P' && p.title !== undefined) throw new Error('Название практикума — только «Практикум № N»: ' + where);
+      if (kind !== 'R' && p.title !== undefined) throw new Error('Название практикума задаётся автоматически: ' + where);
+      if (p.criteria !== undefined) {
+        if (p.kind !== 'final') throw new Error('criteria — только у итогового практикума: ' + where);
+        if (!Array.isArray(p.criteria) || !p.criteria.every(function (c) { return c && typeof c.id === 'string' && typeof c.title === 'string' && c.title; })) {
+          throw new Error('criteria — список { id, title }: ' + where);
+        }
+      }
       if (!Array.isArray(p.taskIds) || p.taskIds.length === 0) throw new Error('В практикуме нет заданий: ' + where);
       if (new Set(p.taskIds).size !== p.taskIds.length) throw new Error('Задания повторяются: ' + where);
       p.taskIds.forEach(function (id) {
@@ -320,11 +362,12 @@
       });
       EGE.practicums.forEach(function (other) {
         if (other.topic !== p.topic) return;
-        if (other.number === p.number && (other.status === 'retired') === (kind === 'R')) throw new Error('Повторяющийся номер практикума: ' + where);
+        if (other.number === p.number && other.id.slice(-3, -2) === kind) throw new Error('Повторяющийся номер практикума: ' + where);
         if (other.legacyTopicAttempts && p.legacyTopicAttempts) {
           throw new Error('legacyTopicAttempts — только у одного практикума темы: ' + where);
         }
       });
+      p.kind = isFinal ? 'final' : 'training';
       p.section = topic.section;
       practicumsById[p.id] = p;
       EGE.practicums.push(p);
@@ -378,9 +421,16 @@
     });
   };
 
-  /** Практикумы темы, которые видит ученик. */
+  /** Итоговый ли практикум (kind: 'final'). */
+  EGE.isFinalPracticum = function (practicum) {
+    return practicum.kind === 'final';
+  };
+
+  /** Практикумы темы, которые видит ученик: тренировочные по номеру, затем итоговые. */
   EGE.getPublishedPracticums = function (topicId) {
-    return EGE.getPracticumsByTopic(topicId).filter(EGE.isPracticumReady);
+    var ready = EGE.getPracticumsByTopic(topicId).filter(EGE.isPracticumReady);
+    return ready.filter(function (p) { return !EGE.isFinalPracticum(p); })
+      .concat(ready.filter(EGE.isFinalPracticum));
   };
 
   /** Максимальный балл за практикум по системе оценивания (js/scoring.js). */
@@ -390,9 +440,20 @@
     }, 0);
   };
 
-  /** Название для ученика: «Практикум № 1»; у прежнего набора — его title. */
+  /**
+   * Название для ученика: «Практикум № 1»; у итогового — «Итоговый практикум — Тема»
+   * (с номером, если итоговых в теме несколько); у прежнего набора — его title.
+   * В теме с итоговым практикумом тренировочные тоже называются с темой —
+   * «Практикум № 1 — Тема», в одном стиле с итоговым. В остальных темах названия прежние.
+   */
   EGE.practicumTitle = function (practicum) {
-    return practicum.status === 'retired' ? practicum.title : 'Практикум № ' + practicum.number;
+    if (practicum.status === 'retired') return practicum.title;
+    var topic = EGE.getTopic(practicum.topic).title;
+    var finals = EGE.practicums.filter(function (o) { return o.topic === practicum.topic && EGE.isFinalPracticum(o); });
+    if (EGE.isFinalPracticum(practicum)) {
+      return 'Итоговый практикум' + (finals.length > 1 ? ' № ' + practicum.number : '') + ' — ' + topic;
+    }
+    return 'Практикум № ' + practicum.number + (finals.length ? ' — ' + topic : '');
   };
 
   /** Темы раздела, в которых есть хотя бы один опубликованный практикум. */

@@ -182,14 +182,14 @@ for (const config of CONFIGS) {
     // Сначала виден только выбор раздела.
     assert.ok(await page.locator('#topic-field').isHidden());
     assert.ok(await page.locator('#practicum-field').isHidden());
-    assert.equal(await noteOf(page, 'section', 'OBS'), '4 темы');
+    assert.equal(await noteOf(page, 'section', 'OBS'), '5 тем');
     assert.equal(await noteOf(page, 'section', 'ECO'), 'Практикумы готовятся');
     await assertNoHorizontalScroll(page, 'старт');
     await shot(page, config, '1-start');
 
     // Раздел → темы (только с практикумами, без «Общих вопросов»).
     await pick(page, 'section', 'OBS');
-    assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS']);
+    assert.deepEqual(await values(page, 'topic'), ['OBS-ACT', 'OBS-COG', 'OBS-SCK', 'OBS-SYS', 'OBS-TYP']);
     assert.equal(await noteOf(page, 'topic', 'OBS-COG'), '1 практикум');
     assert.equal(await noteOf(page, 'topic', 'OBS-SCK'), '2 практикума');
     assert.equal(await noteOf(page, 'topic', 'OBS-SYS'), '2 практикума');
@@ -380,8 +380,9 @@ for (const config of CONFIGS) {
     assert.equal(await page.locator('#statements .statement.status-missed').count(), 1);
     // Статус в разборе выражен не только цветом: подпись и значок.
     // Задания перемешаны: первым может оказаться выбор вариантов (choiceOf: 'items') — у него своя подпись.
-    assert.match(await page.textContent('#statements .statement.status-missed .statement__tag'),
-      first.choiceOfItems ? /Пропущено — этот вариант подходит/ : /Пропущено — это суждение верное/);
+    assert.equal(await page.textContent('#statements .statement.status-missed .statement__action'), '!Пропущен верный вариант');
+    assert.equal(await page.textContent('#statements .statement.status-missed .statement__truth'),
+      first.choiceOfItems ? 'Подходит' : 'Верное суждение');
     assert.equal(await page.locator('#statements .statement.status-missed .statement__icon[aria-hidden="true"]').count(), 1);
     // У старых заданий нет source — блок пояснений скрыт.
     assert.ok(await page.locator('#task-notes').isHidden());

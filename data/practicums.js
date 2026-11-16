@@ -115,6 +115,56 @@ EGE.addPracticums([
     ]
   },
   {
+    // «Типы обществ», Практикум № 1 и № 2 — тренировочные (проверка после каждого задания):
+    // задания документов преподавателя «Типы обществ тест 1» и «тест 2» в их порядке.
+    id: 'OBS-TYP-P01',
+    topic: 'OBS-TYP',
+    number: 1,
+    status: 'published',
+    taskIds: [
+      'OBS-TYP-026', 'OBS-TYP-027', 'OBS-TYP-028', 'OBS-TYP-029', 'OBS-TYP-030',
+      'OBS-TYP-031', 'OBS-TYP-032', 'OBS-TYP-033', 'OBS-TYP-034', 'OBS-TYP-035',
+      'OBS-TYP-036', 'OBS-TYP-037', 'OBS-TYP-038', 'OBS-TYP-039', 'OBS-TYP-040'
+    ]
+  },
+  {
+    id: 'OBS-TYP-P02',
+    topic: 'OBS-TYP',
+    number: 2,
+    status: 'published',
+    taskIds: [
+      'OBS-TYP-041', 'OBS-TYP-042', 'OBS-TYP-043', 'OBS-TYP-044', 'OBS-TYP-045',
+      'OBS-TYP-046', 'OBS-TYP-047', 'OBS-TYP-048', 'OBS-TYP-049', 'OBS-TYP-050',
+      'OBS-TYP-051', 'OBS-TYP-052', 'OBS-TYP-053', 'OBS-TYP-054', 'OBS-TYP-055'
+    ]
+  },
+  {
+    // «Итоговый практикум — Типы обществ»: 25 заданий утверждённого банка преподавателя в его
+    // порядке (OBS-TYP-001…025 = № 1–25). Итоговая работа (kind: 'final', js/final-session.js):
+    // все задания без проверки, ответы можно менять и пропускать; балл, разбор и аналитика —
+    // после завершения. criteria — шесть критериев сравнения обществ для аналитики.
+    id: 'OBS-TYP-F01',
+    topic: 'OBS-TYP',
+    number: 1,
+    kind: 'final',
+    status: 'published',
+    criteria: [
+      { id: 'nature', title: 'Отношение к природе' },
+      { id: 'factor', title: 'Основной фактор производства' },
+      { id: 'economy', title: 'Экономика' },
+      { id: 'social', title: 'Социальная структура' },
+      { id: 'politics', title: 'Политическая жизнь' },
+      { id: 'spiritual', title: 'Духовная жизнь' }
+    ],
+    taskIds: [
+      'OBS-TYP-001', 'OBS-TYP-002', 'OBS-TYP-003', 'OBS-TYP-004', 'OBS-TYP-005',
+      'OBS-TYP-006', 'OBS-TYP-007', 'OBS-TYP-008', 'OBS-TYP-009', 'OBS-TYP-010',
+      'OBS-TYP-011', 'OBS-TYP-012', 'OBS-TYP-013', 'OBS-TYP-014', 'OBS-TYP-015',
+      'OBS-TYP-016', 'OBS-TYP-017', 'OBS-TYP-018', 'OBS-TYP-019', 'OBS-TYP-020',
+      'OBS-TYP-021', 'OBS-TYP-022', 'OBS-TYP-023', 'OBS-TYP-024', 'OBS-TYP-025'
+    ]
+  },
+  {
     // «Семья и брак», Практикум № 1 и № 2 — самостоятельные наборы из 31 задания темы
     // без повторов. Каждый охватывает тему целиком: семья как институт и группа,
     // функции, типы, брак, тенденции, социализация, роли и контроль, проблемы

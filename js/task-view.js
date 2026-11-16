@@ -8,33 +8,35 @@
   var EGE = window.EGE;
   var scoring = EGE.scoring;
 
-  // Подписи статусов в разборе. Ошибки и пропуски начинаются со слов «Ошибка» и «Пропущено»,
-  // чтобы их можно было отличить не только по цвету.
-  var STATUS_LABELS = {
-    hit: 'Верно — вы выбрали верное суждение',
-    missed: 'Пропущено — это суждение верное',
-    wrong: 'Ошибка — это суждение неверное',
-    skip: 'Неверное — вы его не выбрали'
+  /*
+   * Разбор позиции — две независимые характеристики (решение преподавателя от 15.11.2026):
+   *  1) правильность самого варианта — нейтральная метка без цвета, по формату задания;
+   *  2) оценка действия ученика — цвет и значок: выбрано верно / ошибочно, пропущен верный
+   *     вариант, верно не выбрано.
+   * Стандартный вердикт в начале объяснения («Верно.», «Неверно:», «Выпадает из общего ряда.»…)
+   * при показе не повторяется — его уже сообщает метка. Тексты объяснений в данных не меняются.
+   */
+  var TRUTH_LABELS = {
+    'statements': ['Верное суждение', 'Неверное суждение'],
+    'items': ['Подходит', 'Не подходит'],
+    'exclude-two': ['Выпадает из общего ряда', 'Не выпадает из общего ряда']
   };
 
-  // exclude-two: «верная» позиция — та, что выпадает из ряда.
-  var EXCLUDE_STATUS_LABELS = {
-    hit: 'Верно — выпадает, вы выбрали',
-    missed: 'Пропущено — этот термин выпадает',
-    wrong: 'Ошибка — термин относится к ряду',
-    skip: 'Относится к ряду'
+  var ACTION_LABELS = {
+    hit: 'Выбрано верно',
+    wrong: 'Выбрано ошибочно',
+    missed: 'Пропущен верный вариант',
+    skip: 'Верно не выбрано'
   };
 
-  // multiple с choiceOf: 'items' — выбираются термины или другие элементы, а не суждения.
-  var ITEM_STATUS_LABELS = {
-    hit: 'Верно — подходит, вы выбрали',
-    missed: 'Пропущено — этот вариант подходит',
-    wrong: 'Ошибка — этот вариант не подходит',
-    skip: 'Не подходит'
+  /** Вводные вердикты объяснений: [для верного варианта, для неверного]. «Неверно по двум причинам» не скрывается. */
+  var VERDICT_PREFIXES = {
+    true: ['Выпадает из общего ряда.', 'Выпадает.', 'Подходит.', 'Верно.', 'Верно:'],
+    false: ['Не выпадает из общего ряда.', 'Не выпадает.', 'Не подходит.', 'Неверно.', 'Неверно:']
   };
 
   /** Значки статусов: дублируют цвет формой. Для экранных дикторов скрыты — статус есть в подписи. */
-  var STATUS_ICONS = { hit: '✓', missed: '!', wrong: '✕', skip: '–', right: '✓' };
+  var STATUS_ICONS = { hit: '✓', missed: '!', wrong: '✕', skip: '✓', right: '✓' };
 
   /** Ярлык статуса со значком. */
   function statusTag(status, label) {
@@ -46,9 +48,62 @@
     return tag;
   }
 
+  function truthKind(task) {
+    if (scoring.getTaskType(task) === 'exclude-two') return 'exclude-two';
+    return task.choiceOf === 'items' ? 'items' : 'statements';
+  }
+
+  /** Метка правильности самого варианта: «Верное суждение», «Подходит», «Выпадает из общего ряда»… */
+  function truthLabel(task, statement) {
+    return TRUTH_LABELS[truthKind(task)][statement.correct ? 0 : 1];
+  }
+
+  /** Метка действия ученика по статусу (hit, wrong, missed, skip). */
+  function actionLabel(status) {
+    return ACTION_LABELS[status];
+  }
+
+  /** Подписи для доступности и совместимости: «Верное суждение; выбрано верно». */
   function statusLabels(task) {
-    if (scoring.getTaskType(task) === 'exclude-two') return EXCLUDE_STATUS_LABELS;
-    return task.choiceOf === 'items' ? ITEM_STATUS_LABELS : STATUS_LABELS;
+    var kind = truthKind(task);
+    var t = TRUTH_LABELS[kind];
+    return {
+      hit: t[0] + '; ' + ACTION_LABELS.hit.toLowerCase(),
+      missed: t[0] + '; ' + ACTION_LABELS.missed.toLowerCase(),
+      wrong: t[1] + '; ' + ACTION_LABELS.wrong.toLowerCase(),
+      skip: t[1] + '; ' + ACTION_LABELS.skip.toLowerCase()
+    };
+  }
+
+  function upperFirst(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  /**
+   * Объяснение для показа: без вводного вердикта, если он совпадает с правильностью варианта
+   * (иначе — полностью, чтобы не скрыть возможное расхождение). Пустой остаток — исходный текст.
+   */
+  function displayExplanation(statement) {
+    var text = statement.explanation || '';
+    var prefixes = VERDICT_PREFIXES[!!statement.correct];
+    for (var i = 0; i < prefixes.length; i++) {
+      if (text.indexOf(prefixes[i] + ' ') === 0) {
+        var rest = text.slice(prefixes[i].length).trim();
+        return rest ? upperFirst(rest) : text;
+      }
+    }
+    return text;
+  }
+
+  /**
+   * Объяснение позиции соответствия без повтора правильного варианта, который уже показан
+   * строкой «Ваш ответ» / «Правильно»: «1 — традиционное. Земледелие…» → «Земледелие…».
+   */
+  function displayMatchExplanation(task, item) {
+    var text = item.explanation || '';
+    var prefix = item.match + ' — ' + task.options[item.match - 1];
+    var m = text.indexOf(prefix) === 0 ? text.slice(prefix.length).match(/^[.:]\s+(.+)$/) : null;
+    return m ? upperFirst(m[1]) : text;
   }
 
   // Подписи к баллам по индексу-баллу; у заданий на 1 балл ошибка сразу даёт 0.
@@ -92,7 +147,6 @@
   function renderStatements(list, task, options) {
     var answer = options.answer || null;
     var chosen = new Set(answer ? answer.selected : options.selected || []);
-    var labels = statusLabels(task);
 
     list.textContent = '';
     list.classList.toggle('is-answered', !!answer);
@@ -112,17 +166,26 @@
 
       if (answer) {
         var status = statusOf(statement, isChosen);
+        var truth = truthLabel(task, statement);
         btn.disabled = true;
-        btn.setAttribute('aria-label', number + '. ' + statement.text + ' — ' + labels[status]);
+        btn.setAttribute('aria-label', number + '. ' + statement.text + ' — ' + truth + '; ' + actionLabel(status).toLowerCase());
         li.classList.add('status-' + status);
 
         var details = el('div', 'statement__details');
-        details.appendChild(statusTag(status, labels[status]));
-        // Объяснение необязательно: если его нет, показывается только статус суждения.
+        // Строка разбора: слева — правильность варианта (без цвета), справа — оценка действия ученика.
+        var verdict = el('p', 'statement__verdict');
+        verdict.appendChild(el('span', 'statement__truth', truth));
+        var action = statusTag(status, actionLabel(status));
+        action.classList.add('statement__action');
+        verdict.appendChild(action);
+        details.appendChild(verdict);
+        // Объяснение необязательно: если его нет, показывается только строка разбора.
         if (statement.explanation) {
-          details.appendChild(el('p', 'statement__explanation', statement.explanation));
+          details.appendChild(el('p', 'statement__explanation', displayExplanation(statement)));
         }
         appendMistake(details, statement.mistake);
+        appendTrap(details, statement.trap);
+        appendExtra(details, statement.extra);
         li.appendChild(details);
       } else {
         btn.setAttribute('role', 'checkbox');
@@ -143,6 +206,42 @@
     var p = el('p', 'statement__mistake');
     p.appendChild(el('strong', null, 'Типичная ошибка: '));
     p.appendChild(document.createTextNode(mistake));
+    parent.appendChild(p);
+  }
+
+  /**
+   * «Ловушка: подмена типа общества — признак индустриального общества» (поле trap неверной
+   * позиции, см. EGE.TRAP_TAGS). Показывается в разборе после ответа.
+   */
+  function trapText(trap) {
+    if (!trap) return null;
+    var tags = (trap.tags || []).map(function (t) { return (EGE.TRAP_TAGS || {})[t] || t; });
+    var text = tags.join(trap.combine === 'and' ? ' и ' : ' / ');
+    if (trap.comment) text += ' (' + trap.comment + ')';
+    var types = EGE.SOCIETY_TYPES || {};
+    var actual = (trap.actual || []).map(function (id) { return types[id] ? types[id].genitive : id; });
+    if (actual.length) {
+      text += (text ? '; ' : '') + 'на самом деле это признак ' + actual.join(' и ') +
+        (actual.length > 1 ? ' обществ' : ' общества');
+    }
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) + '.' : null;
+  }
+
+  function appendTrap(parent, trap) {
+    var text = trapText(trap);
+    if (!text) return;
+    var p = el('p', 'statement__trap');
+    p.appendChild(el('strong', null, 'Ловушка: '));
+    p.appendChild(document.createTextNode(text));
+    parent.appendChild(p);
+  }
+
+  /** «Дополнительно: …» — положение сверх учебной таблицы (поле extra). */
+  function appendExtra(parent, extra) {
+    if (!extra) return;
+    var p = el('p', 'statement__extra');
+    p.appendChild(el('span', 'statement__extra-tag', 'дополнительно'));
+    p.appendChild(document.createTextNode(' Положение сверх таблицы: ' + extra));
     parent.appendChild(p);
   }
 
@@ -181,9 +280,39 @@
       feature.appendChild(el('p', 'task-notes__text', task.commonFeature));
       box.appendChild(feature);
     }
+    // Методические поля банка «Типы обществ» (необязательные): пояснение ко всему заданию,
+    // проверяемое знание, типичная ошибка, опора в таблице, действие и уровень.
+    if (task.explanationNote) appendNote(box, 'Пояснение', sentence(task.explanationNote));
+    if (task.checks) appendNote(box, 'Проверяемое знание', sentence(task.checks));
+    if (task.typicalMistake) appendNote(box, 'Типичная ошибка', sentence(task.typicalMistake), 'task-notes__feature--warn');
+    var meta = taskMetaLine(task);
+    if (meta) box.appendChild(el('p', 'task-notes__source', meta));
+    if (task.basis) box.appendChild(el('p', 'task-notes__source', 'Опора: ' + task.basis));
     var source = sourceLabel(task);
     if (source) box.appendChild(el('p', 'task-notes__source', source));
     return box.childNodes.length > 0;
+  }
+
+  function sentence(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function appendNote(box, title, text, extraClass) {
+    var block = el('div', 'task-notes__feature' + (extraClass ? ' ' + extraClass : ''));
+    block.appendChild(el('span', 'statement__tag', title));
+    block.appendChild(el('p', 'task-notes__text', text));
+    box.appendChild(block);
+  }
+
+  var ACTION_TITLES = { recognition: 'узнавание', understanding: 'понимание', distinction: 'различение' };
+  var LEVEL_TITLES = { 1: 'базовый', 2: 'средний', 3: 'повышенный' };
+
+  /** «Познавательное действие: различение · Уровень: средний» — только у заданий с полем cognitiveActions. */
+  function taskMetaLine(task) {
+    if (!Array.isArray(task.cognitiveActions)) return null;
+    var line = 'Познавательное действие: ' + task.cognitiveActions.map(function (a) { return ACTION_TITLES[a] || a; }).join(', ');
+    if (LEVEL_TITLES[task.difficulty]) line += ' · Уровень: ' + LEVEL_TITLES[task.difficulty];
+    return line;
   }
 
   /** Новый блок пояснений (для экрана итогов) или null, если пояснять нечего. */
@@ -263,7 +392,7 @@
         var ok = value === item.match;
         li.classList.add(ok ? 'status-right' : 'status-wrong');
         var result = el('div', 'match-row__result');
-        result.appendChild(statusTag(ok ? 'right' : 'wrong', ok ? 'Верно — соответствие установлено правильно' : 'Ошибка — неверное соответствие'));
+        result.appendChild(statusTag(ok ? 'right' : 'wrong', ok ? ACTION_LABELS.hit : ACTION_LABELS.wrong));
         var mine = el('p', 'match-row__line');
         mine.appendChild(el('span', 'muted', 'Ваш ответ: '));
         mine.appendChild(el('strong', ok ? 'text-right' : 'text-wrong', optionLabel(task, value)));
@@ -274,8 +403,9 @@
           right.appendChild(el('strong', 'text-right', optionLabel(task, item.match)));
           result.appendChild(right);
         }
-        if (item.explanation) result.appendChild(el('p', 'statement__explanation', item.explanation));
+        if (item.explanation) result.appendChild(el('p', 'statement__explanation', displayMatchExplanation(task, item)));
         appendMistake(result, item.mistake);
+        appendExtra(result, item.extra);
         li.appendChild(result);
       } else {
         li.classList.toggle('is-filled', value !== null);
@@ -374,6 +504,12 @@
     setStatementSelected: setStatementSelected,
     renderMatching: renderMatching,
     sourceLabel: sourceLabel,
+    trapText: trapText,
+    statusLabels: statusLabels,
+    truthLabel: truthLabel,
+    actionLabel: actionLabel,
+    displayExplanation: displayExplanation,
+    displayMatchExplanation: displayMatchExplanation,
     renderTaskNotes: renderTaskNotes,
     createTaskNotes: createTaskNotes,
     renderFeedback: renderFeedback,

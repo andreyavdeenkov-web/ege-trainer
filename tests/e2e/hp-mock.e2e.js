@@ -426,7 +426,8 @@ async function main() {
       }, KEY);
       await page.goto(START);
       await page.reload();
-      await page.waitForTimeout(300);
+      // Ждём состояние интерфейса, а не фиксированное время: карточка показывает итог попытки.
+      await page.locator('main').getByText('Завершён автоматически: время вышло.').waitFor({ timeout: 10000 });
       const t = await text(page);
       assert.ok(t.includes('Завершён автоматически: время вышло. Затрачено: 1:20:00.'));
       const s = await stored(page);

@@ -155,8 +155,8 @@ test('данные существующих заданий не изменили
   const EGE = loadBank();
   // «Познание» и «Наука» перенесены из предпросмотра с kimTask (позиция КИМ задана с самого начала);
   // у новых тем «Научное познание» и «Общество как система. Социальные институты»
-  // kimTask тоже задан с самого начала.
-  const withKim = /^OBS-(COG|SCI|SCK|SYS)-/;
+  // kimTask тоже задан с самого начала; у «Типов обществ» (OBS-TYP) — по формату банка.
+  const withKim = /^OBS-(COG|SCI|SCK|SYS|TYP)-/;
   for (const task of EGE.tasks.filter((t) => !withKim.test(t.id))) {
     assert.equal(task.kimTask, undefined, task.id);
     if (S.getTaskType(task) === 'matching') assert.equal(S.getMaxPoints(task), 2, task.id);
